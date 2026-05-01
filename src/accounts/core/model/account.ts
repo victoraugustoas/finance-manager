@@ -1,5 +1,5 @@
-import {AggregateRoot, Result} from "@/shared/base";
-import {Money} from "@/shared/ValueObjects";
+import { AggregateRoot, Result } from '@/shared/base';
+import { Money } from '@/shared/ValueObjects';
 
 interface AccountProps {
   id?: string;

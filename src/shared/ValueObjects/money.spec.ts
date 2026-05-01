@@ -1,5 +1,5 @@
-import {Errors} from '../base/Errors';
-import {Money} from './Money';
+import { Errors } from '../base/Errors';
+import { Money } from './Money';
 
 describe('Money', () => {
   describe('create()', () => {

@@ -1,6 +1,6 @@
-import {Entity} from '@/shared/base/entity';
-import {Errors} from '@/shared/base/Errors';
-import {Result} from '@/shared/base/result';
+import { Entity } from '@/shared/base/entity';
+import { Errors } from '@/shared/base/Errors';
+import { Result } from '@/shared/base/result';
 
 interface SubCategoryProps {
   id?: string;
@@ -19,9 +19,9 @@ export class SubCategory extends Entity<SubCategoryProps> {
   static create(props: SubCategoryProps): Result<SubCategory> {
     const trimmed = props.name.trim();
     if (!trimmed) {
-      return Result.fail({code: Errors.SUBCATEGORY_NAME_EMPTY});
+      return Result.fail({ code: Errors.SUBCATEGORY_NAME_EMPTY });
     }
-    return Result.ok(new SubCategory({...props, name: trimmed}));
+    return Result.ok(new SubCategory({ ...props, name: trimmed }));
   }
 
   static new(props: SubCategoryProps): SubCategory {

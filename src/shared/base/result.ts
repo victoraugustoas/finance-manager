@@ -1,4 +1,4 @@
-import {Errors} from "@/shared/base/Errors";
+import { Errors } from '@/shared/base/Errors';
 
 export type ResultError = {
   message?: string;
@@ -29,14 +29,18 @@ export class Result<T> {
 
   get value(): T {
     if (!this._isSuccess) {
-      throw new Error('Cannot get value of a failed Result. Check isSuccess before accessing value.');
+      throw new Error(
+        'Cannot get value of a failed Result. Check isSuccess before accessing value.',
+      );
     }
     return this._value as T;
   }
 
   get error(): ResultError {
     if (this._isSuccess) {
-      throw new Error('Cannot get error of a successful Result. Check isFailure before accessing error.');
+      throw new Error(
+        'Cannot get error of a successful Result. Check isFailure before accessing error.',
+      );
     }
     return this._error as ResultError;
   }
