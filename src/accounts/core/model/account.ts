@@ -10,7 +10,7 @@ interface AccountProps {
 export class Account extends AggregateRoot<AccountProps> {
   name: string;
   balance: Money;
-  openingBalance: Money;
+  readonly openingBalance: Money;
 
   private constructor(props: AccountProps) {
     super(props);
