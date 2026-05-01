@@ -1,0 +1,27 @@
+# dependencies
+node_modules
+
+# build output
+dist
+
+# environment
+.env
+.env.local
+.env.*.local
+
+# coverage
+coverage
+
+# Node 25 + Jest: arquivo usado por --localstorage-file nos scripts de teste
+.jest-localstorage
+
+# IDE
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
