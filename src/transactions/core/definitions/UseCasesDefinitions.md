@@ -4,53 +4,53 @@
 
 ***
 
-### C3. Cadastrar uma despesa
+### C3. Register an expense
 
-#### Definição
+#### Definition
 
-Cadastrar uma despesa deve ter inicialmente os seguintes parâmetros:
+Registering an expense should initially have the following parameters:
 
-- Nome. Ex: Supermercado, Energia, Internet
-- Valor. Ex: $25,23
-- Data de vencimento.
-- Data de lançamento.
-- Data de pagamento.
-- Efetivada
-- Conta
+- Name. E.g.: Grocery, Electricity, Internet
+- Amount. E.g.: $25.23
+- Due date.
+- Entry date.
+- Payment date.
+- Settled
+- Account
 
-#### C3. Regras de negócio
+#### C3. Business rules
 
-RN1. Se uma despesa está efetivada, ela deve
-ter a data de pagamento preenchida.
+BR1. If an expense is settled, it must
+have the payment date filled in.
 
-RN2. A despesa deve pertencer a uma categoria e subcategoria.
+BR2. The expense must belong to a category and subcategory.
 
-RN3. A despesa deve ter um valor positivo e maior que zero.
+BR3. The expense must have a positive value greater than zero.
 
-RN4. A despesa deve pertencer a uma conta.
+BR4. The expense must belong to an account.
 ***
 
-### C4. Transferência entre contas
+### C4. Transfer between accounts
 
-#### Definição
+#### Definition
 
-A transferência deve ser feita entre duas contas diferentes.
-Parâmetros:
+The transfer must be made between two different accounts.
+Parameters:
 
-- Noma. Ex: Transferência de Santander para Carteira
-- Valor. Ex: $20,30
-- Conta de origem. Ex: Santander
-- Conta de destino. Ex: Carteira
-- Data de vencimento.
-- Data de efetivação.
-- Data de lançamento.
-- Efetivada.
+- Name. E.g.: Transfer from Santander to Wallet
+- Amount. E.g.: $20.30
+- Source account. E.g.: Santander
+- Destination account. E.g.: Wallet
+- Due date.
+- Settlement date.
+- Entry date.
+- Settled.
 
-##### C4. Regras de negócio
+##### C4. Business rules
 
-RN1. A transferência deve creditar a conta de destino e
-debitar a conta de origem.
+BR1. The transfer must credit the destination account and
+debit the source account.
 
-RN2. Se a transferência for efetivada
-a data de efetivação deve ser preenchida.
+BR2. If the transfer is settled,
+the settlement date must be filled in.
 ***

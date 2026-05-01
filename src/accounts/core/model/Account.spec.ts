@@ -5,13 +5,13 @@ describe('Account', () => {
   describe('create()', () => {
     it('should create an account with valid props', () => {
       const result = Account.create({
-        name: 'Conta corrente',
+        name: 'Checking account',
         balance: 100.5,
         openingBalance: 25,
       });
 
       expect(result.isSuccess).toBe(true);
-      expect(result.value.name).toBe('Conta corrente');
+      expect(result.value.name).toBe('Checking account');
       expect(result.value.balance.amount).toBe(100.5);
       expect(result.value.balance.amountInCents).toBe(10050);
       expect(result.value.openingBalance.amount).toBe(25);
@@ -55,7 +55,7 @@ describe('Account', () => {
   describe('actualBalance', () => {
     it('should return balance plus openingBalance', () => {
       const { value: account } = Account.create({
-        name: 'Poupança',
+        name: 'Savings',
         balance: 50,
         openingBalance: 12.34,
       });

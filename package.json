@@ -1,7 +1,7 @@
 {
   "name": "finance-manager",
   "version": "1.0.0",
-  "description": "Gerenciador financeiro pessoal",
+  "description": "Personal finance manager",
   "author": "",
   "license": "ISC",
   "scripts": {
