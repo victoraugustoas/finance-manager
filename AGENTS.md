@@ -60,5 +60,26 @@ A pasta shared conterá bases utilizadas em diversos contextos.
 
 ## Comandos
 
-- `pnpm install`: instala as dependências do projeto
-- `nvm use`: para usar a versão correta do node.js
+- instala o node.js
+
+```bash
+nvm install
+```
+
+- para usar a versão correta do node.js
+
+```bash
+nvm use
+```
+
+- habilita o uso do corepack
+
+```bash
+npm install -g corepack && corepack enable
+```
+
+- instala as dependências do projeto
+
+```bash
+pnpm install
+```
