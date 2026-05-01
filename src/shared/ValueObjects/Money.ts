@@ -1,5 +1,5 @@
 import { Result, ValueObject } from '../base';
-import { Errors } from '@/shared/base/Errors';
+import { Errors } from '../base/Errors';
 
 type MoneyProps = {
   amountInCents: number;

@@ -1,4 +1,4 @@
-import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/category';
+import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
 import { Errors } from '@/shared/base/Errors';
 
 describe('Category', () => {

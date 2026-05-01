@@ -1,6 +1,6 @@
-import { Entity } from '@/shared/base/entity';
+import { Entity } from '@/shared/base/Entity';
 import { Errors } from '@/shared/base/Errors';
-import { Result } from '@/shared/base/result';
+import { Result } from '@/shared/base/Result';
 
 interface SubCategoryProps {
   id?: string;

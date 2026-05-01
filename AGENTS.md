@@ -58,6 +58,16 @@ A pasta shared conterá bases utilizadas em diversos contextos.
 - Entity: classe para representar entidades.
 - RootAggregate: classe para representar os agregados.****
 
+### Convenção de nomeação de arquivos
+
+Arquivos de componentes de código (classes, entidades, value objects, aggregates, use cases, etc.) devem usar **PascalCase**.
+
+Exemplos: `Account.ts`, `Category.ts`, `SubCategory.ts`, `AggregateRoot.ts`, `Money.ts`, `Result.ts`.
+
+Arquivos de teste seguem o mesmo padrão com sufixo `.spec.ts`: `Account.spec.ts`, `Money.spec.ts`.
+
+Exceções: `index.ts` (barrel files) permanecem em lowercase.
+
 ## Comandos
 
 - instala o node.js

@@ -1,5 +1,5 @@
 import { Errors } from '@/shared/base/Errors';
-import { Account } from './account';
+import { Account } from './Account';
 
 describe('Account', () => {
   describe('create()', () => {

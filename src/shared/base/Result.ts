@@ -1,4 +1,4 @@
-import { Errors } from '@/shared/base/Errors';
+import { Errors } from './Errors';
 
 export type ResultError = {
   message?: string;

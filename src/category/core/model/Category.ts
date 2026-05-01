@@ -1,7 +1,7 @@
-import { AggregateRoot } from '@/shared/base/aggregate-root';
+import { AggregateRoot } from '@/shared/base/AggregateRoot';
 import { Errors } from '@/shared/base/Errors';
-import { Result } from '@/shared/base/result';
-import { SubCategory } from './sub-category';
+import { Result } from '@/shared/base/Result';
+import { SubCategory } from './SubCategory';
 
 export const DEFAULT_SUBCATEGORY_NAME = 'Others' as const;
 
