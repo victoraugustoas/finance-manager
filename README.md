@@ -111,7 +111,7 @@ Hooks live in `.githooks` (enabled by the npm/pnpm `prepare` script after `pnpm 
 
 ## CI/CD
 
-On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, pnpm 10, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) (`coverage/lcov.info`). If the Codecov badge shows as unknown until the first successful upload, enable the Codecov GitHub app for the repository or wait for the first run on `main`.
+On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, pnpm 10, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) via **OIDC** (`use_oidc: true` in `codecov/codecov-action`, workflow `permissions: id-token: write`) so you do not need a `CODECOV_TOKEN` secret for uploads from this repo’s Actions. Install the [Codecov GitHub app](https://github.com/apps/codecov) on the repository if uploads still fail (required for OIDC trust in some setups). The workflow checks that `coverage/lcov.info` exists after Jest (reporters include `lcov` in `jest.config.ts`).
 
 ---
 

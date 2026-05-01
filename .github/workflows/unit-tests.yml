@@ -10,6 +10,10 @@ concurrency:
   group: pr-check-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -36,8 +40,13 @@ jobs:
       - name: Run unit tests with coverage
         run: pnpm test:cov
 
+      - name: Verify coverage report
+        run: test -f coverage/lcov.info
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
+          use_oidc: true
           files: coverage/lcov.info
+          disable_search: true
           fail_ci_if_error: false
