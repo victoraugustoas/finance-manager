@@ -22,7 +22,7 @@ Exact versions are listed in `package.json`.
 - **Node.js** matching `.nvmrc` (recommended via [nvm](https://github.com/nvm-sh/nvm))
 - **Corepack** (not bundled with Node.js in recent releases; install globally, then enable — see Installation)
 - **pnpm** (via Corepack after `corepack enable`, or install pnpm globally)
-- **PostgreSQL** will be required once the infrastructure layer and Prisma are wired up; the default development URL is in `.env.example`
+- **PostgreSQL** will be required once the infrastructure layer and Prisma are wired up
 
 ## Installation
 
@@ -34,12 +34,6 @@ pnpm install
 ```
 
 Corepack is no longer shipped with Node.js in many setups; install it with `npm install -g corepack` before `corepack enable` so pnpm can be managed by Corepack.
-
-Copy example environment variables and adjust as needed:
-
-```bash
-cp .env.example .env
-```
 
 The `prepare` script in `package.json` points Git at the hooks in `.githooks` (`git config core.hooksPath .githooks`).
 
@@ -99,16 +93,6 @@ The `src/shared` folder holds base types (`UseCase`, `Result`, `ValueObject`, `E
 - Barrel files named `index.ts` stay lowercase.
 
 See `AGENTS.md` for more detail for contributors and tooling.
-
-## Environment variables
-
-| Variable       | Description |
-| -------------- | ----------- |
-| `DATABASE_URL` | PostgreSQL connection URL (Prisma) |
-| `PORT`         | HTTP port for the app (example default: `3000`) |
-| `NODE_ENV`     | Runtime environment (e.g. `development`) |
-
-Source: `.env.example`.
 
 ## Git hooks
 
