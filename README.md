@@ -1,7 +1,7 @@
 # Finance Manager
 
 [![PR Check](https://github.com/victoraugustoas/finance-manager/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/victoraugustoas/finance-manager/actions/workflows/unit-tests.yml)
-[![codecov](https://codecov.io/gh/victoraugustoas/finance-manager/graph/badge.svg)](https://codecov.io/gh/victoraugustoas/finance-manager)
+[![codecov](https://codecov.io/github/victoraugustoas/finance-manager/graph/badge.svg?token=E48S83JRKN)](https://codecov.io/github/victoraugustoas/finance-manager)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-10-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
