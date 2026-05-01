@@ -1,5 +1,11 @@
 # Finance Manager
 
+[![PR Check](https://github.com/victoraugustoas/finance-manager/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/victoraugustoas/finance-manager/actions/workflows/unit-tests.yml)
+[![codecov](https://codecov.io/gh/victoraugustoas/finance-manager/graph/badge.svg)](https://codecov.io/gh/victoraugustoas/finance-manager)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+
 Personal finance manager in TypeScript: record expenses, incomes, and transfers between accounts, with a foundation for analyses (for example, charts of largest expenses and incomes). The project follows **Clean Architecture** and **DDD** (Domain-Driven Design).
 
 ## Technologies
@@ -105,7 +111,7 @@ Hooks live in `.githooks` (enabled by the npm/pnpm `prepare` script after `pnpm 
 
 ## CI/CD
 
-On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests**: checkout, pnpm 10, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test`.
+On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, pnpm 10, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) (`coverage/lcov.info`). If the Codecov badge shows as unknown until the first successful upload, enable the Codecov GitHub app for the repository or wait for the first run on `main`.
 
 ---
 
