@@ -86,10 +86,13 @@ nvm install
 nvm use
 ```
 
-- Enable corepack
+- Install and enable Corepack
+
+Corepack is not bundled with Node.js in many setups; install it globally, then enable it so pnpm can be managed by Corepack.
 
 ```bash
-npm install -g corepack && corepack enable
+npm install -g corepack
+corepack enable
 ```
 
 - Install project dependencies
