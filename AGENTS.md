@@ -68,6 +68,10 @@ Arquivos de teste seguem o mesmo padrão com sufixo `.spec.ts`: `Account.spec.ts
 
 Exceções: `index.ts` (barrel files) permanecem em lowercase.
 
+## Skills
+
+- `.agents/update-readme.md` — Manter o `README.md` atualizado. Usar ao final de qualquer tarefa que altere estrutura, dependências, scripts, contextos, variáveis de ambiente ou convenções do projeto.
+
 ## Comandos
 
 - instala o node.js
