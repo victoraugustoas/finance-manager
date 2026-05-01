@@ -2,6 +2,7 @@ import {AggregateRoot, Result} from "@/shared/base";
 import {Money} from "@/shared/ValueObjects";
 
 interface AccountProps {
+  id?: string;
   name: string;
   balance: number;
   openingBalance: number;
@@ -13,7 +14,7 @@ export class Account extends AggregateRoot<AccountProps> {
   readonly openingBalance: Money;
 
   private constructor(props: AccountProps) {
-    super(props);
+    super(props, props.id);
     this.name = props.name;
     this.balance = Money.create(props.balance).value;
     this.openingBalance = Money.create(props.openingBalance).value;
