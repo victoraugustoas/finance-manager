@@ -1,5 +1,5 @@
-import {Errors} from '@/shared/base/Errors';
-import {Account} from './account';
+import { Errors } from '@/shared/base/Errors';
+import { Account } from './Account';
 
 describe('Account', () => {
   describe('create()', () => {
@@ -54,7 +54,7 @@ describe('Account', () => {
 
   describe('actualBalance', () => {
     it('should return balance plus openingBalance', () => {
-      const {value: account} = Account.create({
+      const { value: account } = Account.create({
         name: 'Poupança',
         balance: 50,
         openingBalance: 12.34,

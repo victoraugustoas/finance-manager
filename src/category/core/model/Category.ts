@@ -1,7 +1,7 @@
-import {AggregateRoot} from '@/shared/base/aggregate-root';
-import {Errors} from '@/shared/base/Errors';
-import {Result} from '@/shared/base/result';
-import {SubCategory} from './sub-category';
+import { AggregateRoot } from '@/shared/base/AggregateRoot';
+import { Errors } from '@/shared/base/Errors';
+import { Result } from '@/shared/base/Result';
+import { SubCategory } from './SubCategory';
 
 export const DEFAULT_SUBCATEGORY_NAME = 'Others' as const;
 
@@ -28,16 +28,16 @@ export class Category extends AggregateRoot<CategoryProps> {
   static create(props: CategoryProps): Result<Category> {
     const trimmed = props.name.trim();
     if (!trimmed) {
-      return Result.fail({code: Errors.CATEGORY_NAME_EMPTY});
+      return Result.fail({ code: Errors.CATEGORY_NAME_EMPTY });
     }
-    const category = new Category({...props, name: trimmed});
-    const defaultSub = SubCategory.new({name: DEFAULT_SUBCATEGORY_NAME});
+    const category = new Category({ ...props, name: trimmed });
+    const defaultSub = SubCategory.new({ name: DEFAULT_SUBCATEGORY_NAME });
     category._subCategories.push(defaultSub);
     return Result.ok(category);
   }
 
   addSubCategory(name: string): Result<SubCategory> {
-    const sub = SubCategory.create({name});
+    const sub = SubCategory.create({ name });
     if (sub.isFailure) {
       return sub;
     }
@@ -45,7 +45,7 @@ export class Category extends AggregateRoot<CategoryProps> {
       (s) => s.name.toLowerCase() === sub.value.name.toLowerCase(),
     );
     if (duplicate) {
-      return Result.fail({code: Errors.SUBCATEGORY_DUPLICATE_NAME});
+      return Result.fail({ code: Errors.SUBCATEGORY_DUPLICATE_NAME });
     }
     this._subCategories.push(sub.value);
     return Result.ok(sub.value);

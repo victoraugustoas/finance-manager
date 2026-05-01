@@ -1,5 +1,5 @@
-import {Result, ValueObject} from '../base';
-import {Errors} from "@/shared/base/Errors";
+import { Result, ValueObject } from '../base';
+import { Errors } from '../base/Errors';
 
 type MoneyProps = {
   amountInCents: number;
@@ -21,27 +21,27 @@ export class Money extends ValueObject<MoneyProps> {
 
   static create(amount: number): Result<Money> {
     if (!Number.isFinite(amount)) {
-      return Result.fail({code: Errors.MONEY_NOT_FINITE});
+      return Result.fail({ code: Errors.MONEY_NOT_FINITE });
     }
 
-    return Result.ok(new Money({amountInCents: Math.round(amount * 100)}));
+    return Result.ok(new Money({ amountInCents: Math.round(amount * 100) }));
   }
 
   static fromCents(amountInCents: number): Result<Money> {
     if (!Number.isInteger(amountInCents)) {
-      return Result.fail({code: Errors.MONEY_CENTS_NOT_INTEGER});
+      return Result.fail({ code: Errors.MONEY_CENTS_NOT_INTEGER });
     }
-    return Result.ok(new Money({amountInCents}));
+    return Result.ok(new Money({ amountInCents }));
   }
 
   add(other: Money): Money {
-    return new Money({amountInCents: this.amountInCents + other.amountInCents});
+    return new Money({ amountInCents: this.amountInCents + other.amountInCents });
   }
 
   subtract(other: Money): Result<Money> {
     const result = this.amountInCents - other.amountInCents;
 
-    return Result.ok(new Money({amountInCents: result}));
+    return Result.ok(new Money({ amountInCents: result }));
   }
 
   isGreaterThan(other: Money): boolean {

@@ -58,6 +58,16 @@ A pasta shared conterá bases utilizadas em diversos contextos.
 - Entity: classe para representar entidades.
 - RootAggregate: classe para representar os agregados.****
 
+### Convenção de nomeação de arquivos
+
+Arquivos de componentes de código (classes, entidades, value objects, aggregates, use cases, etc.) devem usar **PascalCase**.
+
+Exemplos: `Account.ts`, `Category.ts`, `SubCategory.ts`, `AggregateRoot.ts`, `Money.ts`, `Result.ts`.
+
+Arquivos de teste seguem o mesmo padrão com sufixo `.spec.ts`: `Account.spec.ts`, `Money.spec.ts`.
+
+Exceções: `index.ts` (barrel files) permanecem em lowercase.
+
 ## Comandos
 
 - instala o node.js
@@ -83,3 +93,13 @@ npm install -g corepack && corepack enable
 ```bash
 pnpm install
 ```
+
+## Cursor Cloud specific instructions
+
+- O projeto está em fase inicial de domínio (DDD). Não existe `src/main.ts` nem controllers NestJS, portanto `pnpm start:dev` ainda não funciona. Os comandos válidos atualmente são `pnpm test`, `pnpm lint`, `pnpm build` e `pnpm format`.
+- Prisma está declarado como dependência mas **não existe** `prisma/schema.prisma` nem migrações. Os scripts `prisma:generate` e `prisma:migrate` só funcionarão após a criação do schema.
+- PostgreSQL será necessário quando a camada de infraestrutura for implementada. A string de conexão padrão está em `.env.example`.
+- O Prisma 7 não suporta oficialmente o Node.js 25 (apenas 20.19+, 22.12+, 24.0+), mas funciona sem problemas para build/test. Ignore o warning do preinstall.
+- Foram adicionadas as dependências `@eslint/js` e `typescript-eslint` ao `package.json` pois o `eslint.config.mjs` as importa mas não estavam declaradas — essas dependências são necessárias para `pnpm lint` funcionar.
+- A configuração `pnpm.onlyBuiltDependencies` foi adicionada ao `package.json` para permitir build scripts de `@nestjs/core`, `@prisma/engines`, `prisma`, `unrs-resolver` e `inotify` sem necessidade de aprovação interativa.
+- Para referência rápida dos scripts disponíveis, consulte o `package.json` na seção `scripts`.
