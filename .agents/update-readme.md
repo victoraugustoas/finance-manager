@@ -8,7 +8,7 @@ This skill should be used **at the end of any task** that changes one of the fol
 - Dependencies (`package.json`)
 - Available scripts (`package.json` → `scripts`)
 - Bounded contexts (Account, Transaction, Category, Notifications, or new ones)
-- Environment variables (`.env.example`)
+- Environment variables (when `.env.example` exists)
 - Project conventions (naming, architecture, patterns)
 - Infrastructure configuration (Docker, Prisma, database)
 - Git hooks or CI/CD
@@ -56,7 +56,7 @@ Code conventions adopted (file naming, formatting, etc).
 
 ## Environment variables
 
-List of variables with descriptions, based on `.env.example`.
+Include this section only when the project ships `.env.example` (or equivalent documented env contract). List variables with descriptions from that file.
 
 ## Git Hooks
 
@@ -75,7 +75,7 @@ Read the following files to get the current state of the project:
 
 - `package.json` — scripts, dependencies, and versions
 - `.nvmrc` — Node.js version
-- `.env.example` — environment variables
+- `.env.example` — environment variables (if present)
 - `AGENTS.md` — project overview, contexts, and conventions
 - `tsconfig.json` — TypeScript configuration
 - `.githooks/` — configured git hooks

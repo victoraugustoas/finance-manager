@@ -86,10 +86,13 @@ nvm install
 nvm use
 ```
 
-- Enable corepack
+- Install and enable Corepack
+
+Corepack is not bundled with Node.js in many setups; install it globally, then enable it so pnpm can be managed by Corepack.
 
 ```bash
-npm install -g corepack && corepack enable
+npm install -g corepack
+corepack enable
 ```
 
 - Install project dependencies
@@ -102,7 +105,7 @@ pnpm install
 
 - The project is in an early domain modeling phase (DDD). There is no `src/main.ts` or NestJS controllers, so `pnpm start:dev` does not work yet. Currently valid commands are `pnpm test`, `pnpm lint`, `pnpm build`, and `pnpm format`.
 - Prisma is declared as a dependency but `prisma/schema.prisma` and migrations **do not exist** yet. The `prisma:generate` and `prisma:migrate` scripts will only work after the schema is created.
-- PostgreSQL will be required once the infrastructure layer is implemented. The default connection string is in `.env.example`.
+- PostgreSQL will be required once the infrastructure layer is implemented. Environment variables and `.env.example` will be added when the app reads configuration from the environment.
 - Prisma 7 does not officially support Node.js 25 (only 20.19+, 22.12+, 24.0+), but it works fine for build/test. Ignore the preinstall warning.
 - The dependencies `@eslint/js` and `typescript-eslint` were added to `package.json` because `eslint.config.mjs` imports them but they were not declared — these are required for `pnpm lint` to work.
 - The `pnpm.onlyBuiltDependencies` config was added to `package.json` to allow build scripts from `@nestjs/core`, `@prisma/engines`, `prisma`, and `unrs-resolver` without requiring interactive approval.
