@@ -20,16 +20,20 @@ Exact versions are listed in `package.json`.
 ## Prerequisites
 
 - **Node.js** matching `.nvmrc` (recommended via [nvm](https://github.com/nvm-sh/nvm))
-- **pnpm** (enable Corepack: `corepack enable`, or install pnpm globally)
+- **Corepack** (not bundled with Node.js in recent releases; install globally, then enable — see Installation)
+- **pnpm** (via Corepack after `corepack enable`, or install pnpm globally)
 - **PostgreSQL** will be required once the infrastructure layer and Prisma are wired up; the default development URL is in `.env.example`
 
 ## Installation
 
 ```bash
 nvm use
+npm install -g corepack
 corepack enable
 pnpm install
 ```
+
+Corepack is no longer shipped with Node.js in many setups; install it with `npm install -g corepack` before `corepack enable` so pnpm can be managed by Corepack.
 
 Copy example environment variables and adjust as needed:
 
