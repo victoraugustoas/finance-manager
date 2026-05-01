@@ -2,17 +2,17 @@
 
 ## Briefing
 
-Este projeto é um gerenciador financeiro pessoal.
-Capaz de registrar despesas, receitas e transferências entre contas.
-Gerar análises financeiras como gráficos de onde os maiores gastos e receitas estão,
-permitindo que o usuário tenha uma visão holística da sua vida financeira.
+This project is a personal finance manager.
+It can register expenses, incomes, and transfers between accounts.
+It generates financial analyses such as charts showing where the largest expenses and incomes are,
+allowing users to have a holistic view of their financial life.
 
-## Organização do projeto
+## Project organization
 
-O projeto será construído utilizando princípios da arquitetura limpa e
-DDD (Domain Driven Design). Será escrito em typescript.
+The project is built using Clean Architecture and
+DDD (Domain Driven Design) principles. Written in TypeScript.
 
-### Tecnologias utilizadas
+### Technologies
 
 - Typescript (v6)
 - Node.js (.nvmrc)
@@ -23,72 +23,76 @@ DDD (Domain Driven Design). Será escrito em typescript.
 - Prettier
 - Pnpm as a package manager
 
-### Casos de uso
+### Use cases
 
-Cada contexto terá a sua pasta de casos de uso definido em `src/{context}/core/definitions/UseCasesDefinitions.md`.
-Esse arquivo conterá a descrição dos casos de uso assim como as regras de negócio associadas.
+Each context has its own use cases folder defined in `src/{context}/core/definitions/UseCasesDefinitions.md`.
+This file contains the use case descriptions along with the associated business rules.
 
-### Contextos delimitados
+### Bounded contexts
 
-Teremos contextos delimitados para definir as funcionalidades do sistema.
+The system is organized into bounded contexts to define its functionalities.
 
 #### Account
 
-Responsável pelo ciclo de vida das contas financeiras.
+Responsible for the lifecycle of financial accounts.
 
 #### Transaction
 
-Gerencia despesas, receitas e transferências.
+Manages expenses, incomes, and transfers.
 
 #### Category
 
-Gerencia categorias de despesas e receitas.
+Manages expense and income categories.
 
 #### Notifications
 
-Contexto reativo, acionado por eventos.
+Reactive context, triggered by events.
 
 ### Shared folder
 
-A pasta shared conterá bases utilizadas em diversos contextos.
+The shared folder contains base classes used across multiple contexts.
 
-- UseCase: classe abstrata para os casos de uso.
-- Result: classe para encapsular os resultados.
-- ValueObject: classe para representar valores.
-- Entity: classe para representar entidades.
-- RootAggregate: classe para representar os agregados.****
+- UseCase: abstract class for use cases.
+- Result: class to encapsulate results.
+- ValueObject: class to represent value objects.
+- Entity: class to represent entities.
+- RootAggregate: class to represent aggregate roots.
 
-### Convenção de nomeação de arquivos
+### File naming convention
 
-Arquivos de componentes de código (classes, entidades, value objects, aggregates, use cases, etc.) devem usar **PascalCase**.
+Code component files (classes, entities, value objects, aggregates, use cases, etc.) must use **PascalCase**.
 
-Exemplos: `Account.ts`, `Category.ts`, `SubCategory.ts`, `AggregateRoot.ts`, `Money.ts`, `Result.ts`.
+Examples: `Account.ts`, `Category.ts`, `SubCategory.ts`, `AggregateRoot.ts`, `Money.ts`, `Result.ts`.
 
-Arquivos de teste seguem o mesmo padrão com sufixo `.spec.ts`: `Account.spec.ts`, `Money.spec.ts`.
+Test files follow the same pattern with the `.spec.ts` suffix: `Account.spec.ts`, `Money.spec.ts`.
 
-Exceções: `index.ts` (barrel files) permanecem em lowercase.
+Exceptions: `index.ts` (barrel files) remain in lowercase.
 
-## Comandos
+## Skills
 
-- instala o node.js
+- `.agents/update-readme.md` — Keep `README.md` up to date. Use at the end of any task that changes the project's structure, dependencies, scripts, contexts, environment variables, or conventions.
+
+## Commands
+
+- Install Node.js
 
 ```bash
 nvm install
 ```
 
-- para usar a versão correta do node.js
+- Use the correct Node.js version
 
 ```bash
 nvm use
 ```
 
-- habilita o uso do corepack
+- Enable corepack
 
 ```bash
 npm install -g corepack && corepack enable
 ```
 
-- instala as dependências do projeto
+- Install project dependencies
 
 ```bash
 pnpm install
@@ -96,10 +100,10 @@ pnpm install
 
 ## Cursor Cloud specific instructions
 
-- O projeto está em fase inicial de domínio (DDD). Não existe `src/main.ts` nem controllers NestJS, portanto `pnpm start:dev` ainda não funciona. Os comandos válidos atualmente são `pnpm test`, `pnpm lint`, `pnpm build` e `pnpm format`.
-- Prisma está declarado como dependência mas **não existe** `prisma/schema.prisma` nem migrações. Os scripts `prisma:generate` e `prisma:migrate` só funcionarão após a criação do schema.
-- PostgreSQL será necessário quando a camada de infraestrutura for implementada. A string de conexão padrão está em `.env.example`.
-- O Prisma 7 não suporta oficialmente o Node.js 25 (apenas 20.19+, 22.12+, 24.0+), mas funciona sem problemas para build/test. Ignore o warning do preinstall.
-- Foram adicionadas as dependências `@eslint/js` e `typescript-eslint` ao `package.json` pois o `eslint.config.mjs` as importa mas não estavam declaradas — essas dependências são necessárias para `pnpm lint` funcionar.
-- A configuração `pnpm.onlyBuiltDependencies` foi adicionada ao `package.json` para permitir build scripts de `@nestjs/core`, `@prisma/engines`, `prisma`, `unrs-resolver` e `inotify` sem necessidade de aprovação interativa.
-- Para referência rápida dos scripts disponíveis, consulte o `package.json` na seção `scripts`.
+- The project is in an early domain modeling phase (DDD). There is no `src/main.ts` or NestJS controllers, so `pnpm start:dev` does not work yet. Currently valid commands are `pnpm test`, `pnpm lint`, `pnpm build`, and `pnpm format`.
+- Prisma is declared as a dependency but `prisma/schema.prisma` and migrations **do not exist** yet. The `prisma:generate` and `prisma:migrate` scripts will only work after the schema is created.
+- PostgreSQL will be required once the infrastructure layer is implemented. The default connection string is in `.env.example`.
+- Prisma 7 does not officially support Node.js 25 (only 20.19+, 22.12+, 24.0+), but it works fine for build/test. Ignore the preinstall warning.
+- The dependencies `@eslint/js` and `typescript-eslint` were added to `package.json` because `eslint.config.mjs` imports them but they were not declared — these are required for `pnpm lint` to work.
+- The `pnpm.onlyBuiltDependencies` config was added to `package.json` to allow build scripts from `@nestjs/core`, `@prisma/engines`, `prisma`, and `unrs-resolver` without requiring interactive approval.
+- For a quick reference of available scripts, see the `scripts` section in `package.json`.

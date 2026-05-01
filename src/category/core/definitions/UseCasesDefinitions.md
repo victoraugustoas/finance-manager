@@ -4,29 +4,29 @@
 
 ***
 
-### C1. Cadastrar uma categoria
+### C1. Register a category
 
-#### Definição
+#### Definition
 
-Cadastrar uma categoria deve ter inicialmente os seguintes parâmetros:
+Registering a category should initially have the following parameters:
 
-- Nome. Ex: Supermercado, Educação, Viagem
+- Name. E.g.: Grocery, Education, Travel
 
-#### C1. Regras de negócio
+#### C1. Business rules
 
-RN1. A categoria deve sempre ser criada com uma sub-categoria chamada "Outros"
+BR1. A category must always be created with a subcategory named "Others"
 ***
 
-#### C2. Cadastrar uma subcategoria
+#### C2. Register a subcategory
 
-#### Definição
+#### Definition
 
-Cadastrar uma subcategoria deve ter inicialmente os seguintes parâmetros:
+Registering a subcategory should initially have the following parameters:
 
-- Categoria pai. Exemplo: Educação, Contas de casa, Vestuário
-- Nome. Exemplo: Faculdade, Energia, Calçados
+- Parent category. E.g.: Education, Household bills, Clothing
+- Name. E.g.: College, Electricity, Shoes
 
-#### C2. Regras de negócio
+#### C2. Business rules
 
-RN1. A subcategoria deve pertencer a uma categoria
+BR1. A subcategory must belong to a category
 ***

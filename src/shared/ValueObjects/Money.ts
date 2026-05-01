@@ -14,7 +14,7 @@ export class Money extends ValueObject<MoneyProps> {
     return this.props.amountInCents;
   }
 
-  /** Valor decimal para exibição. Ex: 2523 → 25.23 */
+  /** Decimal value for display. E.g.: 2523 → 25.23 */
   get amount(): number {
     return this.props.amountInCents / 100;
   }

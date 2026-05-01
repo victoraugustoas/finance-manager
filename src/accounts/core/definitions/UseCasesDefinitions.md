@@ -1,16 +1,16 @@
 # Accounts context
 
-## Casos de uso
+## Use Cases
 
 ***
 
-### C1. Cadastrar uma conta
+### C1. Register an account
 
-#### Definição
+#### Definition
 
-Cadastrar uma conta deve ter inicialmente os seguintes parâmetros:
+Registering an account should initially have the following parameters:
 
-- Nome. Ex: Santander, Carteira, Poupança
-- Quantia inicial. Ex: $520,30
+- Name. E.g.: Santander, Wallet, Savings
+- Opening balance. E.g.: $520.30
 
 ***

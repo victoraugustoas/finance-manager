@@ -54,7 +54,7 @@ export class Result<T> {
   }
 
   /**
-   * Combina múltiplos Results; retorna falha no primeiro erro encontrado.
+   * Combines multiple Results; returns failure on the first error found.
    */
   static combine(results: Result<unknown>[]): Result<any> {
     for (const result of results) {
@@ -66,7 +66,7 @@ export class Result<T> {
   }
 
   /**
-   * Transforma o valor interno caso seja sucesso, caso contrário propaga a falha.
+   * Transforms the inner value if successful, otherwise propagates the failure.
    */
   map<U>(fn: (value: T) => U): Result<U> {
     if (this.isFailure) {
@@ -76,7 +76,7 @@ export class Result<T> {
   }
 
   /**
-   * Encadeia outro Result caso seja sucesso, caso contrário propaga a falha.
+   * Chains another Result if successful, otherwise propagates the failure.
    */
   flatMap<U>(fn: (value: T) => Result<U>): Result<U> {
     if (this.isFailure) {

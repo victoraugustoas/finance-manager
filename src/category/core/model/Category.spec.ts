@@ -3,11 +3,11 @@ import { Errors } from '@/shared/base/Errors';
 
 describe('Category', () => {
   describe('create()', () => {
-    it('should create a category with trimmed name and default "Outros" subcategory', () => {
-      const result = Category.create({ name: '  Supermercado  ' });
+    it('should create a category with trimmed name and default "Others" subcategory', () => {
+      const result = Category.create({ name: '  Grocery  ' });
 
       expect(result.isSuccess).toBe(true);
-      expect(result.value.name).toBe('Supermercado');
+      expect(result.value.name).toBe('Grocery');
       expect(result.value.subCategories).toHaveLength(1);
       expect(result.value.subCategories[0].name).toBe(DEFAULT_SUBCATEGORY_NAME);
     });
@@ -22,13 +22,13 @@ describe('Category', () => {
 
   describe('addSubCategory()', () => {
     it('should append a subcategory under the category', () => {
-      const { value: category } = Category.create({ name: 'Educação' });
-      const added = category.addSubCategory('Faculdade');
+      const { value: category } = Category.create({ name: 'Education' });
+      const added = category.addSubCategory('College');
 
       expect(added.isSuccess).toBe(true);
       expect(category.subCategories.map((s) => s.name)).toEqual([
         DEFAULT_SUBCATEGORY_NAME,
-        'Faculdade',
+        'College',
       ]);
     });
 
