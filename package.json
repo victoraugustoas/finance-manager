@@ -38,7 +38,6 @@
     "onlyBuiltDependencies": [
       "@nestjs/core",
       "@prisma/engines",
-      "inotify",
       "prisma",
       "unrs-resolver"
     ]
