@@ -71,10 +71,12 @@ src/
 ├── shared/                 # Shared primitives (Result, Entity, ValueObject, UseCase, etc.)
 ├── accounts/core/          # Account context — model and use case definitions
 ├── category/core/          # Category context — model and use case definitions
-└── transactions/core/      # Transaction context — use case definitions
+├── reporting/core/         # Reporting context — analyses (e.g. category breakdowns) and definitions
+└── transactions/core/      # Transaction context — model and use case definitions
 ```
 
-Each context that documents use cases has `core/definitions/UseCasesDefinitions.md` with business rules in domain language.
+Contexts that document use cases place them under `core/definitions/` — usually `UseCasesDefinitions.md`; the
+reporting context uses `UseCaseDefinitions.md`. Business rules are written in domain language.
 
 ## Architecture
 
@@ -88,6 +90,7 @@ Each context that documents use cases has `core/definitions/UseCasesDefinitions.
 | **Account**       | Lifecycle of financial accounts |
 | **Transaction**   | Expenses, incomes, and transfers |
 | **Category**      | Expense and income categories |
+| **Reporting**     | Aggregates for analysis (e.g. totals by category over a period, filters such as dates and posted status) |
 | **Notifications** | Reactive context driven by events (to be reflected under `src/` when modeled) |
 
 The `src/shared` folder holds base types (`UseCase`, `Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) used across contexts.

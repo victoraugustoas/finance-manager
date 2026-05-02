@@ -1,10 +1,10 @@
-import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
+import { Category, CategoryType, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
 import { Errors } from '@/shared/base/Errors';
 
 describe('Category', () => {
   describe('create()', () => {
     it('should create a category with trimmed name and default "Others" subcategory', () => {
-      const result = Category.create({ name: '  Grocery  ' });
+      const result = Category.create({ name: '  Grocery  ', type: CategoryType.EXPENSE });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value.name).toBe('Grocery');
@@ -13,7 +13,7 @@ describe('Category', () => {
     });
 
     it('should fail with empty name', () => {
-      const result = Category.create({ name: '   ' });
+      const result = Category.create({ name: '   ', type: CategoryType.EXPENSE });
 
       expect(result.isFailure).toBe(true);
       expect(result.error.code).toBe(Errors.CATEGORY_NAME_EMPTY);
@@ -22,7 +22,10 @@ describe('Category', () => {
 
   describe('addSubCategory()', () => {
     it('should append a subcategory under the category', () => {
-      const { value: category } = Category.create({ name: 'Education' });
+      const { value: category } = Category.create({
+        name: 'Education',
+        type: CategoryType.EXPENSE,
+      });
       const added = category.addSubCategory('College');
 
       expect(added.isSuccess).toBe(true);
@@ -33,7 +36,7 @@ describe('Category', () => {
     });
 
     it('should fail when subcategory name is empty', () => {
-      const { value: category } = Category.create({ name: 'X' });
+      const { value: category } = Category.create({ name: 'X', type: CategoryType.INCOME });
       const added = category.addSubCategory('  ');
 
       expect(added.isFailure).toBe(true);
@@ -41,7 +44,7 @@ describe('Category', () => {
     });
 
     it('should fail when subcategory name duplicates an existing one (case insensitive)', () => {
-      const { value: category } = Category.create({ name: 'X' });
+      const { value: category } = Category.create({ name: 'X', type: CategoryType.EXPENSE });
       const second = category.addSubCategory(DEFAULT_SUBCATEGORY_NAME);
 
       expect(second.isFailure).toBe(true);

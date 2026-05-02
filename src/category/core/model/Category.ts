@@ -5,9 +5,15 @@ import { SubCategory } from './SubCategory';
 
 export const DEFAULT_SUBCATEGORY_NAME = 'Others' as const;
 
+export enum CategoryType {
+  INCOME = 'INCOME',
+  EXPENSE = 'EXPENSE',
+}
+
 interface CategoryProps {
   id?: string;
   name: string;
+  type: CategoryType;
 }
 
 export class Category extends AggregateRoot<CategoryProps> {

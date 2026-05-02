@@ -11,6 +11,7 @@
 Registering a category should initially have the following parameters:
 
 - Name. E.g.: Grocery, Education, Travel
+- Type: Expense or Income.
 
 #### C1. Business rules
 

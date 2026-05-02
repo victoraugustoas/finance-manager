@@ -65,6 +65,10 @@ export class Result<T> {
     return Result.ok<void>();
   }
 
+  asFail(): Result<any> {
+    return Result.fail<void>(this._error!);
+  }
+
   /**
    * Transforms the inner value if successful, otherwise propagates the failure.
    */

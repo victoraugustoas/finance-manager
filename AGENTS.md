@@ -25,8 +25,9 @@ DDD (Domain Driven Design) principles. Written in TypeScript.
 
 ### Use cases
 
-Each context has its own use cases folder defined in `src/{context}/core/definitions/UseCasesDefinitions.md`.
-This file contains the use case descriptions along with the associated business rules.
+Each context documents use cases under `src/{context}/core/definitions/`. Most contexts use
+`UseCasesDefinitions.md`; the reporting context uses `UseCaseDefinitions.md`. Those files describe
+the use cases and their business rules.
 
 ### Bounded contexts
 
@@ -43,6 +44,11 @@ Manages expenses, incomes, and transfers.
 #### Category
 
 Manages expense and income categories.
+
+#### Reporting
+
+Aggregates and presents financial data for analysis (for example, breakdown of totals by category
+over a period, with filters such as date range and posted status).
 
 #### Notifications
 
