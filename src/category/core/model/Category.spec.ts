@@ -18,6 +18,36 @@ describe('Category', () => {
       expect(result.isFailure).toBe(true);
       expect(result.error.code).toBe(Errors.CATEGORY_NAME_EMPTY);
     });
+
+    it('should use given subcategories when loading from persistence', () => {
+      const result = Category.create({
+        id: 'cat-1',
+        name: 'Education',
+        type: CategoryType.EXPENSE,
+        subCategories: [
+          { id: 'sub-1', name: DEFAULT_SUBCATEGORY_NAME },
+          { id: 'sub-2', name: 'Books' },
+        ],
+      });
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.value.subCategories.map((s) => s.name)).toEqual([
+        DEFAULT_SUBCATEGORY_NAME,
+        'Books',
+      ]);
+    });
+
+    it('should fail when a persisted subcategory name is invalid', () => {
+      const result = Category.create({
+        id: 'cat-1',
+        name: 'Education',
+        type: CategoryType.EXPENSE,
+        subCategories: [{ id: 'sub-1', name: '   ' }],
+      });
+
+      expect(result.isFailure).toBe(true);
+      expect(result.error.code).toBe(Errors.SUBCATEGORY_NAME_EMPTY);
+    });
   });
 
   describe('addSubCategory()', () => {

@@ -1,5 +1,9 @@
 import { Result } from '@/shared/base';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 export class MapResultErrorToHttpException {
   static throwException(error: Result<any>): void {
@@ -21,6 +25,8 @@ export class MapResultErrorToHttpException {
       case 'TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE':
       case 'END_DATE_NOT_AFTER_START_DATE':
         throw new BadRequestException();
+      case 'CATEGORY_NOT_FOUND':
+        throw new NotFoundException();
     }
   }
 }

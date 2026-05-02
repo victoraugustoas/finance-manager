@@ -1,0 +1,87 @@
+import { Category, CategoryType } from '@/category/core/model/Category';
+import { CategoriesRepository } from '@/category/core/provider/categories.repository';
+import { Result } from '@/shared/base';
+import { Errors } from '@/shared/base/Errors';
+import { PrismaService } from '@/shared/infra/PrismaService';
+
+export class PrismaCategoriesRepository implements CategoriesRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async save(category: Category): Promise<Result<void>> {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.category.upsert({
+          where: { id: category.id },
+          create: {
+            id: category.id,
+            name: category.name,
+            type: category.type,
+            subCategories: {
+              create: category.subCategories.map((s) => ({
+                id: s.id,
+                name: s.name,
+              })),
+            },
+          },
+          update: {
+            name: category.name,
+            type: category.type,
+          },
+        });
+
+        for (const s of category.subCategories) {
+          await tx.subCategory.upsert({
+            where: { id: s.id },
+            create: {
+              id: s.id,
+              name: s.name,
+              categoryId: category.id,
+            },
+            update: {
+              name: s.name,
+            },
+          });
+        }
+
+        const idsToKeep = category.subCategories.map((s) => s.id);
+        if (idsToKeep.length === 0) {
+          await tx.subCategory.deleteMany({ where: { categoryId: category.id } });
+        } else {
+          await tx.subCategory.deleteMany({
+            where: {
+              categoryId: category.id,
+              id: { notIn: idsToKeep },
+            },
+          });
+        }
+      });
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail({
+        code: Errors.PRISMA_INSERT_ERROR,
+        cls: this.constructor.name,
+        data: { error: String(e) },
+      });
+    }
+  }
+
+  async findById(id: string): Promise<Category | null> {
+    const row = await this.prisma.category.findUnique({
+      where: { id },
+      include: { subCategories: true },
+    });
+    if (!row) {
+      return null;
+    }
+    const categoryResult = Category.create({
+      id: row.id,
+      name: row.name,
+      type: row.type as CategoryType,
+      subCategories: row.subCategories.map((s) => ({ id: s.id, name: s.name })),
+    });
+    if (categoryResult.isFailure) {
+      return null;
+    }
+    return categoryResult.value;
+  }
+}

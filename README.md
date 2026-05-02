@@ -59,7 +59,7 @@ Stop and remove containers (volume keeps data): `docker compose down`. Remove da
 | Script                 | Description |
 | ---------------------- | ----------- |
 | `pnpm build`           | Compile the project (Nest CLI → `dist/`) |
-| `pnpm start`           | Start the Nest app (requires `src/main.ts` when it exists) |
+| `pnpm start`           | Start the Nest app (`src/main.ts`) |
 | `pnpm start:dev`       | Same as `start` with watch |
 | `pnpm start:debug`     | Start in debug mode with watch |
 | `pnpm start:prod`      | Run `node dist/main` |
@@ -73,30 +73,50 @@ Stop and remove containers (volume keeps data): `docker compose down`. Remove da
 | `pnpm prisma:migrate`  | `prisma migrate dev` |
 | `pnpm prisma:studio`   | Prisma Studio |
 
-**Current state:** there is no `src/main.ts` or Nest controllers yet; the reliable day-to-day commands are `pnpm test`, `pnpm lint`, `pnpm build`, and `pnpm format`. `pnpm prisma:generate` works with the current schema; applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and migrations under `prisma/migrations`.
+**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts` and `category` infrastructure. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
 
 ## Project structure
 
 ```
 src/
+├── main.ts
+├── entrypoint/
+│   └── entrypoint.module.ts    # Root Nest module
 ├── shared/
-│   ├── base/               # Result, Entity, ValueObject, UseCase, AggregateRoot, DomainEvent, errors
-│   └── ValueObjects/       # Shared value objects (e.g. Money)
-├── accounts/core/
-│   ├── definitions/        # Use case definitions (UseCasesDefinitions.md)
-│   └── model/              # Account aggregate
-├── category/core/
-│   ├── definitions/
-│   └── model/              # Category, SubCategory
+│   ├── base/                   # Result, Entity, ValueObject, UseCase, AggregateRoot, DomainEvent, errors
+│   ├── ValueObjects/           # Shared value objects (e.g. Money)
+│   └── infra/                 # PrismaService, HTTP error mapping
+├── accounts/
+│   ├── core/
+│   │   ├── definitions/
+│   │   ├── model/
+│   │   ├── provider/
+│   │   └── usecases/
+│   └── infra/
+│       ├── controllers/
+│       ├── db/
+│       ├── dtos/
+│       └── module/
+├── category/
+│   ├── core/
+│   │   ├── definitions/
+│   │   ├── model/
+│   │   ├── provider/
+│   │   └── usecases/
+│   └── infra/
+│       ├── controllers/
+│       ├── db/
+│       ├── dtos/
+│       └── module/
 ├── reporting/core/
-│   ├── definitions/        # UseCaseDefinitions.md
+│   ├── definitions/            # UseCaseDefinitions.md
 │   ├── dto/
-│   ├── model/              # e.g. ReportingPeriod
-│   ├── provider/           # Query interfaces for reporting use cases
-│   └── usecases/           # Application services (e.g. category breakdown)
+│   ├── model/
+│   ├── provider/
+│   └── usecases/
 └── transactions/core/
     ├── definitions/
-    └── model/              # Transaction, Expense, Income
+    └── model/
 ```
 
 Contexts that document use cases place them under `core/definitions/` — usually `UseCasesDefinitions.md`; the
@@ -104,7 +124,7 @@ reporting context uses `UseCaseDefinitions.md`. Business rules are written in do
 
 ## Architecture
 
-- **Clean Architecture:** separation between domain, use cases, and (future) infrastructure.
+- **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma).
 - **DDD:** aggregates, entities, value objects, and domain events where applicable; bounded contexts mapped to folders under `src/`.
 
 **Bounded contexts (product view):**

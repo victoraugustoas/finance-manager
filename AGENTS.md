@@ -109,9 +109,9 @@ pnpm install
 
 ## Cursor Cloud specific instructions
 
-- The project is in an early domain modeling phase (DDD). There is no `src/main.ts` or NestJS controllers, so `pnpm start:dev` does not work yet. Currently valid commands are `pnpm test`, `pnpm lint`, `pnpm build`, and `pnpm format`.
-- Prisma is declared as a dependency but `prisma/schema.prisma` and migrations **do not exist** yet. The `prisma:generate` and `prisma:migrate` scripts will only work after the schema is created.
-- PostgreSQL will be required once the infrastructure layer is implemented. Environment variables and `.env.example` will be added when the app reads configuration from the environment.
+- The project uses NestJS with `src/main.ts` and HTTP controllers (e.g. accounts, categories). `pnpm start:dev` runs the app when `DATABASE_URL` is set and migrations are applied.
+- Prisma uses `prisma/schema.prisma` and migrations under `prisma/migrations`. Run `pnpm prisma:generate` after schema edits; apply migrations with `pnpm prisma:migrate` (requires PostgreSQL).
+- PostgreSQL is required for persistence at runtime. Configure `DATABASE_URL` (see `.env` / Docker Compose as documented in `README.md`).
 - Prisma 7 does not officially support Node.js 25 (only 20.19+, 22.12+, 24.0+), but it works fine for build/test. Ignore the preinstall warning.
 - The dependencies `@eslint/js` and `typescript-eslint` were added to `package.json` because `eslint.config.mjs` imports them but they were not declared — these are required for `pnpm lint` to work.
 - The `pnpm.onlyBuiltDependencies` config was added to `package.json` to allow build scripts from `@nestjs/core`, `@prisma/engines`, `prisma`, and `unrs-resolver` without requiring interactive approval.

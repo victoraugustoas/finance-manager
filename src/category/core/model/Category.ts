@@ -10,21 +10,26 @@ export enum CategoryType {
   EXPENSE = 'EXPENSE',
 }
 
-interface CategoryProps {
+export interface CategoryProps {
   id?: string;
   name: string;
   type: CategoryType;
+  subCategories?: Array<{ id?: string; name: string }>;
 }
 
-export class Category extends AggregateRoot<CategoryProps> {
+export class Category extends AggregateRoot<Omit<CategoryProps, 'subCategories'>> {
   private readonly _subCategories: SubCategory[] = [];
 
-  private constructor(props: CategoryProps) {
+  private constructor(props: Omit<CategoryProps, 'subCategories'>) {
     super(props, props.id);
   }
 
   get name(): string {
     return this.props.name;
+  }
+
+  get type(): CategoryType {
+    return this.props.type;
   }
 
   get subCategories(): ReadonlyArray<SubCategory> {
@@ -36,9 +41,20 @@ export class Category extends AggregateRoot<CategoryProps> {
     if (!trimmed) {
       return Result.fail({ code: Errors.CATEGORY_NAME_EMPTY });
     }
-    const category = new Category({ ...props, name: trimmed });
-    const defaultSub = SubCategory.new({ name: DEFAULT_SUBCATEGORY_NAME });
-    category._subCategories.push(defaultSub);
+    const { subCategories, id, type } = props;
+    const category = new Category({ id, type, name: trimmed });
+    if (subCategories !== undefined) {
+      for (const raw of subCategories) {
+        const sub = SubCategory.create({ id: raw.id, name: raw.name });
+        if (sub.isFailure) {
+          return Result.fail(sub.error);
+        }
+        category._subCategories.push(sub.value);
+      }
+    } else {
+      const defaultSub = SubCategory.new({ name: DEFAULT_SUBCATEGORY_NAME });
+      category._subCategories.push(defaultSub);
+    }
     return Result.ok(category);
   }
 

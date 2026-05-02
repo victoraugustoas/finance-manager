@@ -1,4 +1,8 @@
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
 import { MapResultErrorToHttpException } from './MapResultErrorToHttpException';
@@ -42,6 +46,12 @@ describe('MapResultErrorToHttpException', () => {
       const result = Result.fail({ code: 'UNMAPPED_ERROR_CODE' as Errors });
 
       expect(() => MapResultErrorToHttpException.throwException(result)).not.toThrow();
+    });
+
+    it('should throw NotFoundException for CATEGORY_NOT_FOUND', () => {
+      const result = Result.fail({ code: Errors.CATEGORY_NOT_FOUND });
+
+      expect(() => MapResultErrorToHttpException.throwException(result)).toThrow(NotFoundException);
     });
   });
 });

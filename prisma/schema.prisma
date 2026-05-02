@@ -19,3 +19,24 @@ model Account {
   balance         Int
   openingBalance  Int
 }
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+model Category {
+  id              String        @id @default(uuid())
+  name            String
+  type            CategoryType
+  subCategories   SubCategory[]
+
+  @@unique([name, type])
+}
+
+model SubCategory {
+  id          String   @id @default(uuid())
+  name        String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
