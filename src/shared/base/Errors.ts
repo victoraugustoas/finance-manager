@@ -1,8 +1,16 @@
-export enum Errors {
-  MONEY_CENTS_NOT_INTEGER = 'MONEY_CENTS_NOT_INTEGER',
-  MONEY_NOT_FINITE = 'MONEY_NOT_FINITE',
-  CATEGORY_NAME_EMPTY = 'CATEGORY_NAME_EMPTY',
-  SUBCATEGORY_NAME_EMPTY = 'SUBCATEGORY_NAME_EMPTY',
-  CATEGORY_NOT_FOUND = 'CATEGORY_NOT_FOUND',
-  SUBCATEGORY_DUPLICATE_NAME = 'SUBCATEGORY_DUPLICATE_NAME',
+import { TransactionErrors } from "@/transactions/core/model/Errors";
+import { MoneyValueObjectErrors } from "../ValueObjects/Errors";
+import { CategoryErrors } from "@/category/core/model/Errors";
+
+
+const ValueObjectsErrors = {
+  ...MoneyValueObjectErrors,
 }
+
+const ContextErrors = {
+  ...CategoryErrors,
+  ...TransactionErrors,
+}
+
+export const Errors = { ...ValueObjectsErrors, ...ContextErrors }
+export type Errors = keyof typeof Errors;

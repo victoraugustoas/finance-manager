@@ -45,6 +45,7 @@ Parameters:
 - Settlement date.
 - Entry date.
 - Settled.
+- Notes.
 
 ##### C4. Business rules
 
@@ -53,4 +54,33 @@ debit the source account.
 
 BR2. If the transfer is settled,
 the settlement date must be filled in.
+***
+
+### C5. Register income
+
+#### Definition
+
+Registering income should initially have the following parameters:
+
+- Name. E.g.: Salary, Freelance, Dividends
+- Amount. E.g.: $3,500.00
+- Category
+- Subcategory
+- Notes
+- Due date.
+- Entry date.
+- Receipt date.
+- Settled
+- Account
+
+#### C5. Business rules
+
+BR1. If income is settled, it must
+have the receipt date filled in.
+
+BR2. Income must belong to a category and subcategory.
+
+BR3. Income must have a positive value greater than zero.
+
+BR4. Income must belong to an account.
 ***

@@ -1,5 +1,5 @@
 export abstract class Entity<TProps> {
-  protected readonly props: TProps;
+  readonly props: TProps;
   private readonly _id: string;
 
   protected constructor(props: TProps, id?: string) {

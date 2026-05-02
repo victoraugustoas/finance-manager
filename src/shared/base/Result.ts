@@ -1,4 +1,4 @@
-import { Errors } from './Errors';
+import type { Errors } from './Errors';
 
 export type ResultError = {
   message?: string;
