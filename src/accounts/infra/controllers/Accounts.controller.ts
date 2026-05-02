@@ -1,14 +1,7 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  InternalServerErrorException,
-  Logger,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Logger, Post } from '@nestjs/common';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
 import { CreateAccountDto } from '@/accounts/infra/dtos/CreateAccount.dto';
+import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 
 @Controller('accounts')
 export class AccountsController {
@@ -29,7 +22,7 @@ export class AccountsController {
       this.logger.error(
         `Error during create account: ${JSON.stringify({ code, cls, data, message })}`,
       );
-      throw new InternalServerErrorException();
+      MapResultErrorToHttpException.throwException(account);
     }
   }
 }

@@ -1,0 +1,23 @@
+### Variable — change the port if Nest is running elsewhere
+@baseUrl = http://localhost:3000
+
+###############################################################################
+### Accounts — register account (C1)
+### Use the “Send Request” link above the request (REST Client extension).
+###############################################################################
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+
+{
+  "name": "Wallet",
+  "openingBalance": 520.3
+}
+
+###
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+
+{
+  "name": "Nubank",
+  "openingBalance": 0
+}
