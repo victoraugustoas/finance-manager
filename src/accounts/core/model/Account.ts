@@ -1,7 +1,7 @@
 import { AggregateRoot, Result } from '@/shared/base';
 import { Money } from '@/shared/ValueObjects';
 
-interface AccountProps {
+export interface AccountProps {
   id?: string;
   name: string;
   balance: number;

@@ -4,6 +4,7 @@ export type ResultError = {
   message?: string;
   code: Errors;
   cls?: string;
+  data?: Record<string, any>;
 };
 
 export class Result<T> {

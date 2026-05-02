@@ -1,0 +1,24 @@
+# Desenvolvimento local — PostgreSQL alinhado a DATABASE_URL em `.env`.
+# Uso: docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: finance-manager-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devuserpassword
+      POSTGRES_DB: finance-manager
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U devuser -d finance-manager']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

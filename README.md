@@ -16,7 +16,7 @@ Personal finance manager in TypeScript: record expenses, incomes, and transfers 
 | Node.js 25        | Runtime (exact version in `.nvmrc`) |
 | NestJS 11         | Framework (future application layer) |
 | PostgreSQL        | Database (when infrastructure is in place) |
-| Prisma 7          | ORM (after schema is defined) |
+| Prisma 7          | ORM (\`prisma/schema.prisma\`; run \`pnpm prisma:generate\` after schema edits) |
 | ESLint + Prettier | Linting and formatting |
 | Jest 30           | Unit tests |
 | pnpm 10           | Package manager (Corepack / CI) |
@@ -28,7 +28,8 @@ Exact versions are listed in `package.json`.
 - **Node.js** matching `.nvmrc` (recommended via [nvm](https://github.com/nvm-sh/nvm))
 - **Corepack** (not bundled with Node.js in recent releases; install globally, then enable — see Installation)
 - **pnpm** (via Corepack after `corepack enable`, or install pnpm globally)
-- **PostgreSQL** will be required once the infrastructure layer and Prisma are wired up
+- **Docker** (optional) — to run PostgreSQL locally via `docker compose` (see Installation)
+- **PostgreSQL** — use Docker Compose at the repo root or install PostgreSQL yourself; credentials must match `DATABASE_URL` in `.env` (for example `devuser` / `finance-manager` on port `5432`)
 
 Prisma 7 does not officially list Node.js 25 in its supported versions, but build and tests run cleanly on the Node version in `.nvmrc`; you may see a preinstall warning.
 
@@ -44,6 +45,14 @@ pnpm install
 Corepack is no longer shipped with Node.js in many setups; install it with `npm install -g corepack` before `corepack enable` so pnpm can be managed by Corepack.
 
 The `prepare` script in `package.json` points Git at the hooks in `.githooks` (`git config core.hooksPath .githooks`).
+
+PostgreSQL for local development (credentials match the default `DATABASE_URL` in `.env`):
+
+```bash
+docker compose up -d
+```
+
+Stop and remove containers (volume keeps data): `docker compose down`. Remove data as well: `docker compose down -v`.
 
 ## Available scripts
 
@@ -64,7 +73,7 @@ The `prepare` script in `package.json` points Git at the hooks in `.githooks` (`
 | `pnpm prisma:migrate`  | `prisma migrate dev` |
 | `pnpm prisma:studio`   | Prisma Studio |
 
-**Current state:** there is no `src/main.ts` or Nest controllers yet; the reliable day-to-day commands are `pnpm test`, `pnpm lint`, `pnpm build`, and `pnpm format`. The `prisma:*` scripts only work after a Prisma schema and migrations exist in the repo.
+**Current state:** there is no `src/main.ts` or Nest controllers yet; the reliable day-to-day commands are `pnpm test`, `pnpm lint`, `pnpm build`, and `pnpm format`. `pnpm prisma:generate` works with the current schema; applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and migrations under `prisma/migrations`.
 
 ## Project structure
 
