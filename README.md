@@ -13,13 +13,13 @@ Personal finance manager in TypeScript: record expenses, incomes, and transfers 
 | Technology        | Primary use |
 | ----------------- | ----------- |
 | TypeScript 6      | Language and strict typing |
-| Node.js           | Runtime (version in `.nvmrc`) |
+| Node.js 25        | Runtime (exact version in `.nvmrc`) |
 | NestJS 11         | Framework (future application layer) |
 | PostgreSQL        | Database (when infrastructure is in place) |
 | Prisma 7          | ORM (after schema is defined) |
 | ESLint + Prettier | Linting and formatting |
-| Jest              | Unit tests |
-| pnpm              | Package manager |
+| Jest 30           | Unit tests |
+| pnpm 10           | Package manager (Corepack / CI) |
 
 Exact versions are listed in `package.json`.
 
@@ -29,6 +29,8 @@ Exact versions are listed in `package.json`.
 - **Corepack** (not bundled with Node.js in recent releases; install globally, then enable — see Installation)
 - **pnpm** (via Corepack after `corepack enable`, or install pnpm globally)
 - **PostgreSQL** will be required once the infrastructure layer and Prisma are wired up
+
+Prisma 7 does not officially list Node.js 25 in its supported versions, but build and tests run cleanly on the Node version in `.nvmrc`; you may see a preinstall warning.
 
 ## Installation
 
@@ -68,11 +70,24 @@ The `prepare` script in `package.json` points Git at the hooks in `.githooks` (`
 
 ```
 src/
-├── shared/                 # Shared primitives (Result, Entity, ValueObject, UseCase, etc.)
-├── accounts/core/          # Account context — model and use case definitions
-├── category/core/          # Category context — model and use case definitions
-├── reporting/core/         # Reporting context — analyses (e.g. category breakdowns) and definitions
-└── transactions/core/      # Transaction context — model and use case definitions
+├── shared/
+│   ├── base/               # Result, Entity, ValueObject, UseCase, AggregateRoot, DomainEvent, errors
+│   └── ValueObjects/       # Shared value objects (e.g. Money)
+├── accounts/core/
+│   ├── definitions/        # Use case definitions (UseCasesDefinitions.md)
+│   └── model/              # Account aggregate
+├── category/core/
+│   ├── definitions/
+│   └── model/              # Category, SubCategory
+├── reporting/core/
+│   ├── definitions/        # UseCaseDefinitions.md
+│   ├── dto/
+│   ├── model/              # e.g. ReportingPeriod
+│   ├── provider/           # Query interfaces for reporting use cases
+│   └── usecases/           # Application services (e.g. category breakdown)
+└── transactions/core/
+    ├── definitions/
+    └── model/              # Transaction, Expense, Income
 ```
 
 Contexts that document use cases place them under `core/definitions/` — usually `UseCasesDefinitions.md`; the
@@ -93,7 +108,7 @@ reporting context uses `UseCaseDefinitions.md`. Business rules are written in do
 | **Reporting**     | Aggregates for analysis (e.g. totals by category over a period, filters such as dates and posted status) |
 | **Notifications** | Reactive context driven by events (to be reflected under `src/` when modeled) |
 
-The `src/shared` folder holds base types (`UseCase`, `Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) used across contexts.
+The `src/shared` tree holds domain primitives under `shared/base` (`UseCase`, `Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.
 
 ## Conventions
 
@@ -103,7 +118,7 @@ The `src/shared` folder holds base types (`UseCase`, `Result`, `ValueObject`, `E
 
 See `AGENTS.md` for more detail for contributors and tooling.
 
-## Git hooks
+## Git Hooks
 
 Hooks live in `.githooks` (enabled by the npm/pnpm `prepare` script after `pnpm install`):
 
@@ -114,7 +129,7 @@ Hooks live in `.githooks` (enabled by the npm/pnpm `prepare` script after `pnpm 
 
 ## CI/CD
 
-On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, pnpm 10, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) via **OIDC** (`use_oidc: true` in `codecov/codecov-action`, workflow `permissions: id-token: write`) so you do not need a `CODECOV_TOKEN` secret for uploads from this repo’s Actions. Install the [Codecov GitHub app](https://github.com/apps/codecov) on the repository if uploads still fail (required for OIDC trust in some setups). The workflow checks that `coverage/lcov.info` exists after Jest (reporters include `lcov` in `jest.config.ts`).
+On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, **pnpm 10**, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. A step verifies that `coverage/lcov.info` exists. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) via **OIDC** (`use_oidc: true` on `codecov/codecov-action@v6`, workflow `permissions: id-token: write`) so you do not need a `CODECOV_TOKEN` secret for uploads from this repo’s Actions. The Codecov step is configured with `fail_ci_if_error: false` so an upload failure does not fail the job. Install the [Codecov GitHub app](https://github.com/apps/codecov) on the repository if uploads still fail (required for OIDC trust in some setups). Jest reporters include `lcov` in `jest.config.ts`.
 
 ---
 

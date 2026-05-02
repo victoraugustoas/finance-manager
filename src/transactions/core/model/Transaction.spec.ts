@@ -1,5 +1,9 @@
-import {Errors} from '@/shared/base/Errors';
-import {Transaction, TransactionProps, TransactionType,} from '@/transactions/core/model/Transaction';
+import { Errors } from '@/shared/base/Errors';
+import {
+  Transaction,
+  TransactionProps,
+  TransactionType,
+} from '@/transactions/core/model/Transaction';
 
 function baseProps(overrides: Partial<TransactionProps> = {}): TransactionProps {
   const entryDate = new Date('2026-01-10T12:00:00.000Z');
@@ -54,21 +58,21 @@ describe('Transaction', () => {
     });
 
     it('should fail when amount is zero', () => {
-      const result = Transaction.create(baseProps({amount: 0}));
+      const result = Transaction.create(baseProps({ amount: 0 }));
 
       expect(result.isFailure).toBe(true);
       expect(result.error.code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
     });
 
     it('should fail when amount is negative', () => {
-      const result = Transaction.create(baseProps({amount: -1}));
+      const result = Transaction.create(baseProps({ amount: -1 }));
 
       expect(result.isFailure).toBe(true);
       expect(result.error.code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
     });
 
     it('should fail when effectivated is true but effectivatedDate is missing', () => {
-      const result = Transaction.create(baseProps({effectivated: true}));
+      const result = Transaction.create(baseProps({ effectivated: true }));
 
       expect(result.isFailure).toBe(true);
       expect(result.error.code).toBe(Errors.EFFECTIVATED_DATE_NOT_BE_NULL);
