@@ -73,7 +73,7 @@ Stop and remove containers (volume keeps data): `docker compose down`. Remove da
 | `pnpm prisma:migrate`  | `prisma migrate dev` |
 | `pnpm prisma:studio`   | Prisma Studio |
 
-**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts` and `category` infrastructure. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
+**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts`, `category`, and `transactions` infrastructure. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
 
 ## Project structure
 
@@ -114,17 +114,28 @@ src/
 │   ├── model/
 │   ├── provider/
 │   └── usecases/
-└── transactions/core/
-    ├── definitions/
-    └── model/
+└── transactions/
+    ├── core/
+    │   ├── definitions/
+    │   ├── model/
+    │   ├── provider/
+    │   └── usecases/
+    └── infra/
+        ├── acl/account/           # ACL: read-only queries into the Account context
+        ├── controllers/
+        ├── db/
+        ├── dtos/
+        └── module/
 ```
+
+`http/` — sample **REST Client** requests (VS Code / Cursor / IntelliJ); one `.http` file per bounded context that has HTTP infrastructure (`accounts`, `category`, `transactions`).
 
 Contexts that document use cases place them under `core/definitions/` — usually `UseCasesDefinitions.md`; the
 reporting context uses `UseCaseDefinitions.md`. Business rules are written in domain language.
 
 ## Architecture
 
-- **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma).
+- **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma). Cross-context reads at the persistence boundary may use ACLs under `infra/acl/` (ports in `core/provider/`, adapters that talk to Prisma or other integrations).
 - **DDD:** aggregates, entities, value objects, and domain events where applicable; bounded contexts mapped to folders under `src/`.
 
 **Bounded contexts (product view):**

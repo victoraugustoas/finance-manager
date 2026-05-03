@@ -1,0 +1,49 @@
+### Variable — change the port if Nest is running elsewhere
+@baseUrl = http://localhost:3000
+### Set after POST /categories (ID from DB or response when the API returns one)
+@categoryId = 4ed8b634-a922-438b-b92e-2253871107a6
+
+###############################################################################
+### Categories — register category (C1)
+###############################################################################
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "name": "Groceries",
+  "type": "EXPENSE"
+}
+
+###
+POST {{baseUrl}}/categories/{{categoryId}}/subcategories
+Content-Type: application/json
+
+{
+  "name": "Supermarket"
+}
+
+### Category — create (expense), other example
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "name": "Housing",
+  "type": "EXPENSE"
+}
+
+### Category — create (income)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "name": "Salary",
+  "type": "INCOME"
+}
+
+### Category — create subcategory (adjust @categoryId at the top if needed)
+POST {{baseUrl}}/categories/{{categoryId}}/subcategories
+Content-Type: application/json
+
+{
+  "name": "Rent"
+}

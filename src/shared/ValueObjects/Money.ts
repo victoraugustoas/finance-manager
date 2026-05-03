@@ -19,6 +19,10 @@ export class Money extends ValueObject<MoneyProps> {
     return this.props.amountInCents / 100;
   }
 
+  static new(amount: number): Money {
+    return new Money({ amountInCents: Math.round(amount * 100) });
+  }
+
   static create(amount: number): Result<Money> {
     if (!Number.isFinite(amount)) {
       return Result.fail({ code: Errors.MONEY_NOT_FINITE });

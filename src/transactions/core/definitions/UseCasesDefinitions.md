@@ -4,7 +4,7 @@
 
 ***
 
-### C3. Register an expense
+### C1. Register an expense
 
 #### Definition
 
@@ -18,7 +18,7 @@ Registering an expense should initially have the following parameters:
 - Settled
 - Account
 
-#### C3. Business rules
+#### C1. Business rules
 
 BR1. If an expense is settled, it must
 have the payment date filled in.
@@ -30,7 +30,7 @@ BR3. The expense must have a positive value greater than zero.
 BR4. The expense must belong to an account.
 ***
 
-### C4. Transfer between accounts
+### C2. Transfer between accounts
 
 #### Definition
 
@@ -47,7 +47,7 @@ Parameters:
 - Settled.
 - Notes.
 
-##### C4. Business rules
+##### C2. Business rules
 
 BR1. The transfer must credit the destination account and
 debit the source account.
@@ -56,7 +56,7 @@ BR2. If the transfer is settled,
 the settlement date must be filled in.
 ***
 
-### C5. Register income
+### C3. Register income
 
 #### Definition
 
@@ -73,7 +73,7 @@ Registering income should initially have the following parameters:
 - Settled
 - Account
 
-#### C5. Business rules
+#### C3. Business rules
 
 BR1. If income is settled, it must
 have the receipt date filled in.

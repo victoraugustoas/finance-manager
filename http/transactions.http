@@ -1,0 +1,35 @@
+### Variable — change the port if Nest is running elsewhere
+@baseUrl = http://localhost:3000
+
+### Transaction — register expense (C1)
+# Replace accountId, categoryId, and subCategoryId with UUIDs that exist in the database.
+POST {{baseUrl}}/transactions/expenses
+Content-Type: application/json
+
+{
+  "name": "Grocery shopping",
+  "amount": 250.45,
+  "dueDate": "2026-05-05T12:00:00.000Z",
+  "entryDate": "2026-05-03T12:00:00.000Z",
+  "settled": false,
+  "accountId": "a08593c9-2175-4bce-a09a-be032a57c5a0",
+  "categoryId": "4ed8b634-a922-438b-b92e-2253871107a6",
+  "subCategoryId": "b3cca725-9fc4-43f5-b039-cc2da66c1a78",
+  "notes": "Weekly groceries"
+}
+
+### Transaction — expense settled (with payment date)
+POST {{baseUrl}}/transactions/expenses
+Content-Type: application/json
+
+{
+  "name": "Electricity",
+  "amount": 120,
+  "dueDate": "2026-05-10T12:00:00.000Z",
+  "entryDate": "2026-05-01T12:00:00.000Z",
+  "paymentDate": "2026-05-08T12:00:00.000Z",
+  "settled": true,
+  "accountId": "00000000-0000-0000-0000-000000000001",
+  "categoryId": "00000000-0000-0000-0000-000000000002",
+  "subCategoryId": "00000000-0000-0000-0000-000000000003"
+}
