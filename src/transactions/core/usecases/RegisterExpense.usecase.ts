@@ -24,10 +24,6 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, vo
 
   async execute(params: RegisterExpenseParams): Promise<Result<void>> {
     const accountRef = await this.accounts.existsById(params.accountId);
-    if (accountRef.isFailure) {
-      return accountRef.asFail();
-    }
-
     const expense = Expense.create({
       name: params.name,
       amount: params.amount,
@@ -41,8 +37,9 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, vo
       accountId: params.accountId,
     });
 
-    if (expense.isFailure) {
-      return expense.asFail();
+    const combineResults = Result.combine([accountRef, expense]);
+    if (combineResults.isFailure) {
+      return combineResults.asFail();
     }
 
     const persisted = await this.transactionsRepository.saveExpense(expense.value);
