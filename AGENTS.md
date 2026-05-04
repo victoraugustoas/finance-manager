@@ -25,9 +25,8 @@ DDD (Domain Driven Design) principles. Written in TypeScript.
 
 ### Use cases
 
-Each context documents use cases under `src/{context}/core/definitions/`. Most contexts use
-`UseCasesDefinitions.md`; the reporting context uses `UseCaseDefinitions.md`. Those files describe
-the use cases and their business rules.
+Each context documents use cases under `src/{context}/core/definitions/` in `UseCasesDefinitions.md`.
+Those files describe the use cases and their business rules.
 
 ### Bounded contexts
 
