@@ -13,6 +13,7 @@ export class MapResultErrorToHttpException {
 
     switch (error.error.code) {
       case 'PRISMA_INSERT_ERROR':
+      case 'PRISMA_QUERY_ERROR':
         throw new InternalServerErrorException();
       case 'MONEY_CENTS_NOT_INTEGER':
       case 'MONEY_NOT_FINITE':
