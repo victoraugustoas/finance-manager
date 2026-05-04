@@ -9,7 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class RegisterExpenseDto {
+export class RegisterIncomeDto {
   @IsString()
   @MinLength(1)
   @MaxLength(255)
@@ -26,7 +26,7 @@ export class RegisterExpenseDto {
 
   @IsOptional()
   @IsDateString()
-  paymentDate?: string;
+  receiptDate?: string;
 
   @IsBoolean()
   effectivated!: boolean;

@@ -1,14 +1,14 @@
 import { Result, UseCase } from '@/shared/base';
-import { Expense } from '@/transactions/core/model/Expense';
+import { Income } from '@/transactions/core/model/Income';
 import { TransactionAccountQuery } from '../provider/TransactionAccount.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
 
-export type RegisterExpenseParams = {
+export type RegisterIncomeParams = {
   name: string;
   amount: number;
   dueDate: Date;
   entryDate: Date;
-  paymentDate?: Date;
+  receiptDate?: Date;
   effectivated: boolean;
   accountId: string;
   categoryId: string;
@@ -16,15 +16,15 @@ export type RegisterExpenseParams = {
   notes?: string;
 };
 
-export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, void> {
+export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, void> {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountQuery,
   ) {}
 
-  async execute(params: RegisterExpenseParams): Promise<Result<void>> {
+  async execute(params: RegisterIncomeParams): Promise<Result<void>> {
     const accountRef = await this.accounts.existsById(params.accountId);
-    const expense = Expense.create({
+    const income = Income.create({
       name: params.name,
       amount: params.amount,
       categoryId: params.categoryId,
@@ -33,16 +33,16 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, vo
       dueDate: params.dueDate,
       entryDate: params.entryDate,
       effectivated: params.effectivated,
-      effectivatedDate: params.effectivated ? params.paymentDate : undefined,
+      effectivatedDate: params.effectivated ? params.receiptDate : undefined,
       accountId: params.accountId,
     });
 
-    const combineResults = Result.combine([accountRef, expense]);
+    const combineResults = Result.combine([accountRef, income]);
     if (combineResults.isFailure) {
       return combineResults.asFail();
     }
 
-    const persisted = await this.transactionsRepository.saveExpense(expense.value);
+    const persisted = await this.transactionsRepository.saveIncome(income.value);
     if (persisted.isFailure) {
       return persisted.asFail();
     }
