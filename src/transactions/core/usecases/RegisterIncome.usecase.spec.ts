@@ -121,6 +121,7 @@ describe('RegisterIncomeUseCase', () => {
     const result = await useCase.execute(baseParams);
 
     expect(result.isSuccess).toBe(true);
+    expect(result.value.id).toEqual(expect.any(String));
     expect(transactionsRepository.saveIncome).toHaveBeenCalledTimes(1);
   });
 });

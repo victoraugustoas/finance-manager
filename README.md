@@ -14,7 +14,7 @@ Personal finance manager in TypeScript: record expenses, incomes, and transfers 
 | ----------------- | ----------- |
 | TypeScript 6      | Language and strict typing |
 | Node.js 25        | Runtime (exact version in `.nvmrc`) |
-| NestJS 11         | HTTP API and application layer (`src/main.ts`, modules under `src/`) |
+| NestJS 11         | HTTP API and application layer (`src/main.ts`, modules under `src/`); OpenAPI via `@nestjs/swagger` (Swagger UI at `/api`) |
 | PostgreSQL        | Database (local stack via `docker compose`; see Installation) |
 | Prisma 7          | ORM (`prisma/schema.prisma`; run `pnpm prisma:generate` after schema edits) |
 | ESLint + Prettier | Linting and formatting |
@@ -56,6 +56,10 @@ Stop and remove containers (volume keeps data): `docker compose down`. Remove da
 
 The Compose file mounts the named volume at `/var/lib/postgresql`, as required by the official PostgreSQL 18 Docker image. If Postgres fails to start after changing from an older layout (volume previously mounted at `/var/lib/postgresql/data`), remove the stale volume with `docker compose down -v` and bring the stack back up—then recreate the schema (`pnpm prisma:migrate`) or restore from backup. Production upgrades should follow [PostgreSQL migration guidance](https://github.com/docker-library/postgres/issues/37).
 
+### API documentation (OpenAPI)
+
+After starting the app (`pnpm start:dev` or `pnpm start`), **Swagger UI** and the generated OpenAPI document are available at **`/api`** (for example `http://localhost:3000/api` when `PORT` is unset). Controllers and DTOs use decorators such as `@ApiProperty`, `@ApiBody`, `@ApiCreatedResponse`, and `@ApiOkResponse` so request and response schemas stay aligned with the HTTP API.
+
 ## Available scripts
 
 | Script                 | Description |
@@ -75,7 +79,7 @@ The Compose file mounts the named volume at `/var/lib/postgresql`, as required b
 | `pnpm prisma:migrate`  | `prisma migrate dev` |
 | `pnpm prisma:studio`   | Prisma Studio |
 
-**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts`, `category`, `reporting`, and `transactions` infrastructure. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
+**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts`, `category`, `reporting`, and `transactions` infrastructure; successful create/report flows return JSON bodies described in Swagger. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
 
 ## Project structure
 
@@ -113,7 +117,7 @@ Contexts document use cases under `core/definitions/UseCasesDefinitions.md` in d
 | **Account**       | Lifecycle of financial accounts |
 | **Transaction**   | Expenses, incomes, and transfers |
 | **Category**      | Expense and income categories |
-| **Reporting**     | Aggregates for analysis (e.g. totals by category over a period, filters such as dates and posted status) |
+| **Reporting**     | Aggregates for analysis (e.g. `GET /reporting/categories/breakdown` returns `{ "categories": [...] }` with at most six rows; overflow is aggregated under `Others` per domain rules) |
 | **Notifications** | Reactive context driven by events (to be reflected under `src/` when modeled) |
 
 The `src/shared` tree holds domain primitives under `shared/base` (`UseCase`, `Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.

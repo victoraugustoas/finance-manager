@@ -3,6 +3,7 @@ import { BreakdownCategoriesQueryDto } from '@/reporting/infra/dtos/BreakdownCat
 import { BreakdownCategoriesResponseDto } from '@/reporting/infra/dtos/BreakdownCategoriesResponse.dto';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 import { Controller, Get, Logger, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 
 @Controller('reporting')
 export class ReportingController {
@@ -12,7 +13,10 @@ export class ReportingController {
 
   @Get('categories/breakdown')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async breakdownCategories(@Query() query: BreakdownCategoriesQueryDto) {
+  @ApiOkResponse({ type: BreakdownCategoriesResponseDto })
+  async breakdownCategories(
+    @Query() query: BreakdownCategoriesQueryDto,
+  ): Promise<BreakdownCategoriesResponseDto> {
     const result = await this.breakdownCategoriesUseCase.execute({
       startDate: new Date(query.startDate),
       endDate: new Date(query.endDate),

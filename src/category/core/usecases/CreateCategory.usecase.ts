@@ -4,10 +4,10 @@ import { Result, UseCase } from '@/shared/base';
 
 type CreateCategoryParams = Omit<CategoryProps, 'id'>;
 
-export class CreateCategoryUseCase implements UseCase<CreateCategoryParams, void> {
+export class CreateCategoryUseCase implements UseCase<CreateCategoryParams, Category> {
   constructor(private readonly categoriesRepository: CategoriesRepository) {}
 
-  async execute(params: CreateCategoryParams): Promise<Result<void>> {
+  async execute(params: CreateCategoryParams): Promise<Result<Category>> {
     const created = Category.create(params);
     if (created.isFailure) {
       return created.asFail();
@@ -18,6 +18,6 @@ export class CreateCategoryUseCase implements UseCase<CreateCategoryParams, void
       return persisted.asFail();
     }
 
-    return Result.ok(undefined);
+    return Result.ok(created.value);
   }
 }

@@ -1,9 +1,12 @@
 import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
 import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
 import { CreateCategoryDto } from '@/category/infra/dtos/CreateCategory.dto';
+import { CreateCategoryResponseDto } from '@/category/infra/dtos/CreateCategoryResponse.dto';
 import { CreateSubCategoryDto } from '@/category/infra/dtos/CreateSubCategory.dto';
+import { CreateSubCategoryResponseDto } from '@/category/infra/dtos/CreateSubCategoryResponse.dto';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 import { Body, Controller, HttpCode, HttpStatus, Logger, Param, Post } from '@nestjs/common';
+import { ApiBody, ApiCreatedResponse, ApiParam } from '@nestjs/swagger';
 
 @Controller('categories')
 export class CategoriesController {
@@ -16,7 +19,9 @@ export class CategoriesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateCategoryDto) {
+  @ApiBody({ type: CreateCategoryDto })
+  @ApiCreatedResponse({ type: CreateCategoryResponseDto })
+  async create(@Body() dto: CreateCategoryDto): Promise<CreateCategoryResponseDto> {
     const result = await this.createCategoryUseCase.execute({
       name: dto.name,
       type: dto.type,
@@ -25,14 +30,18 @@ export class CategoriesController {
       this.logger.error(`Error during create category: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
+    return CreateCategoryResponseDto.fromDomain(result.value);
   }
 
   @Post(':categoryId/subcategories')
   @HttpCode(HttpStatus.CREATED)
+  @ApiParam({ name: 'categoryId', format: 'uuid' })
+  @ApiBody({ type: CreateSubCategoryDto })
+  @ApiCreatedResponse({ type: CreateSubCategoryResponseDto })
   async createSubcategory(
     @Param('categoryId') categoryId: string,
     @Body() dto: CreateSubCategoryDto,
-  ) {
+  ): Promise<CreateSubCategoryResponseDto> {
     const result = await this.createSubCategoryUseCase.execute({
       categoryId,
       name: dto.name,
@@ -41,5 +50,6 @@ export class CategoriesController {
       this.logger.error(`Error during create subcategory: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
+    return CreateSubCategoryResponseDto.fromDomain(result.value);
   }
 }

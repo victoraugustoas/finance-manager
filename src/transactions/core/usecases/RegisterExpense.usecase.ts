@@ -17,14 +17,14 @@ export type RegisterExpenseParams = {
   notes?: string;
 };
 
-export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, void> {
+export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, Expense> {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountQuery,
     private readonly categoryHierarchy: TransactionCategoryHierarchyQuery,
   ) {}
 
-  async execute(params: RegisterExpenseParams): Promise<Result<void>> {
+  async execute(params: RegisterExpenseParams): Promise<Result<Expense>> {
     const [accountRef, categoryRef] = await Promise.all([
       this.accounts.existsById(params.accountId),
       this.categoryHierarchy.ensureExpenseHierarchy(params.categoryId, params.subCategoryId),
@@ -52,6 +52,6 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, vo
       return persisted.asFail();
     }
 
-    return Result.ok(undefined);
+    return Result.ok(expense.value);
   }
 }

@@ -117,6 +117,7 @@ describe('RegisterExpenseUseCase', () => {
     const result = await useCase.execute(baseParams);
 
     expect(result.isSuccess).toBe(true);
+    expect(result.value.id).toEqual(expect.any(String));
     expect(transactionsRepository.saveExpense).toHaveBeenCalledTimes(1);
   });
 });

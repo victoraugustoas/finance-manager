@@ -4,10 +4,10 @@ import { AccountsRepository } from '@/accounts/core/provider/accounts.repository
 
 type CreateAccountParams = Omit<AccountProps, 'id'>;
 
-export class CreateAccountUseCase implements UseCase<CreateAccountParams, void> {
+export class CreateAccountUseCase implements UseCase<CreateAccountParams, Account> {
   constructor(private readonly accountsRepository: AccountsRepository) {}
 
-  async execute(params: CreateAccountParams): Promise<Result<void>> {
+  async execute(params: CreateAccountParams): Promise<Result<Account>> {
     const createdAccount = Account.create(params);
     if (createdAccount.isFailure) {
       return createdAccount.asFail();
@@ -18,6 +18,6 @@ export class CreateAccountUseCase implements UseCase<CreateAccountParams, void> 
       return createdInPersistenceLayer.asFail();
     }
 
-    return Result.ok(undefined);
+    return Result.ok(createdAccount.value);
   }
 }

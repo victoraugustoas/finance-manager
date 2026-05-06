@@ -17,14 +17,14 @@ export type RegisterIncomeParams = {
   notes?: string;
 };
 
-export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, void> {
+export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, Income> {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountQuery,
     private readonly categoryHierarchy: TransactionCategoryHierarchyQuery,
   ) {}
 
-  async execute(params: RegisterIncomeParams): Promise<Result<void>> {
+  async execute(params: RegisterIncomeParams): Promise<Result<Income>> {
     const [accountRef, categoryRef] = await Promise.all([
       this.accounts.existsById(params.accountId),
       this.categoryHierarchy.ensureIncomeHierarchy(params.categoryId, params.subCategoryId),
@@ -52,6 +52,6 @@ export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, void
       return persisted.asFail();
     }
 
-    return Result.ok(undefined);
+    return Result.ok(income.value);
   }
 }
