@@ -14,10 +14,11 @@ datasource db {
 }
 
 model Account {
-  id              String @id @default(uuid())
-  name            String @unique
-  balance         Int
-  openingBalance  Int
+  id             String        @id @default(uuid())
+  name           String        @unique
+  balance        Int
+  openingBalance Int
+  transactions   Transaction[]
 }
 
 enum CategoryType {
@@ -26,17 +27,49 @@ enum CategoryType {
 }
 
 model Category {
-  id              String        @id @default(uuid())
-  name            String
-  type            CategoryType
-  subCategories   SubCategory[]
+  id            String        @id @default(uuid())
+  name          String
+  type          CategoryType
+  subCategories SubCategory[]
+  transactions  Transaction[]
 
   @@unique([name, type])
 }
 
 model SubCategory {
-  id          String   @id @default(uuid())
-  name        String
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id           String        @id @default(uuid())
+  name         String
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+// Foreign key columns live only on `Transaction`. Prisma still requires inverse `transactions`
+// relation lists on parent models; they do not add columns there, only ORM navigation.
+model Transaction {
+  id               String          @id @default(uuid())
+  name             String
+  /// Amount in minor units (cents), aligned with `Money.amountInCents`.
+  amount           Int
+  notes            String?
+  dueDate          DateTime
+  entryDate        DateTime
+  effectivatedDate DateTime?
+  effectivated     Boolean
+  type             TransactionType
+  categoryId       String
+  category         Category        @relation(fields: [categoryId], references: [id])
+  subCategoryId    String
+  subCategory      SubCategory     @relation(fields: [subCategoryId], references: [id])
+  accountId        String
+  account          Account         @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([subCategoryId])
 }

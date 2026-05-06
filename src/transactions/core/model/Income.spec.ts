@@ -43,7 +43,7 @@ describe('Income', () => {
       const result = Income.create(baseProps({ amount: 0 }));
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
+      expect(result.errors[0].code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
     });
   });
 

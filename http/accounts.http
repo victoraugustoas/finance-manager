@@ -1,7 +1,5 @@
 ### Variable — change the port if Nest is running elsewhere
 @baseUrl = http://localhost:3000
-### Set after POST /categories (ID from DB or response when the API returns one)
-@categoryId = e8b2d7d7-90ae-4633-b959-7252ad897009
 
 ###############################################################################
 ### Accounts — register account (C1)
@@ -22,23 +20,4 @@ Content-Type: application/json
 {
   "name": "Nubank",
   "openingBalance": 0
-}
-
-###############################################################################
-### Categories — register category (C1)
-###############################################################################
-POST {{baseUrl}}/categories
-Content-Type: application/json
-
-{
-  "name": "Groceries",
-  "type": "EXPENSE"
-}
-
-###
-POST {{baseUrl}}/categories/{{categoryId}}/subcategories
-Content-Type: application/json
-
-{
-  "name": "Supermarket"
 }

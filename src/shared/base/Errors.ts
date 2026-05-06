@@ -5,6 +5,7 @@ import { ReportingErrors } from '@/reporting/core/model/Errors';
 
 enum GeneralErrors {
   PRISMA_INSERT_ERROR = 'PRISMA_INSERT_ERROR',
+  PRISMA_QUERY_ERROR = 'PRISMA_QUERY_ERROR',
 }
 
 const ValueObjectsErrors = {

@@ -1,6 +1,8 @@
----
+****---
 name: update-readme
-description: Keeps README.md aligned with the real project—run after changes to src layout, dependencies, scripts, bounded contexts, env docs, conventions, infra, hooks, or CI—by refreshing only outdated sections using package.json, AGENTS.md, and the repo layout.
+description: Keeps README.md aligned with the real project—run after changes to src layout, dependencies, scripts,
+bounded contexts, env docs, conventions, infra, hooks, or CI—by refreshing only outdated sections using package.json,
+AGENTS.md, and the repo layout.
 ---
 
 ## When to use
@@ -18,7 +20,8 @@ This skill should be used **at the end of any task** that changes one of the fol
 
 ## Goal
 
-The `README.md` is the entry point for any developer. It must **accurately** reflect the current state of the project so that a new contributor can understand, install, and run the project without needing to ask questions.
+The `README.md` is the entry point for any developer. It must **accurately** reflect the current state of the project so
+that a new contributor can understand, install, and run the project without needing to ask questions.
 
 ## Expected README.md structure
 
@@ -59,7 +62,8 @@ Code conventions adopted (file naming, formatting, etc).
 
 ## Environment variables
 
-Include this section only when the project ships `.env.example` (or equivalent documented env contract). List variables with descriptions from that file.
+Include this section only when the project ships `.env.example` (or equivalent documented env contract). List variables
+with descriptions from that file.
 
 ## Git Hooks
 
@@ -86,11 +90,21 @@ Read the following files to get the current state of the project:
 
 ### 2. Map the directory structure
 
-List the directories and files inside `src/` to reflect the current folder tree. Include only relevant directories and files (ignore `node_modules`, `dist`, `coverage`).
+Survey `src/` and capture what exists, but **do not paste the same subtree under every bounded context** when layouts
+mirror each other.
+
+- List **top-level** entries under `src/` (`main.ts`, app bootstrap, shared, entry wiring, each bounded-context folder).
+- For bounded contexts that follow the **same layout** (for example `core/` for domain/use cases and `infra/` for
+  adapters—controllers, persistence, modules—plus optional folders like `definitions/`), describe that pattern **once**,
+  then name the contexts that use it. Only expand a full sub-tree when a folder **differs** (extra directories, ACL,
+  alternate layering) or when a one-off folder needs explicit detail (such as `shared/` which is not structured like a
+  context).
+- Omit generated or irrelevant paths (`node_modules`, `dist`, `coverage`).
 
 ### 3. Update README.md
 
-Based on the collected information, update **only the sections that changed**. Do not rewrite sections that are already correct.
+Based on the collected information, update **only the sections that changed**. Do not rewrite sections that are already
+correct.
 
 Rules:
 

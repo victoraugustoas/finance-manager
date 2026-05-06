@@ -1,6 +1,7 @@
 import { AggregateRoot, Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
 import { isAfter, isSameDay } from 'date-fns';
+import { Money } from '@/shared/ValueObjects';
 
 export enum TransactionType {
   INCOME = 'INCOME',
@@ -23,8 +24,11 @@ export interface TransactionProps {
 }
 
 export class Transaction extends AggregateRoot<TransactionProps> {
+  amount: Money;
+
   protected constructor(props: TransactionProps) {
     super(props);
+    this.amount = Money.new(props.amount);
   }
 
   static create(props: TransactionProps): Result<Transaction> {

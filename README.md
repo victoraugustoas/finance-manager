@@ -14,9 +14,9 @@ Personal finance manager in TypeScript: record expenses, incomes, and transfers 
 | ----------------- | ----------- |
 | TypeScript 6      | Language and strict typing |
 | Node.js 25        | Runtime (exact version in `.nvmrc`) |
-| NestJS 11         | Framework (future application layer) |
-| PostgreSQL        | Database (when infrastructure is in place) |
-| Prisma 7          | ORM (\`prisma/schema.prisma\`; run \`pnpm prisma:generate\` after schema edits) |
+| NestJS 11         | HTTP API and application layer (`src/main.ts`, modules under `src/`) |
+| PostgreSQL        | Database (local stack via `docker compose`; see Installation) |
+| Prisma 7          | ORM (`prisma/schema.prisma`; run `pnpm prisma:generate` after schema edits) |
 | ESLint + Prettier | Linting and formatting |
 | Jest 30           | Unit tests |
 | pnpm 10           | Package manager (Corepack / CI) |
@@ -29,7 +29,7 @@ Exact versions are listed in `package.json`.
 - **Corepack** (not bundled with Node.js in recent releases; install globally, then enable — see Installation)
 - **pnpm** (via Corepack after `corepack enable`, or install pnpm globally)
 - **Docker** (optional) — to run PostgreSQL locally via `docker compose` (see Installation)
-- **PostgreSQL** — use Docker Compose at the repo root or install PostgreSQL yourself; credentials must match `DATABASE_URL` in `.env` (for example `devuser` / `finance-manager` on port `5432`)
+- **PostgreSQL** — use Docker Compose at the repo root or install PostgreSQL yourself; values in `DATABASE_URL` (`.env`) must match your database (Compose defaults: user `devuser`, database `finance-manager`, password `devuserpassword`, port `5432` — see `docker-compose.yml`)
 
 Prisma 7 does not officially list Node.js 25 in its supported versions, but build and tests run cleanly on the Node version in `.nvmrc`; you may see a preinstall warning.
 
@@ -54,6 +54,8 @@ docker compose up -d
 
 Stop and remove containers (volume keeps data): `docker compose down`. Remove data as well: `docker compose down -v`.
 
+The Compose file mounts the named volume at `/var/lib/postgresql`, as required by the official PostgreSQL 18 Docker image. If Postgres fails to start after changing from an older layout (volume previously mounted at `/var/lib/postgresql/data`), remove the stale volume with `docker compose down -v` and bring the stack back up—then recreate the schema (`pnpm prisma:migrate`) or restore from backup. Production upgrades should follow [PostgreSQL migration guidance](https://github.com/docker-library/postgres/issues/37).
+
 ## Available scripts
 
 | Script                 | Description |
@@ -69,62 +71,39 @@ Stop and remove containers (volume keeps data): `docker compose down`. Remove da
 | `pnpm test:watch`      | Jest in watch mode |
 | `pnpm test:cov`        | Tests with coverage |
 | `pnpm test:e2e`        | E2E tests (config in `test/jest-e2e.json`) |
-| `pnpm prisma:generate` | `prisma generate` (after adding `prisma/schema.prisma`) |
+| `pnpm prisma:generate` | `prisma generate` (refresh client after `prisma/schema.prisma` changes) |
 | `pnpm prisma:migrate`  | `prisma migrate dev` |
 | `pnpm prisma:studio`   | Prisma Studio |
 
-**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts` and `category` infrastructure. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
+**Current state:** the Nest entry point is `src/main.ts` (`EntryPointModule`). HTTP controllers exist under `accounts`, `category`, `reporting`, and `transactions` infrastructure. Reliable commands include `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm format`, and `pnpm prisma:generate`. Applying schema changes with `pnpm prisma:migrate` requires PostgreSQL (`DATABASE_URL`) and uses migrations under `prisma/migrations`.
 
 ## Project structure
 
-```
-src/
-├── main.ts
-├── entrypoint/
-│   └── entrypoint.module.ts    # Root Nest module
-├── shared/
-│   ├── base/                   # Result, Entity, ValueObject, UseCase, AggregateRoot, DomainEvent, errors
-│   ├── ValueObjects/           # Shared value objects (e.g. Money)
-│   └── infra/                 # PrismaService, HTTP error mapping
-├── accounts/
-│   ├── core/
-│   │   ├── definitions/
-│   │   ├── model/
-│   │   ├── provider/
-│   │   └── usecases/
-│   └── infra/
-│       ├── controllers/
-│       ├── db/
-│       ├── dtos/
-│       └── module/
-├── category/
-│   ├── core/
-│   │   ├── definitions/
-│   │   ├── model/
-│   │   ├── provider/
-│   │   └── usecases/
-│   └── infra/
-│       ├── controllers/
-│       ├── db/
-│       ├── dtos/
-│       └── module/
-├── reporting/core/
-│   ├── definitions/            # UseCaseDefinitions.md
-│   ├── dto/
-│   ├── model/
-│   ├── provider/
-│   └── usecases/
-└── transactions/core/
-    ├── definitions/
-    └── model/
-```
+Top-level under `src/`: `main.ts`, `entrypoint/` (root Nest module), `shared/`, and one folder per bounded context
+(`accounts`, `category`, `reporting`, `transactions`).
 
-Contexts that document use cases place them under `core/definitions/` — usually `UseCasesDefinitions.md`; the
-reporting context uses `UseCaseDefinitions.md`. Business rules are written in domain language.
+**`shared/`** — cross-cutting building blocks: `base/` (e.g. `Result`, `Entity`, `ValueObject`, `UseCase`,
+`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`), and `infra/` (e.g. `PrismaService`, HTTP error mapping).
+
+**Bounded contexts (common layout)** — each context uses `core/` for domain and application code and `infra/` for
+adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per context), `model/`, `provider/`,
+`usecases/`. Typical `infra/`: `controllers/`, `db/`, `dtos/`, `module/`.
+
+**Context-specific additions**
+
+| Context       | Extra paths (beyond the common layout) |
+| ------------- | -------------------------------------- |
+| **reporting** | `core/dto/`, `core/service/` |
+| **transactions** | `infra/acl/account/` — read-only access into the Account context |
+
+Other project roots: `http/` holds sample **REST Client** requests (one `.http` file per bounded context with HTTP:
+`accounts`, `category`, `reporting`, `transactions`); `prisma/` holds the schema and migrations.
+
+Contexts document use cases under `core/definitions/UseCasesDefinitions.md` in domain language.
 
 ## Architecture
 
-- **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma).
+- **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma). Cross-context reads at the persistence boundary may use ACLs under `infra/acl/` (ports in `core/provider/`, adapters that talk to Prisma or other integrations).
 - **DDD:** aggregates, entities, value objects, and domain events where applicable; bounded contexts mapped to folders under `src/`.
 
 **Bounded contexts (product view):**
@@ -144,6 +123,7 @@ The `src/shared` tree holds domain primitives under `shared/base` (`UseCase`, `R
 - Domain and application component files use **PascalCase** (e.g. `Account.ts`, `Money.ts`).
 - Tests: same base name with `.spec.ts` suffix (e.g. `Money.spec.ts`).
 - Barrel files named `index.ts` stay lowercase.
+- TypeScript path alias: `@/*` → `src/*` (see `tsconfig.json` `compilerOptions.paths`).
 
 See `AGENTS.md` for more detail for contributors and tooling.
 

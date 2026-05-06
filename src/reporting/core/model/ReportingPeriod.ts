@@ -12,6 +12,14 @@ export class ReportingPeriod extends ValueObject<ReportingPeriodProps> {
     super(props);
   }
 
+  get startDate(): Date {
+    return this.props.startDate;
+  }
+
+  get endDate(): Date {
+    return this.props.endDate;
+  }
+
   static create(props: ReportingPeriodProps): Result<ReportingPeriod> {
     const endDateIsAfterStartDate =
       isAfter(props.endDate, props.startDate) || isSameDay(props.startDate, props.endDate);

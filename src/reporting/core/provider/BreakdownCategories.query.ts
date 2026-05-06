@@ -1,5 +1,5 @@
 import { Result } from '@/shared/base';
-import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories.dto';
+import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
 import { ReportingPeriod } from '@/reporting/core/model/ReportingPeriod';
 
 export interface BreakdownCategoriesQueryProps {
@@ -9,5 +9,5 @@ export interface BreakdownCategoriesQueryProps {
 }
 
 export abstract class BreakdownCategoriesQuery {
-  abstract execute(props: BreakdownCategoriesQueryProps): Promise<Result<BreakdownCategoriesDTO>>;
+  abstract execute(props: BreakdownCategoriesQueryProps): Promise<Result<CategoryBreakdownRow[]>>;
 }

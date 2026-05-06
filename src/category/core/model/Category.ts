@@ -47,7 +47,7 @@ export class Category extends AggregateRoot<Omit<CategoryProps, 'subCategories'>
       for (const raw of subCategories) {
         const sub = SubCategory.create({ id: raw.id, name: raw.name });
         if (sub.isFailure) {
-          return Result.fail(sub.error);
+          return Result.fail(sub.errors);
         }
         category._subCategories.push(sub.value);
       }

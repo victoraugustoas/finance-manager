@@ -61,21 +61,21 @@ describe('Transaction', () => {
       const result = Transaction.create(baseProps({ amount: 0 }));
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
+      expect(result.errors[0].code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
     });
 
     it('should fail when amount is negative', () => {
       const result = Transaction.create(baseProps({ amount: -1 }));
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
+      expect(result.errors[0].code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
     });
 
     it('should fail when effectivated is true but effectivatedDate is missing', () => {
       const result = Transaction.create(baseProps({ effectivated: true }));
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.EFFECTIVATED_DATE_NOT_BE_NULL);
+      expect(result.errors[0].code).toBe(Errors.EFFECTIVATED_DATE_NOT_BE_NULL);
     });
 
     it('should fail when dueDate is before entryDate (different day)', () => {
@@ -88,7 +88,7 @@ describe('Transaction', () => {
       );
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.TRANSACTION_DUE_DATE_NOT_AFTER_ENTRY_DATE);
+      expect(result.errors[0].code).toBe(Errors.TRANSACTION_DUE_DATE_NOT_AFTER_ENTRY_DATE);
     });
 
     it('should fail when effectivatedDate is before entryDate', () => {
@@ -103,7 +103,7 @@ describe('Transaction', () => {
       );
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE);
+      expect(result.errors[0].code).toBe(Errors.TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE);
     });
   });
 
@@ -153,7 +153,7 @@ describe('Transaction', () => {
       const result = transaction.effectivate(new Date('2026-08-09T12:00:00.000Z'));
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE);
+      expect(result.errors[0].code).toBe(Errors.TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE);
     });
 
     it('should not mutate effectivatedDate when validation fails', () => {
