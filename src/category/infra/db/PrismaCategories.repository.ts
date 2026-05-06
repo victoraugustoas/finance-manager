@@ -73,15 +73,11 @@ export class PrismaCategoriesRepository implements CategoriesRepository {
     if (!row) {
       return null;
     }
-    const categoryResult = Category.create({
+    return Category.new({
       id: row.id,
       name: row.name,
       type: row.type as CategoryType,
       subCategories: row.subCategories.map((s) => ({ id: s.id, name: s.name })),
     });
-    if (categoryResult.isFailure) {
-      return null;
-    }
-    return categoryResult.value;
   }
 }

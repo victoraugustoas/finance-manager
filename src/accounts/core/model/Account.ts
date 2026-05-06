@@ -33,4 +33,8 @@ export class Account extends AggregateRoot<AccountProps> {
 
     return Result.ok(new Account(props));
   }
+
+  static new(props: AccountProps): Account {
+    return new Account(props);
+  }
 }

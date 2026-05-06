@@ -36,6 +36,13 @@ export class Category extends AggregateRoot<Omit<CategoryProps, 'subCategories'>
     return this._subCategories;
   }
 
+  static new(props: CategoryProps): Category {
+    const subCategories = props.subCategories?.map((sub) => SubCategory.new(sub));
+    const category = new Category(props);
+    category._subCategories.push(...(subCategories ?? []));
+    return category;
+  }
+
   static create(props: CategoryProps): Result<Category> {
     const trimmed = props.name.trim();
     if (!trimmed) {
