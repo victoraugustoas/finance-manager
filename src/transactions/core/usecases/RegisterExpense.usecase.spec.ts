@@ -2,6 +2,7 @@ import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { TransactionAccountQuery } from '../provider/TransactionAccount.query';
+import { TransactionCategoryHierarchyQuery } from '../provider/TransactionCategoryHierarchy.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
 
 describe('RegisterExpenseUseCase', () => {
@@ -19,6 +20,11 @@ describe('RegisterExpenseUseCase', () => {
     subCategoryId: 'sub-1',
   };
 
+  const categoryHierarchyOk = {
+    ensureIncomeHierarchy: jest.fn(),
+    ensureExpenseHierarchy: jest.fn().mockResolvedValue(Result.ok(undefined)),
+  } as unknown as TransactionCategoryHierarchyQuery;
+
   it('should fail when domain validation fails without calling persistence', async () => {
     const transactionsRepository = {
       saveExpense: jest.fn(),
@@ -27,7 +33,11 @@ describe('RegisterExpenseUseCase', () => {
       existsById: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as TransactionAccountQuery;
 
-    const useCase = new RegisterExpenseUseCase(transactionsRepository, accounts);
+    const useCase = new RegisterExpenseUseCase(
+      transactionsRepository,
+      accounts,
+      categoryHierarchyOk,
+    );
 
     const result = await useCase.execute({ ...baseParams, amount: 0 });
 
@@ -50,12 +60,43 @@ describe('RegisterExpenseUseCase', () => {
       ),
     } as unknown as TransactionAccountQuery;
 
-    const useCase = new RegisterExpenseUseCase(transactionsRepository, accounts);
+    const useCase = new RegisterExpenseUseCase(
+      transactionsRepository,
+      accounts,
+      categoryHierarchyOk,
+    );
 
     const result = await useCase.execute(baseParams);
 
     expect(result.isFailure).toBe(true);
     expect(result.error.code).toBe(Errors.REFERENCE_ACCOUNT_NOT_FOUND);
+    expect(transactionsRepository.saveExpense).not.toHaveBeenCalled();
+  });
+
+  it('should fail when category hierarchy validation fails without persisting', async () => {
+    const transactionsRepository = {
+      saveExpense: jest.fn(),
+    } as unknown as TransactionsRepository;
+    const accounts = {
+      existsById: jest.fn().mockResolvedValue(Result.ok(undefined)),
+    } as unknown as TransactionAccountQuery;
+    const categoryHierarchy = {
+      ensureIncomeHierarchy: jest.fn(),
+      ensureExpenseHierarchy: jest.fn().mockResolvedValue(
+        Result.fail<void>({
+          code: Errors.REFERENCE_SUBCATEGORY_NOT_IN_CATEGORY,
+          cls: 'test',
+          data: { categoryId: baseParams.categoryId, subCategoryId: baseParams.subCategoryId },
+        }),
+      ),
+    } as unknown as TransactionCategoryHierarchyQuery;
+
+    const useCase = new RegisterExpenseUseCase(transactionsRepository, accounts, categoryHierarchy);
+
+    const result = await useCase.execute(baseParams);
+
+    expect(result.isFailure).toBe(true);
+    expect(result.error.code).toBe(Errors.REFERENCE_SUBCATEGORY_NOT_IN_CATEGORY);
     expect(transactionsRepository.saveExpense).not.toHaveBeenCalled();
   });
 
@@ -67,7 +108,11 @@ describe('RegisterExpenseUseCase', () => {
       existsById: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as TransactionAccountQuery;
 
-    const useCase = new RegisterExpenseUseCase(transactionsRepository, accounts);
+    const useCase = new RegisterExpenseUseCase(
+      transactionsRepository,
+      accounts,
+      categoryHierarchyOk,
+    );
 
     const result = await useCase.execute(baseParams);
 

@@ -1,6 +1,7 @@
 import { Result, UseCase } from '@/shared/base';
 import { Income } from '@/transactions/core/model/Income';
 import { TransactionAccountQuery } from '../provider/TransactionAccount.query';
+import { TransactionCategoryHierarchyQuery } from '../provider/TransactionCategoryHierarchy.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
 
 export type RegisterIncomeParams = {
@@ -20,10 +21,14 @@ export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, void
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountQuery,
+    private readonly categoryHierarchy: TransactionCategoryHierarchyQuery,
   ) {}
 
   async execute(params: RegisterIncomeParams): Promise<Result<void>> {
-    const accountRef = await this.accounts.existsById(params.accountId);
+    const [accountRef, categoryRef] = await Promise.all([
+      this.accounts.existsById(params.accountId),
+      this.categoryHierarchy.ensureIncomeHierarchy(params.categoryId, params.subCategoryId),
+    ]);
     const income = Income.create({
       name: params.name,
       amount: params.amount,
@@ -37,7 +42,7 @@ export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, void
       accountId: params.accountId,
     });
 
-    const combineResults = Result.combine([accountRef, income]);
+    const combineResults = Result.combine([accountRef, categoryRef, income]);
     if (combineResults.isFailure) {
       return combineResults.asFail();
     }

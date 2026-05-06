@@ -27,7 +27,12 @@ export class MapResultErrorToHttpException {
       case 'END_DATE_NOT_AFTER_START_DATE':
         throw new BadRequestException();
       case 'CATEGORY_NOT_FOUND':
+      case 'REFERENCE_CATEGORY_NOT_FOUND':
+      case 'REFERENCE_SUBCATEGORY_NOT_FOUND':
         throw new NotFoundException();
+      case 'REFERENCE_CATEGORY_WRONG_TYPE':
+      case 'REFERENCE_SUBCATEGORY_NOT_IN_CATEGORY':
+        throw new BadRequestException();
     }
   }
 }

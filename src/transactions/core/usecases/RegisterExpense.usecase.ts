@@ -1,6 +1,7 @@
 import { Result, UseCase } from '@/shared/base';
 import { Expense } from '@/transactions/core/model/Expense';
 import { TransactionAccountQuery } from '../provider/TransactionAccount.query';
+import { TransactionCategoryHierarchyQuery } from '../provider/TransactionCategoryHierarchy.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
 
 export type RegisterExpenseParams = {
@@ -20,10 +21,14 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, vo
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountQuery,
+    private readonly categoryHierarchy: TransactionCategoryHierarchyQuery,
   ) {}
 
   async execute(params: RegisterExpenseParams): Promise<Result<void>> {
-    const accountRef = await this.accounts.existsById(params.accountId);
+    const [accountRef, categoryRef] = await Promise.all([
+      this.accounts.existsById(params.accountId),
+      this.categoryHierarchy.ensureExpenseHierarchy(params.categoryId, params.subCategoryId),
+    ]);
     const expense = Expense.create({
       name: params.name,
       amount: params.amount,
@@ -37,7 +42,7 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, vo
       accountId: params.accountId,
     });
 
-    const combineResults = Result.combine([accountRef, expense]);
+    const combineResults = Result.combine([accountRef, categoryRef, expense]);
     if (combineResults.isFailure) {
       return combineResults.asFail();
     }
