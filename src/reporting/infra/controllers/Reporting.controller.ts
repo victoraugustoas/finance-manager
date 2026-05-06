@@ -21,10 +21,7 @@ export class ReportingController {
     });
 
     if (result.isFailure) {
-      const { code, cls, data, message } = result.error;
-      this.logger.error(
-        `Error during breakdown categories: ${JSON.stringify({ code, cls, data, message })}`,
-      );
+      this.logger.error(`Error during breakdown categories: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
 

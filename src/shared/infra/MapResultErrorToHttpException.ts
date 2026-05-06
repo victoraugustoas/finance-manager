@@ -11,7 +11,12 @@ export class MapResultErrorToHttpException {
       return;
     }
 
-    switch (error.error.code) {
+    if (error.errors.length === 0) {
+      return;
+    }
+    const [primary] = error.errors;
+
+    switch (primary.code) {
       case 'PRISMA_INSERT_ERROR':
       case 'PRISMA_QUERY_ERROR':
         throw new InternalServerErrorException();
@@ -25,14 +30,13 @@ export class MapResultErrorToHttpException {
       case 'TRANSACTION_DUE_DATE_NOT_AFTER_ENTRY_DATE':
       case 'TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE':
       case 'END_DATE_NOT_AFTER_START_DATE':
+      case 'REFERENCE_CATEGORY_WRONG_TYPE':
+      case 'REFERENCE_SUBCATEGORY_NOT_IN_CATEGORY':
         throw new BadRequestException();
       case 'CATEGORY_NOT_FOUND':
       case 'REFERENCE_CATEGORY_NOT_FOUND':
       case 'REFERENCE_SUBCATEGORY_NOT_FOUND':
         throw new NotFoundException();
-      case 'REFERENCE_CATEGORY_WRONG_TYPE':
-      case 'REFERENCE_SUBCATEGORY_NOT_IN_CATEGORY':
-        throw new BadRequestException();
     }
   }
 }

@@ -7,17 +7,21 @@ export type ResultError = {
   data?: Record<string, any>;
 };
 
+function normalizeErrors(errorOrErrors: ResultError | readonly ResultError[]): ResultError[] {
+  return ([] as ResultError[]).concat(errorOrErrors as ResultError[] | ResultError);
+}
+
 export class Result<T> {
   private readonly _value?: T;
-  private readonly _error?: ResultError;
+  private readonly _errors?: ResultError[];
 
   private constructor(
     private readonly _isSuccess: boolean,
     value?: T,
-    error?: ResultError,
+    errors?: ResultError[],
   ) {
     this._value = value;
-    this._error = error;
+    this._errors = errors;
   }
 
   get isSuccess(): boolean {
@@ -37,21 +41,21 @@ export class Result<T> {
     return this._value as T;
   }
 
-  get error(): ResultError {
+  get errors(): ResultError[] {
     if (this._isSuccess) {
       throw new Error(
-        'Cannot get error of a successful Result. Check isFailure before accessing error.',
+        'Cannot get errors of a successful Result. Check isFailure before accessing errors.',
       );
     }
-    return this._error as ResultError;
+    return this._errors as ResultError[];
   }
 
   static ok<T>(value?: T): Result<T> {
     return new Result<T>(true, value);
   }
 
-  static fail<T>(error: ResultError): Result<T> {
-    return new Result<T>(false, undefined, error);
+  static fail<T>(errorOrErrors: ResultError | readonly ResultError[]): Result<T> {
+    return new Result<T>(false, undefined, normalizeErrors(errorOrErrors));
   }
 
   /**
@@ -60,14 +64,14 @@ export class Result<T> {
   static combine(results: Result<unknown>[]): Result<any> {
     for (const result of results) {
       if (result.isFailure) {
-        return Result.fail<void>(result._error!);
+        return Result.fail<void>(result._errors!);
       }
     }
     return Result.ok<void>();
   }
 
   asFail(): Result<any> {
-    return Result.fail<void>(this._error!);
+    return Result.fail<void>(this._errors!);
   }
 
   /**
@@ -75,7 +79,7 @@ export class Result<T> {
    */
   map<U>(fn: (value: T) => U): Result<U> {
     if (this.isFailure) {
-      return Result.fail<U>(this._error!);
+      return Result.fail<U>(this._errors!);
     }
     return Result.ok<U>(fn(this._value as T));
   }
@@ -85,7 +89,7 @@ export class Result<T> {
    */
   flatMap<U>(fn: (value: T) => Result<U>): Result<U> {
     if (this.isFailure) {
-      return Result.fail<U>(this._error!);
+      return Result.fail<U>(this._errors!);
     }
     return fn(this._value as T);
   }

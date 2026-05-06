@@ -38,7 +38,7 @@ describe('BreakdownCategoriesUseCase', () => {
       });
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.END_DATE_NOT_AFTER_START_DATE);
+      expect(result.errors[0].code).toBe(Errors.END_DATE_NOT_AFTER_START_DATE);
       expect(executeMock).not.toHaveBeenCalled();
     });
 

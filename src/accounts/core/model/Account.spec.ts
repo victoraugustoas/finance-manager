@@ -37,7 +37,7 @@ describe('Account', () => {
       });
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.MONEY_NOT_FINITE);
+      expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
     });
 
     it('should fail when openingBalance is not finite (Infinity)', () => {
@@ -48,7 +48,7 @@ describe('Account', () => {
       });
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.MONEY_NOT_FINITE);
+      expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
     });
   });
 

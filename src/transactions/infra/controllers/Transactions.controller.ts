@@ -31,10 +31,7 @@ export class TransactionsController {
     });
 
     if (result.isFailure) {
-      const { code, cls, data, message } = result.error;
-      this.logger.error(
-        `Error during register expense: ${JSON.stringify({ code, cls, data, message })}`,
-      );
+      this.logger.error(`Error during register expense: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
   }
@@ -56,10 +53,7 @@ export class TransactionsController {
     });
 
     if (result.isFailure) {
-      const { code, cls, data, message } = result.error;
-      this.logger.error(
-        `Error during register income: ${JSON.stringify({ code, cls, data, message })}`,
-      );
+      this.logger.error(`Error during register income: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
   }

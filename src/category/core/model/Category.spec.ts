@@ -16,7 +16,7 @@ describe('Category', () => {
       const result = Category.create({ name: '   ', type: CategoryType.EXPENSE });
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.CATEGORY_NAME_EMPTY);
+      expect(result.errors[0].code).toBe(Errors.CATEGORY_NAME_EMPTY);
     });
 
     it('should use given subcategories when loading from persistence', () => {
@@ -46,7 +46,7 @@ describe('Category', () => {
       });
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.SUBCATEGORY_NAME_EMPTY);
+      expect(result.errors[0].code).toBe(Errors.SUBCATEGORY_NAME_EMPTY);
     });
   });
 
@@ -70,7 +70,7 @@ describe('Category', () => {
       const added = category.addSubCategory('  ');
 
       expect(added.isFailure).toBe(true);
-      expect(added.error.code).toBe(Errors.SUBCATEGORY_NAME_EMPTY);
+      expect(added.errors[0].code).toBe(Errors.SUBCATEGORY_NAME_EMPTY);
     });
 
     it('should fail when subcategory name duplicates an existing one (case insensitive)', () => {
@@ -78,7 +78,7 @@ describe('Category', () => {
       const second = category.addSubCategory(DEFAULT_SUBCATEGORY_NAME);
 
       expect(second.isFailure).toBe(true);
-      expect(second.error.code).toBe(Errors.SUBCATEGORY_DUPLICATE_NAME);
+      expect(second.errors[0].code).toBe(Errors.SUBCATEGORY_DUPLICATE_NAME);
     });
   });
 });

@@ -22,10 +22,7 @@ export class CategoriesController {
       type: dto.type,
     });
     if (result.isFailure) {
-      const { code, cls, data, message } = result.error;
-      this.logger.error(
-        `Error during create category: ${JSON.stringify({ code, cls, data, message })}`,
-      );
+      this.logger.error(`Error during create category: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
   }
@@ -41,10 +38,7 @@ export class CategoriesController {
       name: dto.name,
     });
     if (result.isFailure) {
-      const { code, cls, data, message } = result.error;
-      this.logger.error(
-        `Error during create subcategory: ${JSON.stringify({ code, cls, data, message })}`,
-      );
+      this.logger.error(`Error during create subcategory: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
     }
   }

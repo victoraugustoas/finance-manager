@@ -22,14 +22,14 @@ describe('Money', () => {
       const result = Money.create(Infinity);
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.MONEY_NOT_FINITE);
+      expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
     });
 
     it('should fail with NaN', () => {
       const result = Money.create(NaN);
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.MONEY_NOT_FINITE);
+      expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
     });
   });
 
@@ -46,7 +46,7 @@ describe('Money', () => {
       const result = Money.fromCents(25.23);
 
       expect(result.isFailure).toBe(true);
-      expect(result.error.code).toBe(Errors.MONEY_CENTS_NOT_INTEGER);
+      expect(result.errors[0].code).toBe(Errors.MONEY_CENTS_NOT_INTEGER);
     });
   });
 

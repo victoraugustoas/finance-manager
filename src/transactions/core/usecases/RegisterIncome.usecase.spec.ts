@@ -43,7 +43,7 @@ describe('RegisterIncomeUseCase', () => {
     const result = await useCase.execute({ ...baseParams, amount: 0 });
 
     expect(result.isFailure).toBe(true);
-    expect(result.error.code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
+    expect(result.errors[0].code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
     expect(transactionsRepository.saveIncome).not.toHaveBeenCalled();
   });
 
@@ -71,7 +71,7 @@ describe('RegisterIncomeUseCase', () => {
     const result = await useCase.execute(baseParams);
 
     expect(result.isFailure).toBe(true);
-    expect(result.error.code).toBe(Errors.REFERENCE_ACCOUNT_NOT_FOUND);
+    expect(result.errors[0].code).toBe(Errors.REFERENCE_ACCOUNT_NOT_FOUND);
     expect(transactionsRepository.saveIncome).not.toHaveBeenCalled();
   });
 
@@ -99,7 +99,7 @@ describe('RegisterIncomeUseCase', () => {
     const result = await useCase.execute(baseParams);
 
     expect(result.isFailure).toBe(true);
-    expect(result.error.code).toBe(Errors.REFERENCE_CATEGORY_NOT_FOUND);
+    expect(result.errors[0].code).toBe(Errors.REFERENCE_CATEGORY_NOT_FOUND);
     expect(transactionsRepository.saveIncome).not.toHaveBeenCalled();
   });
 

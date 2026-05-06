@@ -18,10 +18,7 @@ export class AccountsController {
       balance: 0,
     });
     if (account.isFailure) {
-      const { code, cls, data, message } = account.error;
-      this.logger.error(
-        `Error during create account: ${JSON.stringify({ code, cls, data, message })}`,
-      );
+      this.logger.error(`Error during create account: ${JSON.stringify(account.errors)}`);
       MapResultErrorToHttpException.throwException(account);
     }
   }
