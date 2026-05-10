@@ -12,7 +12,7 @@ describe('CreateAccountUseCase', () => {
 
   it('should fail when domain validation fails without calling persistence', async () => {
     const accountsRepository = {
-      create: jest.fn(),
+      save: jest.fn(),
     } as unknown as AccountsRepository;
 
     const useCase = new CreateAccountUseCase(accountsRepository);
@@ -24,12 +24,12 @@ describe('CreateAccountUseCase', () => {
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
-    expect(accountsRepository.create).not.toHaveBeenCalled();
+    expect(accountsRepository.save).not.toHaveBeenCalled();
   });
 
   it('should fail when persistence fails', async () => {
     const accountsRepository = {
-      create: jest.fn().mockResolvedValue(
+      save: jest.fn().mockResolvedValue(
         Result.fail<void>({
           code: Errors.PRISMA_INSERT_ERROR,
           cls: 'test',
@@ -43,12 +43,12 @@ describe('CreateAccountUseCase', () => {
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
-    expect(accountsRepository.create).toHaveBeenCalledTimes(1);
+    expect(accountsRepository.save).toHaveBeenCalledTimes(1);
   });
 
   it('should persist and return the created account when validation passes', async () => {
     const accountsRepository = {
-      create: jest.fn().mockResolvedValue(Result.ok(undefined)),
+      save: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as AccountsRepository;
 
     const useCase = new CreateAccountUseCase(accountsRepository);
@@ -60,7 +60,7 @@ describe('CreateAccountUseCase', () => {
     expect(result.value.name).toBe(baseParams.name);
     expect(result.value.balance.amount).toBe(baseParams.balance);
     expect(result.value.openingBalance.amount).toBe(baseParams.openingBalance);
-    expect(accountsRepository.create).toHaveBeenCalledTimes(1);
-    expect(accountsRepository.create).toHaveBeenCalledWith(result.value);
+    expect(accountsRepository.save).toHaveBeenCalledTimes(1);
+    expect(accountsRepository.save).toHaveBeenCalledWith(result.value);
   });
 });

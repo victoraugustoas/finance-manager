@@ -49,7 +49,14 @@ describe('PrismaTransactionsRepository', () => {
 
   beforeEach(() => {
     transactionCreate = jest.fn().mockResolvedValue(undefined);
-    prisma = { transaction: { create: transactionCreate } } as unknown as PrismaService;
+    prisma = {
+      $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          transaction: { create: transactionCreate },
+          outboxEvent: { createMany: jest.fn().mockResolvedValue(undefined) },
+        }),
+      ),
+    } as unknown as PrismaService;
     repository = new PrismaTransactionsRepository(prisma);
   });
 

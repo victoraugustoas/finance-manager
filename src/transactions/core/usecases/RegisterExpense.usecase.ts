@@ -29,7 +29,7 @@ export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, Ex
       this.accounts.existsById(params.accountId),
       this.categoryHierarchy.ensureExpenseHierarchy(params.categoryId, params.subCategoryId),
     ]);
-    const expense = Expense.create({
+    const expense = Expense.register({
       name: params.name,
       amount: params.amount,
       categoryId: params.categoryId,

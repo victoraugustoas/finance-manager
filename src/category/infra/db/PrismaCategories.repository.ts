@@ -3,13 +3,14 @@ import { CategoriesRepository } from '@/category/core/provider/categories.reposi
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
+import { saveWithOutbox } from '@/shared/events/infra/saveWithOutbox';
 
 export class PrismaCategoriesRepository implements CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(category: Category): Promise<Result<void>> {
     try {
-      await this.prisma.$transaction(async (tx) => {
+      await saveWithOutbox(this.prisma, category.domainEvents, async (tx) => {
         await tx.category.upsert({
           where: { id: category.id },
           create: {
@@ -55,6 +56,7 @@ export class PrismaCategoriesRepository implements CategoriesRepository {
           });
         }
       });
+      category.clearDomainEvents();
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail({

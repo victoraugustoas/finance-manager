@@ -73,3 +73,33 @@ model Transaction {
   @@index([categoryId])
   @@index([subCategoryId])
 }
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model OutboxEvent {
+  id            String            @id
+  eventName     String
+  payload       Json
+  occurredAt    DateTime
+  status        OutboxEventStatus @default(PENDING)
+  processedAt   DateTime?
+  attempts      Int               @default(0)
+  lastError     String?
+  createdAt     DateTime          @default(now())
+
+  @@index([status, createdAt])
+}
+
+model ProcessedEvent {
+  id          String   @id @default(uuid())
+  eventId     String
+  handler     String
+  processedAt DateTime @default(now())
+
+  @@unique([eventId, handler])
+}

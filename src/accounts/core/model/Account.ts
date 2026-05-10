@@ -37,4 +37,10 @@ export class Account extends AggregateRoot<AccountProps> {
   static new(props: AccountProps): Account {
     return new Account(props);
   }
+
+  updateBalance(value: Money, type: 'EXPENSE' | 'INCOME', effectivated: boolean): void {
+    if (!effectivated) return;
+    if (type === 'EXPENSE') this.balance = this.balance.subtract(value);
+    if (type === 'INCOME') this.balance = this.balance.add(value);
+  }
 }

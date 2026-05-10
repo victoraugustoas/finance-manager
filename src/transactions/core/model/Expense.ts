@@ -4,17 +4,36 @@ import {
   TransactionProps,
   TransactionType,
 } from '@/transactions/core/model/Transaction';
+import { TransactionRegisteredEvent } from '@/transactions/core/events/TransactionRegisteredEvent';
 
 export class Expense extends Transaction {
   private constructor(props: Omit<TransactionProps, 'type'>) {
     super({ ...props, type: TransactionType.EXPENSE });
   }
 
+  static register(props: Omit<TransactionProps, 'type'>): Result<Expense> {
+    const expense = Expense.create(props);
+    if (expense.isFailure) return expense;
+    expense.value.addDomainEvent(
+      new TransactionRegisteredEvent({
+        transactionId: expense.value.id,
+        type: TransactionType.EXPENSE,
+        amountInCents: props.amount,
+        accountId: props.accountId,
+        categoryId: props.categoryId,
+        subCategoryId: props.subCategoryId,
+        effectivated: props.effectivated,
+      }),
+    );
+    return expense;
+  }
+
   static create(props: Omit<TransactionProps, 'type'>): Result<Expense> {
     const effectiveProps = { ...props, type: TransactionType.EXPENSE };
     const result = super.create(effectiveProps);
     if (result.isFailure) return result;
-    return Result.ok(new Expense(effectiveProps));
+    const expense = new Expense(effectiveProps);
+    return Result.ok(expense);
   }
 
   static new(props: Omit<TransactionProps, 'type'>): Expense {

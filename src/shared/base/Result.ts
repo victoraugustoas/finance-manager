@@ -93,4 +93,10 @@ export class Result<T> {
     }
     return fn(this._value as T);
   }
+
+  throwIfError(): void {
+    if (this.isFailure) {
+      throw this._errors;
+    }
+  }
 }

@@ -1,9 +1,13 @@
 import { AccountsController } from '@/accounts/infra/controllers/Accounts.controller';
 import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
-import { Module } from '@nestjs/common';
+import { Module, Provider } from '@nestjs/common';
 import { PrismaAccountsRepository } from '@/accounts/infra/db/PrismaAccounts.repository';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
+import { UpdateAccountBalance } from '@/accounts/core/usecases/UpdateAccountBalance';
+import { TransactionRegisteredHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransactionRegisteredHandler';
+
+const eventHandlers: Provider[] = [TransactionRegisteredHandler];
 
 @Module({
   imports: [],
@@ -20,6 +24,12 @@ import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.use
       useFactory: (repo: AccountsRepository) => new CreateAccountUseCase(repo),
       inject: [AccountsRepository],
     },
+    {
+      provide: UpdateAccountBalance,
+      useFactory: (repo: AccountsRepository) => new UpdateAccountBalance(repo),
+      inject: [AccountsRepository],
+    },
+    ...eventHandlers,
   ],
 })
 export class AccountsModule {}

@@ -3,60 +3,130 @@ import { PrismaAccountsRepository } from '@/accounts/infra/db/PrismaAccounts.rep
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 
+const accountId = '11111111-1111-1111-1111-111111111111';
+
+const makeAccount = (): Account => {
+  const result = Account.create({
+    id: accountId,
+    name: 'Checking',
+    balance: 100.5,
+    openingBalance: 25,
+  });
+  if (result.isFailure) throw new Error('Expected Account.create to succeed in test setup');
+  return result.value;
+};
+
 describe('PrismaAccountsRepository', () => {
-  const accountId = '11111111-1111-1111-1111-111111111111';
+  let upsert: jest.Mock;
+  let findUnique: jest.Mock;
+  let prisma: PrismaService;
+  let repository: PrismaAccountsRepository;
 
-  const makeAccount = (): Account => {
-    const result = Account.create({
-      id: accountId,
-      name: 'Checking',
-      balance: 100.5,
-      openingBalance: 25,
-    });
-    if (result.isFailure) {
-      throw new Error('Expected Account.create to succeed in test setup');
-    }
-    return result.value;
-  };
+  beforeEach(() => {
+    upsert = jest.fn().mockResolvedValue(undefined);
+    findUnique = jest.fn();
 
-  it('should call prisma with cents and return ok when create succeeds', async () => {
-    const create = jest.fn().mockResolvedValue(undefined);
-    const prisma = {
-      account: { create },
+    const tx = {
+      account: { upsert },
+      outboxEvent: { createMany: jest.fn().mockResolvedValue(undefined) },
+    };
+
+    prisma = {
+      $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
+      account: { findUnique },
     } as unknown as PrismaService;
 
-    const repository = new PrismaAccountsRepository(prisma);
-    const account = makeAccount();
+    repository = new PrismaAccountsRepository(prisma);
+  });
 
-    const result = await repository.create(account);
+  describe('save()', () => {
+    it('should return ok when upsert succeeds', async () => {
+      const result = await repository.save(makeAccount());
 
-    expect(result.isSuccess).toBe(true);
-    expect(create).toHaveBeenCalledTimes(1);
-    expect(create).toHaveBeenCalledWith({
-      data: {
+      expect(result.isSuccess).toBe(true);
+    });
+
+    it('should call upsert with amounts in cents', async () => {
+      const account = makeAccount();
+
+      await repository.save(account);
+
+      expect(upsert).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalledWith({
+        where: { id: accountId },
+        create: {
+          id: accountId,
+          name: 'Checking',
+          balance: 10050,
+          openingBalance: 2500,
+        },
+        update: {
+          name: 'Checking',
+          balance: 10050,
+        },
+      });
+    });
+
+    it('should return PRISMA_INSERT_ERROR when transaction throws', async () => {
+      const dbError = new Error('Unique constraint failed');
+      (prisma.$transaction as jest.Mock).mockRejectedValue(dbError);
+
+      const result = await repository.save(makeAccount());
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
+      expect(result.errors[0].cls).toBe('PrismaAccountsRepository');
+      expect(result.errors[0].data).toEqual({ error: String(dbError) });
+    });
+  });
+
+  describe('findById()', () => {
+    it('should return the reconstructed account when found', async () => {
+      findUnique.mockResolvedValue({
         id: accountId,
         name: 'Checking',
         balance: 10050,
         openingBalance: 2500,
-      },
+      });
+
+      const result = await repository.findById(accountId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.value.id).toBe(accountId);
+      expect(result.value.name).toBe('Checking');
+      expect(result.value.balance.amountInCents).toBe(10050);
+      expect(result.value.openingBalance.amountInCents).toBe(2500);
     });
-  });
 
-  it('should return PRISMA_INSERT_ERROR when prisma create throws', async () => {
-    const prismaError = new Error('Unique constraint failed');
-    const create = jest.fn().mockRejectedValue(prismaError);
-    const prisma = {
-      account: { create },
-    } as unknown as PrismaService;
+    it('should call findUnique with the given id', async () => {
+      findUnique.mockResolvedValue({
+        id: accountId,
+        name: 'Checking',
+        balance: 10050,
+        openingBalance: 2500,
+      });
 
-    const repository = new PrismaAccountsRepository(prisma);
-    const account = makeAccount();
+      await repository.findById(accountId);
 
-    const result = await repository.create(account);
+      expect(findUnique).toHaveBeenCalledWith({ where: { id: accountId } });
+    });
 
-    expect(result.isFailure).toBe(true);
-    expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
-    expect(result.errors[0].cls).toBe('PrismaAccountsRepository');
-    expect(result.errors[0].data).toEqual({ error: String(prismaError) });
+    it('should return PRISMA_QUERY_ERROR when account is not found', async () => {
+      findUnique.mockResolvedValue(null);
+
+      const result = await repository.findById(accountId);
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
+    });
+
+    it('should return PRISMA_QUERY_ERROR when findUnique throws', async () => {
+      findUnique.mockRejectedValue(new Error('Connection lost'));
+
+      const result = await repository.findById(accountId);
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
+    });
   });
 });

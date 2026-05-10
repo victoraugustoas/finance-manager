@@ -13,7 +13,7 @@ export class CreateAccountUseCase implements UseCase<CreateAccountParams, Accoun
       return createdAccount.asFail();
     }
 
-    const createdInPersistenceLayer = await this.accountsRepository.create(createdAccount.value);
+    const createdInPersistenceLayer = await this.accountsRepository.save(createdAccount.value);
     if (createdInPersistenceLayer.isFailure) {
       return createdInPersistenceLayer.asFail();
     }

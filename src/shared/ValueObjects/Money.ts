@@ -42,10 +42,8 @@ export class Money extends ValueObject<MoneyProps> {
     return new Money({ amountInCents: this.amountInCents + other.amountInCents });
   }
 
-  subtract(other: Money): Result<Money> {
-    const result = this.amountInCents - other.amountInCents;
-
-    return Result.ok(new Money({ amountInCents: result }));
+  subtract(other: Money): Money {
+    return new Money({ amountInCents: this.amountInCents - other.amountInCents });
   }
 
   isGreaterThan(other: Money): boolean {
