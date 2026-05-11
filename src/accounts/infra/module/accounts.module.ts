@@ -6,8 +6,9 @@ import { PrismaService } from '@/shared/infra/PrismaService';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
 import { UpdateAccountBalance } from '@/accounts/core/usecases/UpdateAccountBalance';
 import { TransactionRegisteredHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransactionRegisteredHandler';
+import { TransactionEditedHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransactionEditedHandler';
 
-const eventHandlers: Provider[] = [TransactionRegisteredHandler];
+const eventHandlers: Provider[] = [TransactionRegisteredHandler, TransactionEditedHandler];
 
 @Module({
   imports: [],

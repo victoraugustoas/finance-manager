@@ -2,36 +2,55 @@ import { Result, UseCase } from '@/shared/base';
 import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
 import { Money } from '@/shared/ValueObjects';
 
-interface UpdateAccountBalanceParams {
-  accountId: string;
-  value: number;
-  effectivated: boolean;
-  type: 'EXPENSE' | 'INCOME';
-}
+type UpdateAccountBalanceParams =
+  | {
+      updatedBy: 'NEW_TRANSACTION';
+      accountId: string;
+      value: number;
+      effectivated: boolean;
+      type: 'EXPENSE' | 'INCOME';
+    }
+  | {
+      updatedBy: 'EDIT';
+      accountId: string;
+      oldValue: number;
+      newValue: number;
+      effectivated: boolean;
+      type: 'EXPENSE' | 'INCOME';
+    };
 
 export class UpdateAccountBalance implements UseCase<UpdateAccountBalanceParams, void> {
   constructor(private readonly accountsRepository: AccountsRepository) {}
 
   async execute(params: UpdateAccountBalanceParams): Promise<Result<void>> {
     const account = await this.accountsRepository.findById(params.accountId);
-    const money = Money.create(params.value);
+    if (account.isFailure) return account.asFail();
 
-    const combined = Result.combine([account, money]);
-    if (combined.isFailure) {
-      return combined;
+    if (params.updatedBy === 'NEW_TRANSACTION') {
+      const money = Money.create(params.value);
+      if (money.isFailure) return money.asFail();
+
+      account.value.updateBalance({
+        updatedBy: 'NEW_TRANSACTION',
+        type: params.type,
+        value: money.value,
+        effectivated: params.effectivated,
+      });
+    } else {
+      const oldMoney = Money.create(params.oldValue);
+      const newMoney = Money.create(params.newValue);
+      const combined = Result.combine([oldMoney, newMoney]);
+      if (combined.isFailure) return combined.asFail();
+
+      account.value.updateBalance({
+        updatedBy: 'EDIT',
+        type: params.type,
+        oldValue: oldMoney.value,
+        newValue: newMoney.value,
+        effectivated: params.effectivated,
+      });
     }
 
-    account.value.updateBalance({
-      updatedBy: 'NEW_TRANSACTION',
-      type: params.type,
-      value: money.value,
-      effectivated: params.effectivated,
-    });
-
-    const saved = await this.accountsRepository.save(account.value);
-    if (saved.isFailure) {
-      return saved;
-    }
-    return Result.ok(undefined);
+    return this.accountsRepository.save(account.value);
   }
 }

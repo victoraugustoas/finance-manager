@@ -13,6 +13,7 @@ const config: Config = {
   testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^generated/(.*)$': '<rootDir>/../generated/$1',
   },
   preset: 'ts-jest',
 };

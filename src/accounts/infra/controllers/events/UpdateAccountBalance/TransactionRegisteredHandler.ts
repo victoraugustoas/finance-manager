@@ -29,6 +29,7 @@ export class TransactionRegisteredHandler extends EventConsumer<TransactionRegis
 
   async callDomain(payload: TransactionRegisteredPayload): Promise<Result<void>> {
     return this.updateAccountBalance.execute({
+      updatedBy: 'NEW_TRANSACTION',
       accountId: payload.accountId,
       value: payload.amountInCents,
       type: payload.type,
