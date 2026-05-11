@@ -27,7 +27,7 @@ export class Transaction extends AggregateRoot<TransactionProps> {
   amount: Money;
 
   protected constructor(props: TransactionProps) {
-    super(props);
+    super(props, props.id);
     this.amount = Money.new(props.amount);
   }
 
@@ -54,6 +54,20 @@ export class Transaction extends AggregateRoot<TransactionProps> {
 
   static new(props: TransactionProps): Transaction {
     return new Transaction(props);
+  }
+
+  edit(props: Omit<TransactionProps, 'type'>): Result<Transaction> {
+    const effectivatedDate = props.effectivated ? props.effectivatedDate : undefined;
+
+    const transactionResult = Transaction.create({
+      ...props,
+      id: this.id,
+      type: this.props.type,
+      effectivatedDate,
+    });
+    if (transactionResult.isFailure) return transactionResult.asFail();
+
+    return Result.ok(transactionResult.value);
   }
 
   effectivate(effectivatedDate: Date): Result<void> {

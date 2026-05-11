@@ -21,7 +21,12 @@ export class UpdateAccountBalance implements UseCase<UpdateAccountBalanceParams,
       return combined;
     }
 
-    account.value.updateBalance(money.value, params.type, params.effectivated);
+    account.value.updateBalance({
+      updatedBy: 'NEW_TRANSACTION',
+      type: params.type,
+      value: money.value,
+      effectivated: params.effectivated,
+    });
 
     const saved = await this.accountsRepository.save(account.value);
     if (saved.isFailure) {

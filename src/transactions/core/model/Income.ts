@@ -5,6 +5,7 @@ import {
 } from '@/transactions/core/model/Transaction';
 import { Result } from '@/shared/base';
 import { TransactionRegisteredEvent } from '@/transactions/core/events/TransactionRegisteredEvent';
+import { TransactionEditedEvent } from '@/transactions/core/events/TransactionEditedEvent';
 
 export class Income extends Transaction {
   private constructor(props: Omit<TransactionProps, 'type'>) {
@@ -39,5 +40,19 @@ export class Income extends Transaction {
   static new(props: Omit<TransactionProps, 'type'>): Income {
     const effectiveProps = { ...props, type: TransactionType.INCOME };
     return new Income(effectiveProps);
+  }
+
+  edit(props: Omit<TransactionProps, 'type' | 'id'>): Result<Income> {
+    const income = super.edit(props);
+    if (income.isFailure) {
+      return income.asFail();
+    }
+    this.addDomainEvent(
+      new TransactionEditedEvent({
+        newValues: { ...props, type: this.props.type },
+        oldValues: this.props,
+      }),
+    );
+    return Result.ok(income.value);
   }
 }
