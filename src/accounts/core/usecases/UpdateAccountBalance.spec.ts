@@ -73,26 +73,27 @@ describe('UpdateAccountBalance', () => {
 
   describe('EDIT', () => {
     it('should reverse old amount and apply new amount for EXPENSE', async () => {
-      const account = makeAccount(100);
+      // balance -50, expense was 20, changed to 10 → -50 + 20 - 10 = -40
+      const account = makeAccount(-50);
       const repo = makeRepo(account);
       const useCase = new UpdateAccountBalance(repo);
 
       const result = await useCase.execute({
         updatedBy: 'EDIT',
         accountId: 'acc-1',
-        oldValue: 30,
-        newValue: 50,
+        oldValue: 20,
+        newValue: 10,
         type: 'EXPENSE',
         effectivated: true,
       });
 
       expect(result.isSuccess).toBe(true);
-      // 100 + 30 (reverse old expense) - 50 (apply new expense) = 80
-      expect(account.balance.amount).toBe(80);
+      expect(account.balance.amount).toBe(-40);
       expect(repo.save).toHaveBeenCalledWith(account);
     });
 
     it('should reverse old amount and apply new amount for INCOME', async () => {
+      // balance 100, income was 40, changed to 60 → 100 - 40 + 60 = 120
       const account = makeAccount(100);
       const repo = makeRepo(account);
       const useCase = new UpdateAccountBalance(repo);
@@ -106,7 +107,6 @@ describe('UpdateAccountBalance', () => {
         effectivated: true,
       });
 
-      // 100 - 40 (reverse old income) + 60 (apply new income) = 120
       expect(account.balance.amount).toBe(120);
     });
 
