@@ -12,6 +12,7 @@ interface NewTransaction {
   updatedBy: 'NEW_TRANSACTION';
   value: Money;
   type: 'EXPENSE' | 'INCOME';
+  effectivated: boolean;
 }
 
 interface DeleteTransaction {
@@ -24,12 +25,12 @@ interface EditValueTransaction {
   updatedBy: 'EDIT';
   oldValue: Money;
   newValue: Money;
+  oldEffectivated: boolean;
+  newEffectivated: boolean;
   type: 'EXPENSE' | 'INCOME';
 }
 
-type AdjustBalanceParams = (NewTransaction | DeleteTransaction | EditValueTransaction) & {
-  effectivated: boolean;
-};
+type AdjustBalanceParams = NewTransaction | DeleteTransaction | EditValueTransaction;
 
 export class Account extends AggregateRoot<AccountProps> {
   name: string;
@@ -62,12 +63,20 @@ export class Account extends AggregateRoot<AccountProps> {
   }
 
   updateBalance(params: AdjustBalanceParams): void {
-    if (!params.effectivated) return;
     switch (params.updatedBy) {
       case 'NEW_TRANSACTION':
-        return this.adjustBalanceInCreationTransactions(params.value, params.type);
+        if (params.effectivated) {
+          return this.adjustBalanceInCreationTransactions(params.value, params.type);
+        }
+        break;
       case 'EDIT':
-        return this.adjustBalanceInEditTransactions(params.oldValue, params.newValue, params.type);
+        return this.adjustBalanceInEditTransactions(
+          params.oldValue,
+          params.newValue,
+          params.type,
+          params.oldEffectivated,
+          params.newEffectivated,
+        );
       case 'DELETE':
         return this.adjustBalanceInRemoveTransactions(params.oldValue, params.type);
     }
@@ -87,14 +96,27 @@ export class Account extends AggregateRoot<AccountProps> {
     oldValue: Money,
     newValue: Money,
     type: 'EXPENSE' | 'INCOME',
+    oldEffectivated: boolean,
+    newEffectivated: boolean,
   ) {
-    if (type === 'EXPENSE') {
-      this.balance = this.balance.add(oldValue);
-      this.balance = this.balance.subtract(newValue);
-    } else {
-      if (type === 'INCOME') {
-        this.balance = this.balance.subtract(oldValue);
-        this.balance = this.balance.add(newValue);
+    if (oldEffectivated && !newEffectivated) {
+      if (type === 'EXPENSE') {
+        this.balance = this.balance.add(oldValue);
+        this.balance = this.balance.subtract(newValue);
+      } else {
+        if (type === 'INCOME') {
+          this.balance = this.balance.subtract(oldValue);
+          this.balance = this.balance.add(newValue);
+        }
+      }
+    }
+    if (!oldEffectivated && newEffectivated) {
+      if (type === 'EXPENSE') {
+        this.balance = this.balance.subtract(newValue);
+      } else {
+        if (type === 'INCOME') {
+          this.balance = this.balance.add(newValue);
+        }
       }
     }
   }

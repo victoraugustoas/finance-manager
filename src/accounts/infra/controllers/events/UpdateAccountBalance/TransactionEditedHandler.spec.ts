@@ -67,7 +67,8 @@ describe('TransactionEditedHandler', () => {
       oldValue: basePayload.oldValues.amount,
       newValue: basePayload.newValues.amount,
       type: basePayload.newValues.type,
-      effectivated: basePayload.newValues.effectivated,
+      oldEffectivated: basePayload.oldValues.effectivated,
+      newEffectivated: basePayload.newValues.effectivated,
     });
   });
 

@@ -15,7 +15,8 @@ type UpdateAccountBalanceParams =
       accountId: string;
       oldValue: number;
       newValue: number;
-      effectivated: boolean;
+      newEffectivated: boolean;
+      oldEffectivated: boolean;
       type: 'EXPENSE' | 'INCOME';
     };
 
@@ -47,7 +48,8 @@ export class UpdateAccountBalance implements UseCase<UpdateAccountBalanceParams,
         type: params.type,
         oldValue: oldMoney.value,
         newValue: newMoney.value,
-        effectivated: params.effectivated,
+        oldEffectivated: params.oldEffectivated,
+        newEffectivated: params.newEffectivated,
       });
     }
 

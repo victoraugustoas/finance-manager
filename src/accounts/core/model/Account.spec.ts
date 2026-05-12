@@ -53,102 +53,6 @@ describe('Account', () => {
     });
   });
 
-  describe('updateBalance()', () => {
-    const makeAccount = (balance: number) =>
-      Account.create({ name: 'Test', balance, openingBalance: 0 }).value;
-
-    const money = (amount: number) => Money.create(amount).value;
-
-    describe('when effectivated is false', () => {
-      it('should not change balance', () => {
-        const account = makeAccount(100);
-        account.updateBalance({
-          updatedBy: 'NEW_TRANSACTION',
-          type: 'EXPENSE',
-          value: money(50),
-          effectivated: false,
-        });
-        expect(account.balance.amount).toBe(100);
-      });
-    });
-
-    describe('NEW_TRANSACTION', () => {
-      it('should subtract balance on EXPENSE', () => {
-        const account = makeAccount(100);
-        account.updateBalance({
-          updatedBy: 'NEW_TRANSACTION',
-          type: 'EXPENSE',
-          value: money(30),
-          effectivated: true,
-        });
-        expect(account.balance.amount).toBe(70);
-      });
-
-      it('should add balance on INCOME', () => {
-        const account = makeAccount(100);
-        account.updateBalance({
-          updatedBy: 'NEW_TRANSACTION',
-          type: 'INCOME',
-          value: money(50),
-          effectivated: true,
-        });
-        expect(account.balance.amount).toBe(150);
-      });
-    });
-
-    describe('EDIT', () => {
-      it('should reverse old EXPENSE and apply new EXPENSE (negative balance)', () => {
-        // balance -50, expense was 20, changed to 10 → -50 + 20 - 10 = -40
-        const account = makeAccount(-50);
-        account.updateBalance({
-          updatedBy: 'EDIT',
-          type: 'EXPENSE',
-          oldValue: money(20),
-          newValue: money(10),
-          effectivated: true,
-        });
-        expect(account.balance.amount).toBe(-40);
-      });
-
-      it('should reverse old INCOME and apply new INCOME', () => {
-        // balance 100, income was 40, changed to 60 → 100 - 40 + 60 = 120
-        const account = makeAccount(100);
-        account.updateBalance({
-          updatedBy: 'EDIT',
-          type: 'INCOME',
-          oldValue: money(40),
-          newValue: money(60),
-          effectivated: true,
-        });
-        expect(account.balance.amount).toBe(120);
-      });
-    });
-
-    describe('DELETE', () => {
-      it('should add back balance on EXPENSE deletion', () => {
-        const account = makeAccount(70);
-        account.updateBalance({
-          updatedBy: 'DELETE',
-          type: 'EXPENSE',
-          oldValue: money(30),
-          effectivated: true,
-        });
-        expect(account.balance.amount).toBe(100);
-      });
-
-      it('should subtract balance on INCOME deletion', () => {
-        const account = makeAccount(150);
-        account.updateBalance({
-          updatedBy: 'DELETE',
-          type: 'INCOME',
-          oldValue: money(50),
-          effectivated: true,
-        });
-        expect(account.balance.amount).toBe(100);
-      });
-    });
-  });
-
   describe('actualBalance', () => {
     it('should return balance plus openingBalance', () => {
       const { value: account } = Account.create({
@@ -161,6 +65,165 @@ describe('Account', () => {
 
       expect(actual.amountInCents).toBe(6234);
       expect(actual.amount).toBe(62.34);
+    });
+  });
+
+  describe('updateBalance()', () => {
+    const makeAccount = (balance: number) =>
+      Account.create({ name: 'Test', balance, openingBalance: 0 }).value;
+
+    const money = (amount: number) => Money.create(amount).value;
+
+    describe('NEW_TRANSACTION', () => {
+      it('should subtract balance on effectivated EXPENSE', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'NEW_TRANSACTION',
+          type: 'EXPENSE',
+          value: money(30),
+          effectivated: true,
+        });
+        expect(account.balance.amount).toBe(70);
+      });
+
+      it('should add balance on effectivated INCOME', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'NEW_TRANSACTION',
+          type: 'INCOME',
+          value: money(50),
+          effectivated: true,
+        });
+        expect(account.balance.amount).toBe(150);
+      });
+
+      it('should not change balance when EXPENSE is not effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'NEW_TRANSACTION',
+          type: 'EXPENSE',
+          value: money(50),
+          effectivated: false,
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+
+      it('should not change balance when INCOME is not effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'NEW_TRANSACTION',
+          type: 'INCOME',
+          value: money(50),
+          effectivated: false,
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+    });
+
+    describe('EDIT', () => {
+      it('should add back old EXPENSE and subtract new when going from effectivated to not effectivated', () => {
+        // balance -50, expense was 20 (effectivated), changed to 10 (not effectivated)
+        // → -50 + 20 - 10 = -40
+        const account = makeAccount(-50);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: 'EXPENSE',
+          oldValue: money(20),
+          newValue: money(10),
+          oldEffectivated: true,
+          newEffectivated: false,
+        });
+        expect(account.balance.amount).toBe(-40);
+      });
+
+      it('should subtract old INCOME and add new when going from effectivated to not effectivated', () => {
+        // balance 100, income was 40 (effectivated), changed to 60 (not effectivated)
+        // → 100 - 40 + 60 = 120
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: 'INCOME',
+          oldValue: money(40),
+          newValue: money(60),
+          oldEffectivated: true,
+          newEffectivated: false,
+        });
+        expect(account.balance.amount).toBe(120);
+      });
+
+      it('should only subtract new EXPENSE when going from not effectivated to effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: 'EXPENSE',
+          oldValue: money(20),
+          newValue: money(30),
+          oldEffectivated: false,
+          newEffectivated: true,
+        });
+        expect(account.balance.amount).toBe(70);
+      });
+
+      it('should only add new INCOME when going from not effectivated to effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: 'INCOME',
+          oldValue: money(20),
+          newValue: money(50),
+          oldEffectivated: false,
+          newEffectivated: true,
+        });
+        expect(account.balance.amount).toBe(150);
+      });
+
+      it('should not change balance when both EXPENSE states are effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: 'EXPENSE',
+          oldValue: money(20),
+          newValue: money(30),
+          oldEffectivated: true,
+          newEffectivated: true,
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+
+      it('should not change balance when both INCOME states are not effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: 'INCOME',
+          oldValue: money(20),
+          newValue: money(50),
+          oldEffectivated: false,
+          newEffectivated: false,
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+    });
+
+    describe('DELETE', () => {
+      it('should add back balance on EXPENSE deletion', () => {
+        const account = makeAccount(70);
+        account.updateBalance({
+          updatedBy: 'DELETE',
+          type: 'EXPENSE',
+          oldValue: money(30),
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+
+      it('should subtract balance on INCOME deletion', () => {
+        const account = makeAccount(150);
+        account.updateBalance({
+          updatedBy: 'DELETE',
+          type: 'INCOME',
+          oldValue: money(50),
+        });
+        expect(account.balance.amount).toBe(100);
+      });
     });
   });
 });

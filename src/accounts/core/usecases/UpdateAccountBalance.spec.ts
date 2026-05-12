@@ -33,6 +33,24 @@ describe('UpdateAccountBalance', () => {
       expect(repo.save).toHaveBeenCalledWith(account);
     });
 
+    it('should add to balance on effectivated INCOME', async () => {
+      const account = makeAccount(100);
+      const repo = makeRepo(account);
+      const useCase = new UpdateAccountBalance(repo);
+
+      const result = await useCase.execute({
+        updatedBy: 'NEW_TRANSACTION',
+        accountId: 'acc-1',
+        value: 50,
+        type: 'INCOME',
+        effectivated: true,
+      });
+
+      expect(result.isSuccess).toBe(true);
+      expect(account.balance.amount).toBe(150);
+      expect(repo.save).toHaveBeenCalledWith(account);
+    });
+
     it('should not change balance when not effectivated', async () => {
       const account = makeAccount(100);
       const repo = makeRepo(account);
@@ -47,6 +65,24 @@ describe('UpdateAccountBalance', () => {
       });
 
       expect(account.balance.amount).toBe(100);
+    });
+
+    it('should fail without calling save when value is invalid', async () => {
+      const account = makeAccount(100);
+      const repo = makeRepo(account);
+      const useCase = new UpdateAccountBalance(repo);
+
+      const result = await useCase.execute({
+        updatedBy: 'NEW_TRANSACTION',
+        accountId: 'acc-1',
+        value: NaN,
+        type: 'EXPENSE',
+        effectivated: true,
+      });
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
+      expect(repo.save).not.toHaveBeenCalled();
     });
 
     it('should fail when account is not found', async () => {
@@ -69,11 +105,33 @@ describe('UpdateAccountBalance', () => {
       expect(result.isFailure).toBe(true);
       expect(repo.save).not.toHaveBeenCalled();
     });
+
+    it('should propagate save failure', async () => {
+      const account = makeAccount(100);
+      const repo = {
+        findById: jest.fn().mockResolvedValue(Result.ok(account)),
+        save: jest
+          .fn()
+          .mockResolvedValue(Result.fail({ code: Errors.PRISMA_INSERT_ERROR, cls: 'test' })),
+      } as unknown as AccountsRepository;
+      const useCase = new UpdateAccountBalance(repo);
+
+      const result = await useCase.execute({
+        updatedBy: 'NEW_TRANSACTION',
+        accountId: 'acc-1',
+        value: 10,
+        type: 'EXPENSE',
+        effectivated: true,
+      });
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
+    });
   });
 
   describe('EDIT', () => {
-    it('should reverse old amount and apply new amount for EXPENSE', async () => {
-      // balance -50, expense was 20, changed to 10 → -50 + 20 - 10 = -40
+    it('should reverse old EXPENSE and apply new when going from effectivated to not effectivated', async () => {
+      // balance -50, expense was 20 (effectivated → not effectivated), changed to 10 → -50 + 20 - 10 = -40
       const account = makeAccount(-50);
       const repo = makeRepo(account);
       const useCase = new UpdateAccountBalance(repo);
@@ -84,7 +142,8 @@ describe('UpdateAccountBalance', () => {
         oldValue: 20,
         newValue: 10,
         type: 'EXPENSE',
-        effectivated: true,
+        oldEffectivated: true,
+        newEffectivated: false,
       });
 
       expect(result.isSuccess).toBe(true);
@@ -92,8 +151,8 @@ describe('UpdateAccountBalance', () => {
       expect(repo.save).toHaveBeenCalledWith(account);
     });
 
-    it('should reverse old amount and apply new amount for INCOME', async () => {
-      // balance 100, income was 40, changed to 60 → 100 - 40 + 60 = 120
+    it('should reverse old INCOME and apply new when going from effectivated to not effectivated', async () => {
+      // balance 100, income was 40 (effectivated → not effectivated), changed to 60 → 100 - 40 + 60 = 120
       const account = makeAccount(100);
       const repo = makeRepo(account);
       const useCase = new UpdateAccountBalance(repo);
@@ -104,10 +163,50 @@ describe('UpdateAccountBalance', () => {
         oldValue: 40,
         newValue: 60,
         type: 'INCOME',
-        effectivated: true,
+        oldEffectivated: true,
+        newEffectivated: false,
       });
 
       expect(account.balance.amount).toBe(120);
+    });
+
+    it('should only apply new EXPENSE when going from not effectivated to effectivated', async () => {
+      // balance 100, expense was 20 (not effectivated → effectivated), changed to 30 → 100 - 30 = 70
+      const account = makeAccount(100);
+      const repo = makeRepo(account);
+      const useCase = new UpdateAccountBalance(repo);
+
+      await useCase.execute({
+        updatedBy: 'EDIT',
+        accountId: 'acc-1',
+        oldValue: 20,
+        newValue: 30,
+        type: 'EXPENSE',
+        oldEffectivated: false,
+        newEffectivated: true,
+      });
+
+      expect(account.balance.amount).toBe(70);
+    });
+
+    it('should fail without calling save when a Money value is invalid', async () => {
+      const account = makeAccount(100);
+      const repo = makeRepo(account);
+      const useCase = new UpdateAccountBalance(repo);
+
+      const result = await useCase.execute({
+        updatedBy: 'EDIT',
+        accountId: 'acc-1',
+        oldValue: NaN,
+        newValue: 10,
+        type: 'EXPENSE',
+        oldEffectivated: true,
+        newEffectivated: true,
+      });
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.MONEY_NOT_FINITE);
+      expect(repo.save).not.toHaveBeenCalled();
     });
 
     it('should fail when account is not found', async () => {
@@ -125,7 +224,8 @@ describe('UpdateAccountBalance', () => {
         oldValue: 10,
         newValue: 20,
         type: 'EXPENSE',
-        effectivated: true,
+        oldEffectivated: true,
+        newEffectivated: true,
       });
 
       expect(result.isFailure).toBe(true);

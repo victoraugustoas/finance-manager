@@ -34,7 +34,8 @@ export class TransactionEditedHandler extends EventConsumer<TransactionEditedPay
       oldValue: payload.oldValues.amount,
       newValue: payload.newValues.amount,
       type: payload.newValues.type as 'EXPENSE' | 'INCOME',
-      effectivated: payload.newValues.effectivated,
+      newEffectivated: payload.newValues.effectivated,
+      oldEffectivated: payload.oldValues.effectivated,
     });
   }
 

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
+import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
 import { TransactionAccountQuery } from '../../core/provider/TransactionAccount.query';
 import { TransactionCategoryHierarchyQuery } from '../../core/provider/TransactionCategoryHierarchy.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
@@ -46,6 +47,15 @@ import { TransactionsController } from '@/transactions/infra/controllers/Transac
         accounts: TransactionAccountQuery,
         categoryHierarchy: TransactionCategoryHierarchyQuery,
       ) => new RegisterIncomeUseCase(transactionsRepository, accounts, categoryHierarchy),
+      inject: [TransactionsRepository, TransactionAccountQuery, TransactionCategoryHierarchyQuery],
+    },
+    {
+      provide: EditTransactionUseCase,
+      useFactory: (
+        transactionsRepository: TransactionsRepository,
+        accounts: TransactionAccountQuery,
+        categoryHierarchy: TransactionCategoryHierarchyQuery,
+      ) => new EditTransactionUseCase(transactionsRepository, accounts, categoryHierarchy),
       inject: [TransactionsRepository, TransactionAccountQuery, TransactionCategoryHierarchyQuery],
     },
   ],
