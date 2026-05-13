@@ -107,6 +107,70 @@ describe('Transaction', () => {
     });
   });
 
+  describe('copyWith()', () => {
+    it('should override the given props on the copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', name: 'Original' }));
+
+      const copy = transaction.copyWith({ name: 'Updated' });
+
+      expect(copy.props.name).toBe('Updated');
+    });
+
+    it('should preserve props not included in the overrides', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+
+      const copy = transaction.copyWith({ name: 'Updated' });
+
+      expect(copy.props.amount).toBe(100);
+      expect(copy.props.type).toBe(TransactionType.EXPENSE);
+      expect(copy.props.accountId).toBe('acc-1');
+    });
+
+    it('should preserve the id when the original was created with an explicit id', () => {
+      const transaction = Transaction.new(baseProps({ id: 'explicit-id' }));
+
+      const copy = transaction.copyWith({ name: 'Copy' });
+
+      expect(copy.id).toBe('explicit-id');
+    });
+
+    it('should update the amount Money value object on the copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', amount: 100 }));
+
+      const copy = transaction.copyWith({ amount: 200 });
+
+      expect(copy.amount.amount).toBe(200);
+      expect(transaction.amount.amount).toBe(100);
+    });
+
+    it('should update the effectivated value object on the copy', () => {
+      const effectivatedDate = new Date('2026-06-01T12:00:00.000Z');
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', effectivated: false }));
+
+      const copy = transaction.copyWith({ effectivated: true, effectivatedDate });
+
+      expect(copy.effectivated.effectivated).toBe(true);
+      expect(copy.effectivated.effectivatedDate).toBe(effectivatedDate);
+    });
+
+    it('should return a copy with no domain events (fresh instance via Transaction.new)', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+
+      const copy = transaction.copyWith({ name: 'Copy' });
+
+      expect(copy.domainEvents).toHaveLength(0);
+    });
+
+    it('should not mutate the original props', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', name: 'Original' }));
+
+      transaction.copyWith({ name: 'Different', amount: 999 });
+
+      expect(transaction.props.name).toBe('Original');
+      expect(transaction.props.amount).toBe(100);
+    });
+  });
+
   describe('effectivate()', () => {
     it('should succeed when effectivatedDate is on the same calendar day as entryDate', () => {
       const entryDate = new Date('2026-06-01T08:00:00.000Z');
