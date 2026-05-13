@@ -1,5 +1,5 @@
 import { TransactionErrors } from '@/transactions/core/model/Errors';
-import { MoneyValueObjectErrors } from '../ValueObjects/Errors';
+import { ValueObjectErrors } from '../ValueObjects/Errors';
 import { CategoryErrors } from '@/category/core/model/Errors';
 import { ReportingErrors } from '@/reporting/core/model/Errors';
 
@@ -9,7 +9,7 @@ enum GeneralErrors {
 }
 
 const ValueObjectsErrors = {
-  ...MoneyValueObjectErrors,
+  ...ValueObjectErrors,
 };
 
 const ContextErrors = {

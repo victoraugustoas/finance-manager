@@ -1,4 +1,7 @@
-export enum MoneyValueObjectErrors {
+export enum ValueObjectErrors {
+  // Money
   MONEY_CENTS_NOT_INTEGER = 'MONEY_CENTS_NOT_INTEGER',
   MONEY_NOT_FINITE = 'MONEY_NOT_FINITE',
+  // Effectivated
+  EFFECTIVATED_DATE_NOT_BE_NULL = 'EFFECTIVATED_DATE_NOT_BE_NULL',
 }

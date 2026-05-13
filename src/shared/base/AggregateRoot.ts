@@ -16,6 +16,12 @@ export abstract class AggregateRoot<TProps> extends Entity<TProps> {
     this._domainEvents = [];
   }
 
+  override copyWith(overrides: Partial<TProps>): this {
+    const copy = super.copyWith(overrides);
+    copy._domainEvents = [...this._domainEvents];
+    return copy;
+  }
+
   protected addDomainEvent(event: DomainEvent): void {
     this._domainEvents.push(event);
   }

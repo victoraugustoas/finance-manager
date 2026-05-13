@@ -2,13 +2,14 @@ import { AggregateRoot, Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
 import { isAfter, isSameDay } from 'date-fns';
 import { Money } from '@/shared/ValueObjects';
+import { Effectivated, EffectivatedProps } from '@/shared/ValueObjects/Effectivated';
 
 export enum TransactionType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',
 }
 
-export interface TransactionProps {
+export interface TransactionProps extends EffectivatedProps {
   id?: string;
   name: string;
   amount: number;
@@ -17,25 +18,30 @@ export interface TransactionProps {
   notes?: string;
   dueDate: Date;
   entryDate: Date;
-  effectivatedDate?: Date;
-  effectivated: boolean;
   accountId: string;
   type: TransactionType;
 }
 
 export class Transaction extends AggregateRoot<TransactionProps> {
   amount: Money;
+  effectivated: Effectivated;
 
   protected constructor(props: TransactionProps) {
     super(props, props.id);
     this.amount = Money.new(props.amount);
+    this.effectivated = Effectivated.new({
+      effectivated: props.effectivated,
+      effectivatedDate: props.effectivatedDate,
+    });
   }
 
   static create(props: TransactionProps): Result<Transaction> {
     const { amount, effectivated, effectivatedDate } = props;
+
+    const effectivatedResult = Effectivated.create({ effectivated, effectivatedDate });
+    if (effectivatedResult.isFailure) return effectivatedResult.asFail();
+
     if (amount <= 0) return Result.fail({ code: Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE });
-    if (effectivated && !effectivatedDate)
-      return Result.fail({ code: Errors.EFFECTIVATED_DATE_NOT_BE_NULL });
 
     const dueDateIsAfterEntryDate =
       isSameDay(props.dueDate, props.entryDate) || isAfter(props.dueDate, props.entryDate);
@@ -57,17 +63,19 @@ export class Transaction extends AggregateRoot<TransactionProps> {
   }
 
   edit(props: Omit<TransactionProps, 'type'>): Result<Transaction> {
-    const effectivatedDate = props.effectivated ? props.effectivatedDate : undefined;
-
     const transactionResult = Transaction.create({
       ...props,
       id: this.id,
       type: this.props.type,
-      effectivatedDate,
     });
     if (transactionResult.isFailure) return transactionResult.asFail();
+    return Result.ok(this.copyWith(props));
+  }
 
-    return Result.ok(transactionResult.value);
+  override copyWith(props: Partial<TransactionProps>): this {
+    const copy = Transaction.new({ ...this.props, ...props }) as this;
+    copy.domainEvents.forEach((event) => this.addDomainEvent(event));
+    return copy;
   }
 
   effectivate(effectivatedDate: Date): Result<void> {
