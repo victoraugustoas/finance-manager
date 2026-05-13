@@ -3,24 +3,60 @@ import { AccountsRepository } from '@/accounts/core/provider/accounts.repository
 import { Result } from '@/shared/base';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { Errors } from '@/shared/base/Errors';
+import { saveWithOutbox } from '@/shared/events/infra/saveWithOutbox';
 
 export class PrismaAccountsRepository implements AccountsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(account: Account): Promise<Result<void>> {
+  async save(account: Account): Promise<Result<void>> {
     try {
-      await this.prisma.account.create({
-        data: {
-          name: account.name,
-          balance: account.balance.amountInCents,
-          openingBalance: account.openingBalance.amountInCents,
-          id: account.id,
-        },
+      await saveWithOutbox(this.prisma, account.domainEvents, async (tx) => {
+        await tx.account.upsert({
+          where: { id: account.id },
+          create: {
+            id: account.id,
+            name: account.name,
+            balance: account.balance.amountInCents,
+            openingBalance: account.openingBalance.amountInCents,
+          },
+          update: {
+            name: account.name,
+            balance: account.balance.amountInCents,
+          },
+        });
       });
+      account.clearDomainEvents();
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail({
         code: Errors.PRISMA_INSERT_ERROR,
+        cls: this.constructor.name,
+        data: { error: String(e) },
+      });
+    }
+  }
+
+  async findById(id: string): Promise<Result<Account>> {
+    try {
+      const raw = await this.prisma.account.findUnique({ where: { id } });
+      if (!raw) {
+        return Result.fail({
+          code: Errors.PRISMA_QUERY_ERROR,
+          cls: this.constructor.name,
+          data: { id },
+        });
+      }
+      return Result.ok(
+        Account.new({
+          id: raw.id,
+          name: raw.name,
+          balance: raw.balance / 100,
+          openingBalance: raw.openingBalance / 100,
+        }),
+      );
+    } catch (e) {
+      return Result.fail({
+        code: Errors.PRISMA_QUERY_ERROR,
         cls: this.constructor.name,
         data: { error: String(e) },
       });

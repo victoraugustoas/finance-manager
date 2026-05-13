@@ -7,10 +7,14 @@ import {
 import { TransactionsController } from '@/transactions/infra/controllers/Transactions.controller';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
+import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
 import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
+import { EditExpenseDto } from '@/transactions/infra/dtos/EditExpense.dto';
+import { EditIncomeDto } from '@/transactions/infra/dtos/EditIncome.dto';
 import { Expense } from '@/transactions/core/model/Expense';
 import { Income } from '@/transactions/core/model/Income';
+import { TransactionType } from '@/transactions/core/model/Transaction';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 
@@ -44,14 +48,17 @@ describe('TransactionsController', () => {
   let controller: TransactionsController;
   let registerExpenseMock: jest.Mock;
   let registerIncomeMock: jest.Mock;
+  let editTransactionMock: jest.Mock;
   let loggerErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     registerExpenseMock = jest.fn();
     registerIncomeMock = jest.fn();
+    editTransactionMock = jest.fn();
     controller = new TransactionsController(
       { execute: registerExpenseMock } as unknown as RegisterExpenseUseCase,
       { execute: registerIncomeMock } as unknown as RegisterIncomeUseCase,
+      { execute: editTransactionMock } as unknown as EditTransactionUseCase,
     );
     loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
@@ -229,6 +236,152 @@ describe('TransactionsController', () => {
       );
 
       await expect(controller.registerIncome(baseDto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('editExpense()', () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
+    const baseDto: EditExpenseDto = {
+      name: 'Groceries',
+      amount: 49.9,
+      dueDate: '2026-01-15T12:00:00.000Z',
+      entryDate: '2026-01-10T12:00:00.000Z',
+      effectivated: false,
+      accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+      categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+      subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+    };
+
+    it('should call EditTransactionUseCase.execute with id, EXPENSE type, parsed dates and optional fields mapped', async () => {
+      editTransactionMock.mockResolvedValue(Result.ok(undefined));
+
+      await controller.editExpense(id, baseDto);
+
+      expect(editTransactionMock).toHaveBeenCalledTimes(1);
+      expect(editTransactionMock).toHaveBeenCalledWith({
+        id,
+        type: TransactionType.EXPENSE,
+        name: 'Groceries',
+        amount: 49.9,
+        dueDate: new Date('2026-01-15T12:00:00.000Z'),
+        entryDate: new Date('2026-01-10T12:00:00.000Z'),
+        effectivatedDate: undefined,
+        effectivated: false,
+        accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+        categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+        subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+        notes: undefined,
+      });
+    });
+
+    it('should parse effectivatedDate when provided', async () => {
+      editTransactionMock.mockResolvedValue(Result.ok(undefined));
+      const dto: EditExpenseDto = { ...baseDto, effectivatedDate: '2026-01-12T12:00:00.000Z' };
+
+      await controller.editExpense(id, dto);
+
+      expect(editTransactionMock).toHaveBeenCalledWith(
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-12T12:00:00.000Z') }),
+      );
+    });
+
+    it('should return undefined (204 No Content) on success', async () => {
+      editTransactionMock.mockResolvedValue(Result.ok(undefined));
+
+      const response = await controller.editExpense(id, baseDto);
+
+      expect(response).toBeUndefined();
+    });
+
+    it('should log and throw InternalServerErrorException on PRISMA_QUERY_ERROR', async () => {
+      editTransactionMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(controller.editExpense(id, baseDto)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during edit expense');
+    });
+
+    it('should throw BadRequestException on domain validation error', async () => {
+      editTransactionMock.mockResolvedValue(
+        Result.fail({ code: Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE }),
+      );
+
+      await expect(controller.editExpense(id, baseDto)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('editIncome()', () => {
+    const id = 'eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee';
+    const baseDto: EditIncomeDto = {
+      name: 'Salary',
+      amount: 3500,
+      dueDate: '2026-01-31T12:00:00.000Z',
+      entryDate: '2026-01-01T12:00:00.000Z',
+      effectivated: false,
+      accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+      categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+      subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+    };
+
+    it('should call EditTransactionUseCase.execute with id, INCOME type, parsed dates and optional fields mapped', async () => {
+      editTransactionMock.mockResolvedValue(Result.ok(undefined));
+
+      await controller.editIncome(id, baseDto);
+
+      expect(editTransactionMock).toHaveBeenCalledTimes(1);
+      expect(editTransactionMock).toHaveBeenCalledWith({
+        id,
+        type: TransactionType.INCOME,
+        name: 'Salary',
+        amount: 3500,
+        dueDate: new Date('2026-01-31T12:00:00.000Z'),
+        entryDate: new Date('2026-01-01T12:00:00.000Z'),
+        effectivatedDate: undefined,
+        effectivated: false,
+        accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+        categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+        subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+        notes: undefined,
+      });
+    });
+
+    it('should parse effectivatedDate when provided', async () => {
+      editTransactionMock.mockResolvedValue(Result.ok(undefined));
+      const dto: EditIncomeDto = { ...baseDto, effectivatedDate: '2026-01-05T12:00:00.000Z' };
+
+      await controller.editIncome(id, dto);
+
+      expect(editTransactionMock).toHaveBeenCalledWith(
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-05T12:00:00.000Z') }),
+      );
+    });
+
+    it('should return undefined (204 No Content) on success', async () => {
+      editTransactionMock.mockResolvedValue(Result.ok(undefined));
+
+      const response = await controller.editIncome(id, baseDto);
+
+      expect(response).toBeUndefined();
+    });
+
+    it('should log and throw InternalServerErrorException on PRISMA_QUERY_ERROR', async () => {
+      editTransactionMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(controller.editIncome(id, baseDto)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during edit income');
+    });
+
+    it('should throw BadRequestException on domain validation error', async () => {
+      editTransactionMock.mockResolvedValue(
+        Result.fail({ code: Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE }),
+      );
+
+      await expect(controller.editIncome(id, baseDto)).rejects.toThrow(BadRequestException);
     });
   });
 });

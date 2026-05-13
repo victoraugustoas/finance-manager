@@ -87,7 +87,10 @@ Top-level under `src/`: `main.ts`, `entrypoint/` (root Nest module), `shared/`, 
 (`accounts`, `category`, `reporting`, `transactions`).
 
 **`shared/`** — cross-cutting building blocks: `base/` (e.g. `Result`, `Entity`, `ValueObject`, `UseCase`,
-`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`), and `infra/` (e.g. `PrismaService`, HTTP error mapping).
+`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`), `infra/` (e.g. `PrismaService`, HTTP error mapping),
+and `events/` (outbox infrastructure — `OutboxEvent`, `EventsModule`, and sub-folders `infra/` with
+`saveWithOutbox`, `OutboxRelayService`, `EventConsumer`, `NestEventEmitterPublisher`, `PrismaOutboxRepository`,
+and `ports/` with `EventPublisher`, `OutboxRepository`).
 
 **Bounded contexts (common layout)** — each context uses `core/` for domain and application code and `infra/` for
 adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per context), `model/`, `provider/`,
@@ -95,10 +98,11 @@ adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per c
 
 **Context-specific additions**
 
-| Context       | Extra paths (beyond the common layout) |
-| ------------- | -------------------------------------- |
-| **reporting** | `core/dto/`, `core/service/` |
-| **transactions** | `infra/acl/account/` — read-only access into the Account context |
+| Context          | Extra paths (beyond the common layout) |
+| ---------------- | -------------------------------------- |
+| **accounts**     | `infra/controllers/events/` — event handlers (e.g. `UpdateAccountBalance/TransactionRegisteredHandler`, `TransactionEditedHandler`) |
+| **reporting**    | `core/dto/`, `core/service/` |
+| **transactions** | `core/events/` — domain events (`TransactionRegisteredEvent`, `TransactionEditedEvent`); `infra/acl/account/` — read-only access into the Account context |
 
 Other project roots: `http/` holds sample **REST Client** requests (one `.http` file per bounded context with HTTP:
 `accounts`, `category`, `reporting`, `transactions`); `prisma/` holds the schema and migrations.
@@ -109,6 +113,7 @@ Contexts document use cases under `core/definitions/UseCasesDefinitions.md` in d
 
 - **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma). Cross-context reads at the persistence boundary may use ACLs under `infra/acl/` (ports in `core/provider/`, adapters that talk to Prisma or other integrations).
 - **DDD:** aggregates, entities, value objects, and domain events where applicable; bounded contexts mapped to folders under `src/`.
+- **Outbox pattern:** domain events are persisted atomically alongside the aggregate in an `OutboxEvent` table via `saveWithOutbox`. `OutboxRelayService` polls every 5 s, dispatches pending events through NestJS `EventEmitter2`, and marks them processed. Consumers extend `EventConsumer<TPayload>` (in `shared/events/infra/`) which handles idempotency via a `ProcessedEvent` table.
 
 **Bounded contexts (product view):**
 
@@ -142,7 +147,7 @@ Hooks live in `.githooks` (enabled by the npm/pnpm `prepare` script after `pnpm 
 
 ## CI/CD
 
-On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, **pnpm 10**, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. A step verifies that `coverage/lcov.info` exists. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) via **OIDC** (`use_oidc: true` on `codecov/codecov-action@v6`, workflow `permissions: id-token: write`) so you do not need a `CODECOV_TOKEN` secret for uploads from this repo’s Actions. The Codecov step is configured with `fail_ci_if_error: false` so an upload failure does not fail the job. Install the [Codecov GitHub app](https://github.com/apps/codecov) on the repository if uploads still fail (required for OIDC trust in some setups). Jest reporters include `lcov` in `jest.config.ts`.
+On GitHub Actions, the **PR Check** workflow (`.github/workflows/unit-tests.yml`) runs on **pull requests** and on **pushes to `main`**: checkout, **pnpm 10**, Node from `.nvmrc`, `pnpm install --frozen-lockfile`, and `pnpm test:cov`. A step verifies that `coverage/lcov.info` exists. Coverage is uploaded to [Codecov](https://codecov.io/gh/victoraugustoas/finance-manager) via **OIDC** (`use_oidc: true` on `codecov/codecov-action@v6`, workflow `permissions: id-token: write`) so you do not need a `CODECOV_TOKEN` secret for uploads from this repo's Actions. The Codecov step is configured with `fail_ci_if_error: false` so an upload failure does not fail the job. Install the [Codecov GitHub app](https://github.com/apps/codecov) on the repository if uploads still fail (required for OIDC trust in some setups). Jest reporters include `lcov` in `jest.config.ts`.
 
 ---
 

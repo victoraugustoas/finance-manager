@@ -29,7 +29,7 @@ export class RegisterIncomeUseCase implements UseCase<RegisterIncomeParams, Inco
       this.accounts.existsById(params.accountId),
       this.categoryHierarchy.ensureIncomeHierarchy(params.categoryId, params.subCategoryId),
     ]);
-    const income = Income.create({
+    const income = Income.register({
       name: params.name,
       amount: params.amount,
       categoryId: params.categoryId,

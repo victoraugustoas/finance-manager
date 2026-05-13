@@ -1,9 +1,22 @@
+import { DomainEvent } from '@/shared/base/DomainEvent';
 import { Errors } from '@/shared/base/Errors';
 import {
   Transaction,
   TransactionProps,
   TransactionType,
 } from '@/transactions/core/model/Transaction';
+
+class StubEvent extends DomainEvent {
+  constructor() {
+    super();
+  }
+  get eventName() {
+    return 'stub.event';
+  }
+  get payload() {
+    return {};
+  }
+}
 
 function baseProps(overrides: Partial<TransactionProps> = {}): TransactionProps {
   const entryDate = new Date('2026-01-10T12:00:00.000Z');
@@ -104,6 +117,83 @@ describe('Transaction', () => {
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.TRANSACTION_EFFECTIVATED_DATE_NOT_AFTER_ENTRY_DATE);
+    });
+  });
+
+  describe('copyWith()', () => {
+    it('should override the given props on the copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', name: 'Original' }));
+
+      const copy = transaction.copyWith({ name: 'Updated' });
+
+      expect(copy.props.name).toBe('Updated');
+    });
+
+    it('should preserve props not included in the overrides', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+
+      const copy = transaction.copyWith({ name: 'Updated' });
+
+      expect(copy.props.amount).toBe(100);
+      expect(copy.props.type).toBe(TransactionType.EXPENSE);
+      expect(copy.props.accountId).toBe('acc-1');
+    });
+
+    it('should preserve the id when the original was created with an explicit id', () => {
+      const transaction = Transaction.new(baseProps({ id: 'explicit-id' }));
+
+      const copy = transaction.copyWith({ name: 'Copy' });
+
+      expect(copy.id).toBe('explicit-id');
+    });
+
+    it('should update the amount Money value object on the copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', amount: 100 }));
+
+      const copy = transaction.copyWith({ amount: 200 });
+
+      expect(copy.amount.amount).toBe(200);
+      expect(transaction.amount.amount).toBe(100);
+    });
+
+    it('should update the effectivated value object on the copy', () => {
+      const effectivatedDate = new Date('2026-06-01T12:00:00.000Z');
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', effectivated: false }));
+
+      const copy = transaction.copyWith({ effectivated: true, effectivatedDate });
+
+      expect(copy.effectivated.effectivated).toBe(true);
+      expect(copy.effectivated.effectivatedDate).toBe(effectivatedDate);
+    });
+
+    it('should copy domain events from the original into the copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+      transaction['addDomainEvent'](new StubEvent());
+
+      const copy = transaction.copyWith({ name: 'Copy' });
+
+      expect(copy.domainEvents).toHaveLength(1);
+      expect(copy.domainEvents[0]).toBeInstanceOf(StubEvent);
+    });
+
+    it('should not share the events array between original and copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+      transaction['addDomainEvent'](new StubEvent());
+
+      const copy = transaction.copyWith({ name: 'Copy' });
+      copy['addDomainEvent'](new StubEvent());
+
+      expect(transaction.domainEvents).toHaveLength(1);
+      expect(copy.domainEvents).toHaveLength(2);
+    });
+
+    it('should not mutate the original props', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', name: 'Original' }));
+
+      transaction.copyWith({ name: 'Different', amount: 999 });
+
+      expect(transaction.props.name).toBe('Original');
+      expect(transaction.props.amount).toBe(100);
     });
   });
 

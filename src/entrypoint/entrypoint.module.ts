@@ -5,9 +5,11 @@ import { TransactionsModule } from '@/transactions/infra/module/transactions.mod
 import { ReportingModule } from '@/reporting/infra/module/reporting.module';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { ConfigModule } from '@nestjs/config';
+import { EventsModule } from '@/shared/events/EventsModule';
 
 @Module({
   imports: [
+    EventsModule,
     AccountsModule,
     CategoriesModule,
     TransactionsModule,

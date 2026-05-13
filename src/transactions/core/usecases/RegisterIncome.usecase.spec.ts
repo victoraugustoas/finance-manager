@@ -124,4 +124,48 @@ describe('RegisterIncomeUseCase', () => {
     expect(result.value.id).toEqual(expect.any(String));
     expect(transactionsRepository.saveIncome).toHaveBeenCalledTimes(1);
   });
+
+  it('should return the persistence failure when saveIncome fails', async () => {
+    const transactionsRepository = {
+      saveExpense: jest.fn(),
+      saveIncome: jest
+        .fn()
+        .mockResolvedValue(Result.fail({ code: Errors.PRISMA_INSERT_ERROR, cls: 'test' })),
+    } as unknown as TransactionsRepository;
+    const accounts = {
+      existsById: jest.fn().mockResolvedValue(Result.ok(undefined)),
+    } as unknown as TransactionAccountQuery;
+
+    const useCase = new RegisterIncomeUseCase(
+      transactionsRepository,
+      accounts,
+      categoryHierarchyOk,
+    );
+
+    const result = await useCase.execute(baseParams);
+
+    expect(result.isFailure).toBe(true);
+    expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
+  });
+
+  it('should call existsById and ensureIncomeHierarchy with the params account and category ids', async () => {
+    const transactionsRepository = {
+      saveExpense: jest.fn(),
+      saveIncome: jest.fn().mockResolvedValue(Result.ok(undefined)),
+    } as unknown as TransactionsRepository;
+    const accounts = {
+      existsById: jest.fn().mockResolvedValue(Result.ok(undefined)),
+    } as unknown as TransactionAccountQuery;
+    const categoryHierarchy = {
+      ensureIncomeHierarchy: jest.fn().mockResolvedValue(Result.ok(undefined)),
+      ensureExpenseHierarchy: jest.fn(),
+    } as unknown as TransactionCategoryHierarchyQuery;
+
+    const useCase = new RegisterIncomeUseCase(transactionsRepository, accounts, categoryHierarchy);
+
+    await useCase.execute(baseParams);
+
+    expect(accounts.existsById).toHaveBeenCalledWith('acc-1');
+    expect(categoryHierarchy.ensureIncomeHierarchy).toHaveBeenCalledWith('cat-1', 'sub-1');
+  });
 });

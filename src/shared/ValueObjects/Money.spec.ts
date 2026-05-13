@@ -79,9 +79,8 @@ describe('Money', () => {
 
       const result = a.subtract(b);
 
-      expect(result.isSuccess).toBe(true);
-      expect(result.value.amountInCents).toBe(1450);
-      expect(result.value.amount).toBe(14.5);
+      expect(result.amountInCents).toBe(1450);
+      expect(result.amount).toBe(14.5);
     });
 
     it('should return zero when subtracting equal amounts', () => {
@@ -90,8 +89,7 @@ describe('Money', () => {
 
       const result = a.subtract(b);
 
-      expect(result.isSuccess).toBe(true);
-      expect(result.value.amountInCents).toBe(0);
+      expect(result.amountInCents).toBe(0);
     });
 
     it('should return a negative amount when subtracting a larger amount', () => {
@@ -100,8 +98,7 @@ describe('Money', () => {
 
       const result = a.subtract(b);
 
-      expect(result.isSuccess).toBe(true);
-      expect(result.value.amountInCents).toBe(-500);
+      expect(result.amountInCents).toBe(-500);
     });
   });
 

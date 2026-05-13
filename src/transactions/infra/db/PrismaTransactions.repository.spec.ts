@@ -43,13 +43,20 @@ const makeIncome = (overrides: Partial<Parameters<typeof Income.new>[0]> = {}): 
   });
 
 describe('PrismaTransactionsRepository', () => {
-  let transactionCreate: jest.Mock;
+  let transactionUpsert: jest.Mock;
   let prisma: PrismaService;
   let repository: PrismaTransactionsRepository;
 
   beforeEach(() => {
-    transactionCreate = jest.fn().mockResolvedValue(undefined);
-    prisma = { transaction: { create: transactionCreate } } as unknown as PrismaService;
+    transactionUpsert = jest.fn().mockResolvedValue(undefined);
+    prisma = {
+      $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          transaction: { upsert: transactionUpsert },
+          outboxEvent: { createMany: jest.fn().mockResolvedValue(undefined) },
+        }),
+      ),
+    } as unknown as PrismaService;
     repository = new PrismaTransactionsRepository(prisma);
   });
 
@@ -65,13 +72,15 @@ describe('PrismaTransactionsRepository', () => {
 
       await repository.saveExpense(expense);
 
-      expect(transactionCreate).toHaveBeenCalledTimes(1);
-      expect(transactionCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          amount: expense.amount.amountInCents,
-          type: 'EXPENSE',
+      expect(transactionUpsert).toHaveBeenCalledTimes(1);
+      expect(transactionUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            amount: expense.amount.amountInCents,
+            type: 'EXPENSE',
+          }),
         }),
-      });
+      );
     });
 
     it('should map all scalar fields correctly', async () => {
@@ -79,8 +88,9 @@ describe('PrismaTransactionsRepository', () => {
 
       await repository.saveExpense(expense);
 
-      expect(transactionCreate).toHaveBeenCalledWith({
-        data: {
+      expect(transactionUpsert).toHaveBeenCalledWith({
+        where: { id: expense.id },
+        create: {
           id: expense.id,
           name: 'Groceries',
           amount: expense.amount.amountInCents,
@@ -90,6 +100,18 @@ describe('PrismaTransactionsRepository', () => {
           effectivatedDate: null,
           effectivated: false,
           type: 'EXPENSE',
+          categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+          subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+          accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+        },
+        update: {
+          name: 'Groceries',
+          amount: expense.amount.amountInCents,
+          notes: null,
+          dueDate,
+          entryDate,
+          effectivatedDate: null,
+          effectivated: false,
           categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
           subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
           accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
@@ -106,18 +128,20 @@ describe('PrismaTransactionsRepository', () => {
 
       await repository.saveExpense(expense);
 
-      expect(transactionCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          notes: 'weekly shop',
-          effectivated: true,
-          effectivatedDate,
+      expect(transactionUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            notes: 'weekly shop',
+            effectivated: true,
+            effectivatedDate,
+          }),
         }),
-      });
+      );
     });
 
     it('should return PRISMA_INSERT_ERROR when prisma create throws', async () => {
       const dbError = new Error('unique constraint failed');
-      transactionCreate.mockRejectedValue(dbError);
+      transactionUpsert.mockRejectedValue(dbError);
 
       const result = await repository.saveExpense(makeExpense());
 
@@ -140,13 +164,15 @@ describe('PrismaTransactionsRepository', () => {
 
       await repository.saveIncome(income);
 
-      expect(transactionCreate).toHaveBeenCalledTimes(1);
-      expect(transactionCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          amount: income.amount.amountInCents,
-          type: 'INCOME',
+      expect(transactionUpsert).toHaveBeenCalledTimes(1);
+      expect(transactionUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            amount: income.amount.amountInCents,
+            type: 'INCOME',
+          }),
         }),
-      });
+      );
     });
 
     it('should map all scalar fields correctly', async () => {
@@ -154,8 +180,9 @@ describe('PrismaTransactionsRepository', () => {
 
       await repository.saveIncome(income);
 
-      expect(transactionCreate).toHaveBeenCalledWith({
-        data: {
+      expect(transactionUpsert).toHaveBeenCalledWith({
+        where: { id: income.id },
+        create: {
           id: income.id,
           name: 'Salary',
           amount: income.amount.amountInCents,
@@ -165,6 +192,18 @@ describe('PrismaTransactionsRepository', () => {
           effectivatedDate: null,
           effectivated: false,
           type: 'INCOME',
+          categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+          subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+          accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+        },
+        update: {
+          name: 'Salary',
+          amount: income.amount.amountInCents,
+          notes: null,
+          dueDate,
+          entryDate,
+          effectivatedDate: null,
+          effectivated: false,
           categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
           subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
           accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
@@ -181,18 +220,20 @@ describe('PrismaTransactionsRepository', () => {
 
       await repository.saveIncome(income);
 
-      expect(transactionCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          notes: 'monthly salary',
-          effectivated: true,
-          effectivatedDate,
+      expect(transactionUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            notes: 'monthly salary',
+            effectivated: true,
+            effectivatedDate,
+          }),
         }),
-      });
+      );
     });
 
     it('should return PRISMA_INSERT_ERROR when prisma create throws', async () => {
       const dbError = new Error('foreign key constraint failed');
-      transactionCreate.mockRejectedValue(dbError);
+      transactionUpsert.mockRejectedValue(dbError);
 
       const result = await repository.saveIncome(makeIncome());
 

@@ -14,4 +14,10 @@ export abstract class Entity<TProps> {
   equals(other: Entity<TProps>): boolean {
     return other._id === this._id;
   }
+
+  copyWith(overrides: Partial<TProps>): this {
+    const copy = Object.create(Object.getPrototypeOf(this)) as this;
+    Object.assign(copy, this, { props: { ...this.props, ...overrides } });
+    return copy;
+  }
 }

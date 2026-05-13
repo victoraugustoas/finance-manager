@@ -2,5 +2,6 @@ import { Result } from '@/shared/base';
 import { Account } from '../model/Account';
 
 export abstract class AccountsRepository {
-  abstract create(account: Account): Promise<Result<void>>;
+  abstract save(account: Account): Promise<Result<void>>;
+  abstract findById(id: string): Promise<Result<Account>>;
 }
