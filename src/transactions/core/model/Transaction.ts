@@ -74,7 +74,7 @@ export class Transaction extends AggregateRoot<TransactionProps> {
 
   override copyWith(props: Partial<TransactionProps>): this {
     const copy = Transaction.new({ ...this.props, ...props }) as this;
-    copy.domainEvents.forEach((event) => this.addDomainEvent(event));
+    this.domainEvents.forEach((event) => copy.addDomainEvent(event));
     return copy;
   }
 

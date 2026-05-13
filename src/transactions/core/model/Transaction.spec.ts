@@ -1,9 +1,22 @@
+import { DomainEvent } from '@/shared/base/DomainEvent';
 import { Errors } from '@/shared/base/Errors';
 import {
   Transaction,
   TransactionProps,
   TransactionType,
 } from '@/transactions/core/model/Transaction';
+
+class StubEvent extends DomainEvent {
+  constructor() {
+    super();
+  }
+  get eventName() {
+    return 'stub.event';
+  }
+  get payload() {
+    return {};
+  }
+}
 
 function baseProps(overrides: Partial<TransactionProps> = {}): TransactionProps {
   const entryDate = new Date('2026-01-10T12:00:00.000Z');
@@ -153,12 +166,25 @@ describe('Transaction', () => {
       expect(copy.effectivated.effectivatedDate).toBe(effectivatedDate);
     });
 
-    it('should return a copy with no domain events (fresh instance via Transaction.new)', () => {
+    it('should copy domain events from the original into the copy', () => {
       const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+      transaction['addDomainEvent'](new StubEvent());
 
       const copy = transaction.copyWith({ name: 'Copy' });
 
-      expect(copy.domainEvents).toHaveLength(0);
+      expect(copy.domainEvents).toHaveLength(1);
+      expect(copy.domainEvents[0]).toBeInstanceOf(StubEvent);
+    });
+
+    it('should not share the events array between original and copy', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1' }));
+      transaction['addDomainEvent'](new StubEvent());
+
+      const copy = transaction.copyWith({ name: 'Copy' });
+      copy['addDomainEvent'](new StubEvent());
+
+      expect(transaction.domainEvents).toHaveLength(1);
+      expect(copy.domainEvents).toHaveLength(2);
     });
 
     it('should not mutate the original props', () => {
