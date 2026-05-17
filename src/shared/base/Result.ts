@@ -74,26 +74,6 @@ export class Result<T> {
     return Result.fail<void>(this._errors!);
   }
 
-  /**
-   * Transforms the inner value if successful, otherwise propagates the failure.
-   */
-  map<U>(fn: (value: T) => U): Result<U> {
-    if (this.isFailure) {
-      return Result.fail<U>(this._errors!);
-    }
-    return Result.ok<U>(fn(this._value as T));
-  }
-
-  /**
-   * Chains another Result if successful, otherwise propagates the failure.
-   */
-  flatMap<U>(fn: (value: T) => Result<U>): Result<U> {
-    if (this.isFailure) {
-      return Result.fail<U>(this._errors!);
-    }
-    return fn(this._value as T);
-  }
-
   throwIfError(): void {
     if (this.isFailure) {
       throw this._errors;

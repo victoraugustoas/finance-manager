@@ -1,0 +1,1 @@
+../../.agents/skills/create-value-object/SKILL.md

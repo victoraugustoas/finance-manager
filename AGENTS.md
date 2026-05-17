@@ -76,6 +76,7 @@ Exceptions: `index.ts` (barrel files) remain in lowercase.
 ## Skills
 
 - `.agents/update-readme.md` — Keep `README.md` up to date. Use at the end of any task that changes the project's structure, dependencies, scripts, contexts, environment variables, or conventions.
+- `.agents/skills/create-value-object/SKILL.md` — Create a new Value Object following DDD. Use when encapsulating a primitive concept (email, CPF, phone, date range, etc.) that has invariants or behaviour.
 
 ## Commands
 

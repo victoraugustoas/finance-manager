@@ -2,4 +2,8 @@
 
 echo "Running tests before push..."
 
+# Load nvm to ensure node/pnpm are available (needed for GUI git clients like GitKraken)
+export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
 pnpm test

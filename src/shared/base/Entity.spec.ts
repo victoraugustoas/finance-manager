@@ -17,9 +17,7 @@ describe('Entity', () => {
     it('should generate a UUID when no id is provided', () => {
       const entity = new SomeEntity({ name: 'X', value: 1 });
 
-      expect(entity.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      );
+      expect(entity.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     });
 
     it('should generate different ids for two instances without explicit id', () => {
