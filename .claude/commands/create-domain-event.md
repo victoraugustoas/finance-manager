@@ -1,0 +1,1 @@
+../../.agents/skills/create-domain-event/SKILL.md
