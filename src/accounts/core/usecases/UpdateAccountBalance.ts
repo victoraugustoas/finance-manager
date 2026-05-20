@@ -1,6 +1,7 @@
 import { Result, UseCase } from '@/shared/base';
 import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
 import { Money } from '@/shared/ValueObjects';
+import { TransactionType } from '@/shared/enums/TransactionType';
 
 type UpdateAccountBalanceParams =
   | {
@@ -8,7 +9,7 @@ type UpdateAccountBalanceParams =
       accountId: string;
       value: number;
       effectivated: boolean;
-      type: 'EXPENSE' | 'INCOME';
+      type: TransactionType;
     }
   | {
       updatedBy: 'EDIT';
@@ -17,7 +18,7 @@ type UpdateAccountBalanceParams =
       newValue: number;
       newEffectivated: boolean;
       oldEffectivated: boolean;
-      type: 'EXPENSE' | 'INCOME';
+      type: TransactionType;
     };
 
 export class UpdateAccountBalance implements UseCase<UpdateAccountBalanceParams, void> {

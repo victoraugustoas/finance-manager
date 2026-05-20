@@ -1,4 +1,5 @@
-import { Category, CategoryType } from '@/category/core/model/Category';
+import { Category } from '@/category/core/model/Category';
+import { CategoryType } from '@/shared/enums/CategoryType';
 import { ApiProperty } from '@nestjs/swagger';
 import { CreateSubCategoryResponseDto } from '@/category/infra/dtos/CreateSubCategoryResponse.dto';
 

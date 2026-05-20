@@ -1,7 +1,7 @@
 import { Result } from '@/shared/base';
 import { UpdateAccountBalance } from '@/accounts/core/usecases/UpdateAccountBalance';
 import { TransactionEditedEvent } from '@/transactions/core/events/TransactionEditedEvent';
-import { TransactionType } from '@/transactions/core/model/Transaction';
+import { TransactionType } from '@/shared/enums/TransactionType';
 import { TransactionEditedHandler } from './TransactionEditedHandler';
 
 const makePrisma = (processedCount: number) =>

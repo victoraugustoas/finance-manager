@@ -7,8 +7,14 @@ import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.use
 import { UpdateAccountBalance } from '@/accounts/core/usecases/UpdateAccountBalance';
 import { TransactionRegisteredHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransactionRegisteredHandler';
 import { TransactionEditedHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransactionEditedHandler';
+import { TransferRegisteredHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransferRegisteredHandler';
+import { ApplyTransferBetweenAccountsUseCase } from '@/accounts/core/usecases/ApplyTransferBetweenAccounts.usecase';
 
-const eventHandlers: Provider[] = [TransactionRegisteredHandler, TransactionEditedHandler];
+const eventHandlers: Provider[] = [
+  TransactionRegisteredHandler,
+  TransactionEditedHandler,
+  TransferRegisteredHandler,
+];
 
 @Module({
   imports: [],
@@ -28,6 +34,12 @@ const eventHandlers: Provider[] = [TransactionRegisteredHandler, TransactionEdit
     {
       provide: UpdateAccountBalance,
       useFactory: (repo: AccountsRepository) => new UpdateAccountBalance(repo),
+      inject: [AccountsRepository],
+    },
+    {
+      provide: ApplyTransferBetweenAccountsUseCase,
+      useFactory: (accountsRepository: AccountsRepository) =>
+        new ApplyTransferBetweenAccountsUseCase(accountsRepository),
       inject: [AccountsRepository],
     },
     ...eventHandlers,

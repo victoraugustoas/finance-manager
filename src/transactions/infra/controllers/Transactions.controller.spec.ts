@@ -7,14 +7,16 @@ import {
 import { TransactionsController } from '@/transactions/infra/controllers/Transactions.controller';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
+import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
 import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
+import { RegisterTransferDto } from '@/transactions/infra/dtos/RegisterTransfer.dto';
 import { EditExpenseDto } from '@/transactions/infra/dtos/EditExpense.dto';
 import { EditIncomeDto } from '@/transactions/infra/dtos/EditIncome.dto';
 import { Expense } from '@/transactions/core/model/Expense';
 import { Income } from '@/transactions/core/model/Income';
-import { TransactionType } from '@/transactions/core/model/Transaction';
+import { TransactionType } from '@/shared/enums/TransactionType';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 
@@ -48,16 +50,19 @@ describe('TransactionsController', () => {
   let controller: TransactionsController;
   let registerExpenseMock: jest.Mock;
   let registerIncomeMock: jest.Mock;
+  let registerTransferMock: jest.Mock;
   let editTransactionMock: jest.Mock;
   let loggerErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     registerExpenseMock = jest.fn();
     registerIncomeMock = jest.fn();
+    registerTransferMock = jest.fn();
     editTransactionMock = jest.fn();
     controller = new TransactionsController(
       { execute: registerExpenseMock } as unknown as RegisterExpenseUseCase,
       { execute: registerIncomeMock } as unknown as RegisterIncomeUseCase,
+      { execute: registerTransferMock } as unknown as RegisterTransferUseCase,
       { execute: editTransactionMock } as unknown as EditTransactionUseCase,
     );
     loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
@@ -236,6 +241,82 @@ describe('TransactionsController', () => {
       );
 
       await expect(controller.registerIncome(baseDto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('registerTransfer()', () => {
+    const baseDto: RegisterTransferDto = {
+      name: 'Savings transfer',
+      amount: 150,
+      dueDate: '2026-01-15T12:00:00.000Z',
+      entryDate: '2026-01-10T12:00:00.000Z',
+      effectivated: false,
+      accountIdOrigin: '11111111-1111-4111-1111-111111111111',
+      accountIdDestination: '22222222-2222-4222-2222-222222222222',
+    };
+
+    it('should call RegisterTransferUseCase.execute with dates parsed and optional fields mapped', async () => {
+      registerTransferMock.mockResolvedValue(Result.ok(undefined));
+
+      await controller.registerTransfer(baseDto);
+
+      expect(registerTransferMock).toHaveBeenCalledTimes(1);
+      expect(registerTransferMock).toHaveBeenCalledWith({
+        name: 'Savings transfer',
+        amount: 150,
+        dueDate: new Date('2026-01-15T12:00:00.000Z'),
+        entryDate: new Date('2026-01-10T12:00:00.000Z'),
+        effectivatedDate: undefined,
+        effectivated: false,
+        accountIdOrigin: '11111111-1111-4111-1111-111111111111',
+        accountIdDestination: '22222222-2222-4222-2222-222222222222',
+        notes: undefined,
+      });
+    });
+
+    it('should parse effectivatedDate when provided', async () => {
+      registerTransferMock.mockResolvedValue(Result.ok(undefined));
+      const dto = { ...baseDto, effectivatedDate: '2026-01-12T12:00:00.000Z' };
+
+      await controller.registerTransfer(dto);
+
+      expect(registerTransferMock).toHaveBeenCalledWith(
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-12T12:00:00.000Z') }),
+      );
+    });
+
+    it('should return undefined (201 no body) on success', async () => {
+      registerTransferMock.mockResolvedValue(Result.ok(undefined));
+
+      const response = await controller.registerTransfer(baseDto);
+
+      expect(response).toBeUndefined();
+    });
+
+    it('should log and throw InternalServerErrorException on PRISMA_INSERT_ERROR', async () => {
+      registerTransferMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_INSERT_ERROR }));
+
+      await expect(controller.registerTransfer(baseDto)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during register transfer');
+    });
+
+    it('should throw BadRequestException on domain validation error', async () => {
+      registerTransferMock.mockResolvedValue(
+        Result.fail({ code: Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE }),
+      );
+
+      await expect(controller.registerTransfer(baseDto)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException on due date before entry date', async () => {
+      registerTransferMock.mockResolvedValue(
+        Result.fail({ code: Errors.TRANSACTION_DUE_DATE_NOT_AFTER_ENTRY_DATE }),
+      );
+
+      await expect(controller.registerTransfer(baseDto)).rejects.toThrow(BadRequestException);
     });
   });
 

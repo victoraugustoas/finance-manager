@@ -1,7 +1,8 @@
 import { Result, UseCase } from '@/shared/base';
 import { Income } from '@/transactions/core/model/Income';
 import { Expense } from '@/transactions/core/model/Expense';
-import { TransactionProps, TransactionType } from '@/transactions/core/model/Transaction';
+import { TransactionProps } from '@/transactions/core/model/Transaction';
+import { TransactionType } from '@/shared/enums/TransactionType';
 import { TransactionAccountQuery } from '../provider/TransactionAccount.query';
 import { TransactionCategoryHierarchyQuery } from '../provider/TransactionCategoryHierarchy.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';

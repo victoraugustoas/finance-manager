@@ -1,4 +1,4 @@
-import { CategoryType } from '@/category/core/model/Category';
+import { CategoryType } from '@/shared/enums/CategoryType';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsString, MaxLength, MinLength } from 'class-validator';
 

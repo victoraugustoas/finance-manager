@@ -3,11 +3,9 @@ import { Errors } from '@/shared/base/Errors';
 import { isAfter, isSameDay } from 'date-fns';
 import { Money } from '@/shared/ValueObjects';
 import { Effectivated, EffectivatedProps } from '@/shared/ValueObjects/Effectivated';
+import { TransactionType } from '@/shared/enums/TransactionType';
 
-export enum TransactionType {
-  INCOME = 'INCOME',
-  EXPENSE = 'EXPENSE',
-}
+export { TransactionType };
 
 export interface TransactionProps extends EffectivatedProps {
   id?: string;

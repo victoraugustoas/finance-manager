@@ -3,6 +3,7 @@ import { Errors } from '@/shared/base/Errors';
 import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
 import { Account } from '@/accounts/core/model/Account';
 import { UpdateAccountBalance } from './UpdateAccountBalance';
+import { TransactionType } from '@/shared/enums/TransactionType';
 
 const makeAccount = (balance = 100) =>
   Account.create({ name: 'Test', balance, openingBalance: 0 }).value;
@@ -24,7 +25,7 @@ describe('UpdateAccountBalance', () => {
         updatedBy: 'NEW_TRANSACTION',
         accountId: 'acc-1',
         value: 30,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         effectivated: true,
       });
 
@@ -42,7 +43,7 @@ describe('UpdateAccountBalance', () => {
         updatedBy: 'NEW_TRANSACTION',
         accountId: 'acc-1',
         value: 50,
-        type: 'INCOME',
+        type: TransactionType.INCOME,
         effectivated: true,
       });
 
@@ -60,7 +61,7 @@ describe('UpdateAccountBalance', () => {
         updatedBy: 'NEW_TRANSACTION',
         accountId: 'acc-1',
         value: 30,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         effectivated: false,
       });
 
@@ -76,7 +77,7 @@ describe('UpdateAccountBalance', () => {
         updatedBy: 'NEW_TRANSACTION',
         accountId: 'acc-1',
         value: NaN,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         effectivated: true,
       });
 
@@ -98,7 +99,7 @@ describe('UpdateAccountBalance', () => {
         updatedBy: 'NEW_TRANSACTION',
         accountId: 'not-found',
         value: 10,
-        type: 'INCOME',
+        type: TransactionType.INCOME,
         effectivated: true,
       });
 
@@ -120,7 +121,7 @@ describe('UpdateAccountBalance', () => {
         updatedBy: 'NEW_TRANSACTION',
         accountId: 'acc-1',
         value: 10,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         effectivated: true,
       });
 
@@ -141,7 +142,7 @@ describe('UpdateAccountBalance', () => {
         accountId: 'acc-1',
         oldValue: 20,
         newValue: 10,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         oldEffectivated: true,
         newEffectivated: false,
       });
@@ -162,7 +163,7 @@ describe('UpdateAccountBalance', () => {
         accountId: 'acc-1',
         oldValue: 40,
         newValue: 60,
-        type: 'INCOME',
+        type: TransactionType.INCOME,
         oldEffectivated: true,
         newEffectivated: false,
       });
@@ -181,7 +182,7 @@ describe('UpdateAccountBalance', () => {
         accountId: 'acc-1',
         oldValue: 20,
         newValue: 30,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         oldEffectivated: false,
         newEffectivated: true,
       });
@@ -199,7 +200,7 @@ describe('UpdateAccountBalance', () => {
         accountId: 'acc-1',
         oldValue: NaN,
         newValue: 10,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         oldEffectivated: true,
         newEffectivated: true,
       });
@@ -223,7 +224,7 @@ describe('UpdateAccountBalance', () => {
         accountId: 'not-found',
         oldValue: 10,
         newValue: 20,
-        type: 'EXPENSE',
+        type: TransactionType.EXPENSE,
         oldEffectivated: true,
         newEffectivated: true,
       });

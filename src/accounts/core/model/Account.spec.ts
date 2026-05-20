@@ -1,6 +1,7 @@
 import { Errors } from '@/shared/base/Errors';
 import { Money } from '@/shared/ValueObjects';
 import { Account } from './Account';
+import { TransactionType } from '@/shared/enums/TransactionType';
 
 describe('Account', () => {
   describe('create()', () => {
@@ -68,6 +69,64 @@ describe('Account', () => {
     });
   });
 
+  describe('new()', () => {
+    it('should create an account without validation', () => {
+      const account = Account.new({
+        name: 'Quick account',
+        balance: 200,
+        openingBalance: 50,
+      });
+
+      expect(account.name).toBe('Quick account');
+      expect(account.balance.amount).toBe(200);
+      expect(account.openingBalance.amount).toBe(50);
+    });
+  });
+
+  describe('creditBalance()', () => {
+    it('should add the given value to account balance', () => {
+      const { value: account } = Account.create({ name: 'Test', balance: 100, openingBalance: 0 });
+
+      account.creditBalance(Money.create(40).value);
+
+      expect(account.balance.amount).toBe(140);
+    });
+
+    it('should handle crediting zero', () => {
+      const { value: account } = Account.create({ name: 'Test', balance: 75, openingBalance: 0 });
+
+      account.creditBalance(Money.create(0).value);
+
+      expect(account.balance.amount).toBe(75);
+    });
+  });
+
+  describe('deduceBalance()', () => {
+    it('should subtract the given value from account balance', () => {
+      const { value: account } = Account.create({ name: 'Test', balance: 100, openingBalance: 0 });
+
+      account.deduceBalance(Money.create(30).value);
+
+      expect(account.balance.amount).toBe(70);
+    });
+
+    it('should allow balance to go negative', () => {
+      const { value: account } = Account.create({ name: 'Test', balance: 20, openingBalance: 0 });
+
+      account.deduceBalance(Money.create(50).value);
+
+      expect(account.balance.amount).toBe(-30);
+    });
+
+    it('should handle deducing zero', () => {
+      const { value: account } = Account.create({ name: 'Test', balance: 75, openingBalance: 0 });
+
+      account.deduceBalance(Money.create(0).value);
+
+      expect(account.balance.amount).toBe(75);
+    });
+  });
+
   describe('updateBalance()', () => {
     const makeAccount = (balance: number) =>
       Account.create({ name: 'Test', balance, openingBalance: 0 }).value;
@@ -79,7 +138,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'NEW_TRANSACTION',
-          type: 'EXPENSE',
+          type: TransactionType.EXPENSE,
           value: money(30),
           effectivated: true,
         });
@@ -90,7 +149,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'NEW_TRANSACTION',
-          type: 'INCOME',
+          type: TransactionType.INCOME,
           value: money(50),
           effectivated: true,
         });
@@ -101,7 +160,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'NEW_TRANSACTION',
-          type: 'EXPENSE',
+          type: TransactionType.EXPENSE,
           value: money(50),
           effectivated: false,
         });
@@ -112,7 +171,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'NEW_TRANSACTION',
-          type: 'INCOME',
+          type: TransactionType.INCOME,
           value: money(50),
           effectivated: false,
         });
@@ -127,7 +186,7 @@ describe('Account', () => {
         const account = makeAccount(-50);
         account.updateBalance({
           updatedBy: 'EDIT',
-          type: 'EXPENSE',
+          type: TransactionType.EXPENSE,
           oldValue: money(20),
           newValue: money(10),
           oldEffectivated: true,
@@ -142,7 +201,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
-          type: 'INCOME',
+          type: TransactionType.INCOME,
           oldValue: money(40),
           newValue: money(60),
           oldEffectivated: true,
@@ -155,7 +214,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
-          type: 'EXPENSE',
+          type: TransactionType.EXPENSE,
           oldValue: money(20),
           newValue: money(30),
           oldEffectivated: false,
@@ -168,7 +227,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
-          type: 'INCOME',
+          type: TransactionType.INCOME,
           oldValue: money(20),
           newValue: money(50),
           oldEffectivated: false,
@@ -181,7 +240,7 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
-          type: 'EXPENSE',
+          type: TransactionType.EXPENSE,
           oldValue: money(20),
           newValue: money(30),
           oldEffectivated: true,
@@ -194,9 +253,35 @@ describe('Account', () => {
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
-          type: 'INCOME',
+          type: TransactionType.INCOME,
           oldValue: money(20),
           newValue: money(50),
+          oldEffectivated: false,
+          newEffectivated: false,
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+
+      it('should not change balance when both INCOME states are effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: TransactionType.INCOME,
+          oldValue: money(20),
+          newValue: money(50),
+          oldEffectivated: true,
+          newEffectivated: true,
+        });
+        expect(account.balance.amount).toBe(100);
+      });
+
+      it('should not change balance when both EXPENSE states are not effectivated', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: TransactionType.EXPENSE,
+          oldValue: money(20),
+          newValue: money(30),
           oldEffectivated: false,
           newEffectivated: false,
         });
@@ -209,7 +294,7 @@ describe('Account', () => {
         const account = makeAccount(70);
         account.updateBalance({
           updatedBy: 'DELETE',
-          type: 'EXPENSE',
+          type: TransactionType.EXPENSE,
           oldValue: money(30),
         });
         expect(account.balance.amount).toBe(100);
@@ -219,7 +304,7 @@ describe('Account', () => {
         const account = makeAccount(150);
         account.updateBalance({
           updatedBy: 'DELETE',
-          type: 'INCOME',
+          type: TransactionType.INCOME,
           oldValue: money(50),
         });
         expect(account.balance.amount).toBe(100);

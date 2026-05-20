@@ -1,6 +1,6 @@
 import { DomainEvent } from '@/shared/base/DomainEvent';
 import { OutboxEventData } from '@/shared/events/OutboxEvent';
-import { TransactionType } from '@/transactions/core/model/Transaction';
+import { TransactionType } from '@/shared/enums/TransactionType';
 
 export interface TransactionRegisteredPayload {
   transactionId: string;

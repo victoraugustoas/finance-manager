@@ -4,9 +4,9 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-  moduleFormat  = "cjs"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -14,11 +14,13 @@ datasource db {
 }
 
 model Account {
-  id             String        @id @default(uuid())
-  name           String        @unique
-  balance        Int
-  openingBalance Int
-  transactions   Transaction[]
+  id                     String        @id @default(uuid())
+  name                   String        @unique
+  balance                Int
+  openingBalance         Int
+  transactions           Transaction[]
+  transfersAsOrigin      Transfer[]    @relation("TransferOrigin")
+  transfersAsDestination Transfer[]    @relation("TransferDestination")
 }
 
 enum CategoryType {
@@ -74,6 +76,25 @@ model Transaction {
   @@index([subCategoryId])
 }
 
+model Transfer {
+  id                   String    @id @default(uuid())
+  name                 String
+  /// Amount in minor units (cents), aligned with `Money.amountInCents`.
+  amount               Int
+  notes                String?
+  dueDate              DateTime
+  entryDate            DateTime
+  effectivatedDate     DateTime?
+  effectivated         Boolean
+  accountIdOrigin      String
+  accountOrigin        Account   @relation("TransferOrigin", fields: [accountIdOrigin], references: [id])
+  accountIdDestination String
+  accountDestination   Account   @relation("TransferDestination", fields: [accountIdDestination], references: [id])
+
+  @@index([accountIdOrigin])
+  @@index([accountIdDestination])
+}
+
 enum OutboxEventStatus {
   PENDING
   PROCESSING
@@ -82,15 +103,15 @@ enum OutboxEventStatus {
 }
 
 model OutboxEvent {
-  id            String            @id
-  eventName     String
-  payload       Json
-  occurredAt    DateTime
-  status        OutboxEventStatus @default(PENDING)
-  processedAt   DateTime?
-  attempts      Int               @default(0)
-  lastError     String?
-  createdAt     DateTime          @default(now())
+  id          String            @id
+  eventName   String
+  payload     Json
+  occurredAt  DateTime
+  status      OutboxEventStatus @default(PENDING)
+  processedAt DateTime?
+  attempts    Int               @default(0)
+  lastError   String?
+  createdAt   DateTime          @default(now())
 
   @@index([status, createdAt])
 }

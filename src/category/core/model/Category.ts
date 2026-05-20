@@ -2,13 +2,10 @@ import { AggregateRoot } from '@/shared/base/AggregateRoot';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 import { SubCategory } from './SubCategory';
+import { CategoryType } from '@/shared/enums/CategoryType';
 
+export { CategoryType };
 export const DEFAULT_SUBCATEGORY_NAME = 'Others' as const;
-
-export enum CategoryType {
-  INCOME = 'INCOME',
-  EXPENSE = 'EXPENSE',
-}
 
 export interface CategoryProps {
   id?: string;

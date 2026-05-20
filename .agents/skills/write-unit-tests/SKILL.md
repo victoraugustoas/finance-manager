@@ -22,6 +22,53 @@ disable-model-invocation: true
 - **Imports**: use the `@/…` alias like production code.
 - **Environment**: `node` (no DOM).
 
+## Dependency isolation (critical rule)
+
+**Test only the unit under test. Every dependency it calls must be mocked.**
+
+If `funA()` calls `funB()` internally, the test for `funA()` must mock `funB()` — it must never let `funB()` actually run. Letting a real dependency execute means the test is verifying the dependency's behavior, not `funA()`'s. When `funB()` breaks, `funA()`'s tests must not break.
+
+```ts
+// jest.mock must be at the top of the file — Jest hoists it before any import
+import { funA } from '@/path/to/funA';
+import { funB } from '@/path/to/funB';
+
+jest.mock('@/path/to/funB');
+
+// WRONG — funB runs for real (jest.mock is missing)
+describe('funA', () => {
+  it('should do X', async () => {
+    const result = await funA(input); // funB executes internally
+  });
+});
+
+// CORRECT — jest.mock replaces the module; jest.mocked gives a typed reference
+describe('funA', () => {
+  const mockFunB = jest.mocked(funB);
+
+  beforeEach(() => {
+    mockFunB.mockReset();
+    mockFunB.mockResolvedValue(someFakeReturn);
+  });
+
+  it('should do X', async () => {
+    const result = await funA(input);
+    expect(mockFunB).toHaveBeenCalledWith(expectedArgs);
+    expect(result).toEqual(expectedOutput);
+  });
+
+  it('should not call funB when validation fails', async () => {
+    const result = await funA(invalidInput);
+    expect(mockFunB).not.toHaveBeenCalled();
+  });
+});
+```
+
+What to assert on mocked dependencies:
+- **Called**: `expect(mock).toHaveBeenCalledTimes(1)` / `toHaveBeenCalledWith(…)` — verify the unit delegates correctly.
+- **Not called**: `expect(mock).not.toHaveBeenCalled()` — verify the unit skips the call when it should (e.g., validation failure path).
+- **Never assert the return value of a mock as if it proves real behavior** — that only proves the mock was set up.
+
 ## Test structure
 
 - `describe('ClassOrFunctionName', () => { … })`.
@@ -40,8 +87,10 @@ disable-model-invocation: true
 
 ## Use cases
 
-- External dependencies: **stubs/test doubles** (minimal subclass overriding the method) or typed `jest.fn()` when it fits.
-- When validation fails **before** I/O, collaborators must **not** be invoked (`toHaveBeenCalledTimes(0)` / `not.toHaveBeenCalled()`).
+- Every injected dependency (repositories, services, event buses, etc.) must be a `jest.fn()` mock or a minimal stub — never the real implementation.
+- Set the mock's return value to a controlled fake **before** calling `execute()`. This keeps the test deterministic and scoped to the use case's own logic.
+- When validation fails **before** I/O, collaborators must **not** be invoked (`expect(mock).not.toHaveBeenCalled()`).
+- When the use case delegates to another service, assert: (a) the delegate was called with the right arguments and (b) the use case returns/emits the expected output — not what the delegate does internally.
 - When the use case composes other services, assert DTO/output shape with `toEqual` on stable objects.
 
 ## Infrastructure (e.g., Prisma repository)
@@ -58,6 +107,8 @@ disable-model-invocation: true
 
 ## Anti-patterns
 
+- **Letting dependencies run for real** inside a unit test — if `funA` calls `funB`, always mock `funB`. Otherwise the test is an accidental integration test and breaks for the wrong reasons.
+- **Not asserting on mocks** — setting up a mock but never verifying it was called (or not called) leaves the interaction contract untested.
 - Disguised e2e tests (starting the app, real database) in a unit `*.spec.ts` file.
 - Weak assertions (`expect(true).toBe(true)`) or “smoke-only” tests that skip domain invariants.
 - Copying large chunks of production code just to “make the test work”—prefer extracting testable seams when needed (only when refactoring is explicitly in scope).

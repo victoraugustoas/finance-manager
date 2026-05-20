@@ -1,4 +1,5 @@
-import { Category, CategoryType, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
+import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
+import { CategoryType } from '@/shared/enums/CategoryType';
 import { Errors } from '@/shared/base/Errors';
 
 describe('Category', () => {

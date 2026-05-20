@@ -4,6 +4,7 @@ import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { Expense } from '@/transactions/core/model/Expense';
 import { Income } from '@/transactions/core/model/Income';
+import { Transfer } from '@/transactions/core/model/Transfer';
 import { TransactionsRepository } from '../../core/provider/Transactions.repository';
 import { saveWithOutbox } from '@/shared/events/infra/saveWithOutbox';
 
@@ -162,6 +163,47 @@ export class PrismaTransactionsRepository implements TransactionsRepository {
     } catch (e) {
       return Result.fail({
         code: Errors.PRISMA_QUERY_ERROR,
+        cls: this.constructor.name,
+        data: { error: String(e) },
+      });
+    }
+  }
+
+  async saveTransfer(transfer: Transfer): Promise<Result<void>> {
+    try {
+      await saveWithOutbox(this.prisma, transfer.domainEvents, async (tx) => {
+        await tx.transfer.upsert({
+          where: { id: transfer.id },
+          create: {
+            id: transfer.id,
+            name: transfer.props.name,
+            amount: transfer.props.amount,
+            notes: transfer.props.notes ?? null,
+            dueDate: transfer.props.dueDate,
+            entryDate: transfer.props.entryDate,
+            effectivatedDate: transfer.props.effectivatedDate ?? null,
+            effectivated: transfer.props.effectivated,
+            accountIdOrigin: transfer.props.accountIdOrigin,
+            accountIdDestination: transfer.props.accountIdDestination,
+          },
+          update: {
+            name: transfer.props.name,
+            amount: transfer.props.amount,
+            notes: transfer.props.notes ?? null,
+            dueDate: transfer.props.dueDate,
+            entryDate: transfer.props.entryDate,
+            effectivatedDate: transfer.props.effectivatedDate ?? null,
+            effectivated: transfer.props.effectivated,
+            accountIdOrigin: transfer.props.accountIdOrigin,
+            accountIdDestination: transfer.props.accountIdDestination,
+          },
+        });
+      });
+      transfer.clearDomainEvents();
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail({
+        code: Errors.PRISMA_INSERT_ERROR,
         cls: this.constructor.name,
         data: { error: String(e) },
       });

@@ -1,5 +1,6 @@
 import { AggregateRoot, Result } from '@/shared/base';
 import { Money } from '@/shared/ValueObjects';
+import { TransactionType } from '@/shared/enums/TransactionType';
 
 export interface AccountProps {
   id?: string;
@@ -11,14 +12,14 @@ export interface AccountProps {
 interface NewTransaction {
   updatedBy: 'NEW_TRANSACTION';
   value: Money;
-  type: 'EXPENSE' | 'INCOME';
+  type: TransactionType;
   effectivated: boolean;
 }
 
 interface DeleteTransaction {
   updatedBy: 'DELETE';
   oldValue: Money;
-  type: 'EXPENSE' | 'INCOME';
+  type: TransactionType;
 }
 
 interface EditValueTransaction {
@@ -27,7 +28,7 @@ interface EditValueTransaction {
   newValue: Money;
   oldEffectivated: boolean;
   newEffectivated: boolean;
-  type: 'EXPENSE' | 'INCOME';
+  type: TransactionType;
 }
 
 type AdjustBalanceParams = NewTransaction | DeleteTransaction | EditValueTransaction;
@@ -62,6 +63,14 @@ export class Account extends AggregateRoot<AccountProps> {
     return new Account(props);
   }
 
+  creditBalance(value: Money): void {
+    this.balance = this.balance.add(value);
+  }
+
+  deduceBalance(value: Money): void {
+    this.balance = this.balance.subtract(value);
+  }
+
   updateBalance(params: AdjustBalanceParams): void {
     switch (params.updatedBy) {
       case 'NEW_TRANSACTION':
@@ -82,7 +91,7 @@ export class Account extends AggregateRoot<AccountProps> {
     }
   }
 
-  private adjustBalanceInRemoveTransactions(oldValue: Money, type: 'EXPENSE' | 'INCOME') {
+  private adjustBalanceInRemoveTransactions(oldValue: Money, type: TransactionType) {
     if (type === 'EXPENSE') {
       this.balance = this.balance.add(oldValue);
     } else {
@@ -95,7 +104,7 @@ export class Account extends AggregateRoot<AccountProps> {
   private adjustBalanceInEditTransactions(
     oldValue: Money,
     newValue: Money,
-    type: 'EXPENSE' | 'INCOME',
+    type: TransactionType,
     oldEffectivated: boolean,
     newEffectivated: boolean,
   ) {
@@ -121,7 +130,7 @@ export class Account extends AggregateRoot<AccountProps> {
     }
   }
 
-  private adjustBalanceInCreationTransactions(value: Money, type: 'EXPENSE' | 'INCOME') {
+  private adjustBalanceInCreationTransactions(value: Money, type: TransactionType) {
     if (type === 'EXPENSE') {
       this.balance = this.balance.subtract(value);
     } else {

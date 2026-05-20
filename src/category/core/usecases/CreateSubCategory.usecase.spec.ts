@@ -1,4 +1,5 @@
-import { Category, CategoryType, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
+import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
+import { CategoryType } from '@/shared/enums/CategoryType';
 import { CategoriesRepository } from '@/category/core/provider/categories.repository';
 import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
 import { Errors } from '@/shared/base/Errors';

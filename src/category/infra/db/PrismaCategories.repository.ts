@@ -1,4 +1,5 @@
-import { Category, CategoryType } from '@/category/core/model/Category';
+import { Category } from '@/category/core/model/Category';
+import { CategoryType } from '@/shared/enums/CategoryType';
 import { CategoriesRepository } from '@/category/core/provider/categories.repository';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';

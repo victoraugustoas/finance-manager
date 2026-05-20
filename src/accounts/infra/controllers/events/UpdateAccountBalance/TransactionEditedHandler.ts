@@ -33,7 +33,7 @@ export class TransactionEditedHandler extends EventConsumer<TransactionEditedPay
       accountId: payload.newValues.accountId,
       oldValue: payload.oldValues.amount,
       newValue: payload.newValues.amount,
-      type: payload.newValues.type as 'EXPENSE' | 'INCOME',
+      type: payload.newValues.type,
       newEffectivated: payload.newValues.effectivated,
       oldEffectivated: payload.oldValues.effectivated,
     });

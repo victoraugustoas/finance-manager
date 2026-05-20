@@ -4,12 +4,14 @@ import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dt
 import { RegisterExpenseResponseDto } from '@/transactions/infra/dtos/RegisterExpenseResponse.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
 import { RegisterIncomeResponseDto } from '@/transactions/infra/dtos/RegisterIncomeResponse.dto';
+import { RegisterTransferDto } from '@/transactions/infra/dtos/RegisterTransfer.dto';
 import { EditExpenseDto } from '@/transactions/infra/dtos/EditExpense.dto';
 import { EditIncomeDto } from '@/transactions/infra/dtos/EditIncome.dto';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
+import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
-import { TransactionType } from '@/transactions/core/model/Transaction';
+import { TransactionType } from '@/shared/enums/TransactionType';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 
 @Controller('transactions')
@@ -19,6 +21,7 @@ export class TransactionsController {
   constructor(
     private readonly registerExpenseUseCase: RegisterExpenseUseCase,
     private readonly registerIncomeUseCase: RegisterIncomeUseCase,
+    private readonly registerTransferUseCase: RegisterTransferUseCase,
     private readonly editTransactionUseCase: EditTransactionUseCase,
   ) {}
 
@@ -70,6 +73,30 @@ export class TransactionsController {
       MapResultErrorToHttpException.throwException(result);
     }
     return RegisterIncomeResponseDto.fromDomain(result.value);
+  }
+
+  @Post('transfers')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiBody({ type: RegisterTransferDto })
+  @ApiCreatedResponse()
+  async registerTransfer(@Body() dto: RegisterTransferDto): Promise<void> {
+    const result = await this.registerTransferUseCase.execute({
+      name: dto.name,
+      amount: dto.amount,
+      dueDate: new Date(dto.dueDate),
+      entryDate: new Date(dto.entryDate),
+      effectivatedDate:
+        dto.effectivatedDate !== undefined ? new Date(dto.effectivatedDate) : undefined,
+      effectivated: dto.effectivated,
+      accountIdOrigin: dto.accountIdOrigin,
+      accountIdDestination: dto.accountIdDestination,
+      notes: dto.notes,
+    });
+
+    if (result.isFailure) {
+      this.logger.error(`Error during register transfer: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
   }
 
   @Put('expenses/:id')
