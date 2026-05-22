@@ -29,12 +29,14 @@ import { EditIncomeDto } from '@/transactions/infra/dtos/EditIncome.dto';
 import { ListTransactionsQueryDto } from '@/transactions/infra/dtos/ListTransactionsQuery.dto';
 import { ListIncomeResponseDto } from '@/transactions/infra/dtos/ListIncomeResponse.dto';
 import { ListExpenseResponseDto } from '@/transactions/infra/dtos/ListExpenseResponse.dto';
+import { ListTransfersResponseDto } from '@/transactions/infra/dtos/ListTransfersResponse.dto';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
 import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
 import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
 import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
+import { ListTransfersUseCase } from '@/transactions/core/usecases/ListTransfers.usecase';
 import { TransactionType } from '@/shared/enums/TransactionType';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 
@@ -49,6 +51,7 @@ export class TransactionsController {
     private readonly editTransactionUseCase: EditTransactionUseCase,
     private readonly listIncomeUseCase: ListIncomeUseCase,
     private readonly listExpenseUseCase: ListExpenseUseCase,
+    private readonly listTransfersUseCase: ListTransfersUseCase,
   ) {}
 
   @Get('expenses')
@@ -85,6 +88,24 @@ export class TransactionsController {
     }
 
     return ListIncomeResponseDto.fromDomain(result.value);
+  }
+
+  @Get('transfers')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @ApiOkResponse({ type: ListTransfersResponseDto })
+  async listTransfers(@Query() query: ListTransactionsQueryDto): Promise<ListTransfersResponseDto> {
+    const result = await this.listTransfersUseCase.execute({
+      startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
+      endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
+    });
+
+    if (result.isFailure) {
+      this.logger.error(`Error during list transfers: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+
+    return ListTransfersResponseDto.fromDomain(result.value);
   }
 
   @Post('expenses')

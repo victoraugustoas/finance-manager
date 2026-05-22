@@ -11,8 +11,10 @@ import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTr
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
 import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
 import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
+import { ListTransfersUseCase } from '@/transactions/core/usecases/ListTransfers.usecase';
 import { ListIncomeQueryResult } from '@/transactions/core/provider/ListIncome.query';
 import { ListExpenseQueryResult } from '@/transactions/core/provider/ListExpense.query';
+import { ListTransfersQueryResult } from '@/transactions/core/provider/ListTransfers.query';
 import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
 import { RegisterTransferDto } from '@/transactions/infra/dtos/RegisterTransfer.dto';
@@ -59,6 +61,7 @@ describe('TransactionsController', () => {
   let editTransactionMock: jest.Mock;
   let listIncomeMock: jest.Mock;
   let listExpenseMock: jest.Mock;
+  let listTransfersMock: jest.Mock;
   let loggerErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -68,6 +71,7 @@ describe('TransactionsController', () => {
     editTransactionMock = jest.fn();
     listIncomeMock = jest.fn();
     listExpenseMock = jest.fn();
+    listTransfersMock = jest.fn();
     controller = new TransactionsController(
       { execute: registerExpenseMock } as unknown as RegisterExpenseUseCase,
       { execute: registerIncomeMock } as unknown as RegisterIncomeUseCase,
@@ -75,6 +79,7 @@ describe('TransactionsController', () => {
       { execute: editTransactionMock } as unknown as EditTransactionUseCase,
       { execute: listIncomeMock } as unknown as ListIncomeUseCase,
       { execute: listExpenseMock } as unknown as ListExpenseUseCase,
+      { execute: listTransfersMock } as unknown as ListTransfersUseCase,
     );
     loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
@@ -242,6 +247,83 @@ describe('TransactionsController', () => {
 
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during list incomes');
+    });
+  });
+
+  describe('listTransfers()', () => {
+    const query: ListTransactionsQueryDto = {
+      startDate: '2026-01-01T00:00:00.000Z',
+      endDate: '2026-01-31T23:59:59.999Z',
+    };
+
+    const transfer: ListTransfersQueryResult = {
+      id: 'ffffffff-ffff-4fff-ffff-ffffffffffff',
+      name: 'Savings transfer',
+      amount: 150,
+      notes: 'monthly allocation',
+      dueDate: new Date('2026-01-15T12:00:00.000Z'),
+      entryDate: new Date('2026-01-10T12:00:00.000Z'),
+      effectivatedDate: new Date('2026-01-12T12:00:00.000Z'),
+      effectivated: true,
+      accountIdOrigin: '11111111-1111-4111-1111-111111111111',
+      accountOriginName: 'Checking',
+      accountIdDestination: '22222222-2222-4222-2222-222222222222',
+      accountDestinationName: 'Savings',
+    };
+
+    it('should call ListTransfersUseCase.execute with parsed optional period', async () => {
+      listTransfersMock.mockResolvedValue(Result.ok([]));
+
+      await controller.listTransfers(query);
+
+      expect(listTransfersMock).toHaveBeenCalledTimes(1);
+      expect(listTransfersMock).toHaveBeenCalledWith({
+        startDate: new Date('2026-01-01T00:00:00.000Z'),
+        endDate: new Date('2026-01-31T23:59:59.999Z'),
+      });
+    });
+
+    it('should call ListTransfersUseCase.execute with undefined dates when period is omitted', async () => {
+      listTransfersMock.mockResolvedValue(Result.ok([]));
+
+      await controller.listTransfers({});
+
+      expect(listTransfersMock).toHaveBeenCalledWith({
+        startDate: undefined,
+        endDate: undefined,
+      });
+    });
+
+    it('should return ListTransfersResponseDto mapped from query rows', async () => {
+      listTransfersMock.mockResolvedValue(Result.ok([transfer]));
+
+      const response = await controller.listTransfers(query);
+
+      expect(response.transfers).toEqual([
+        {
+          id: transfer.id,
+          name: 'Savings transfer',
+          amount: 150,
+          notes: 'monthly allocation',
+          dueDate: '2026-01-15T12:00:00.000Z',
+          entryDate: '2026-01-10T12:00:00.000Z',
+          effectivatedDate: '2026-01-12T12:00:00.000Z',
+          effectivated: true,
+          accountIdOrigin: transfer.accountIdOrigin,
+          accountOriginName: 'Checking',
+          accountIdDestination: transfer.accountIdDestination,
+          accountDestinationName: 'Savings',
+        },
+      ]);
+    });
+
+    it('should log and throw InternalServerErrorException when list transfers fails', async () => {
+      listTransfersMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(controller.listTransfers(query)).rejects.toThrow(InternalServerErrorException);
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during list transfers');
     });
   });
 

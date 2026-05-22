@@ -6,15 +6,18 @@ import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTr
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
 import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
 import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
+import { ListTransfersUseCase } from '@/transactions/core/usecases/ListTransfers.usecase';
 import { TransactionAccountQuery } from '../../core/provider/TransactionAccount.query';
 import { TransactionCategoryHierarchyQuery } from '../../core/provider/TransactionCategoryHierarchy.query';
 import { ListIncomeQuery } from '@/transactions/core/provider/ListIncome.query';
 import { ListExpenseQuery } from '@/transactions/core/provider/ListExpense.query';
+import { ListTransfersQuery } from '@/transactions/core/provider/ListTransfers.query';
 import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
 import { PrismaTransactionAccountAcl } from '@/transactions/infra/acl/account/PrismaTransactionAccountAcl';
 import { PrismaTransactionCategoryHierarchyAcl } from '@/transactions/infra/acl/category/PrismaTransactionCategoryHierarchyAcl';
 import { PrismaListIncomeQuery } from '@/transactions/infra/db/PrismaListIncome.query';
 import { PrismaListExpenseQuery } from '@/transactions/infra/db/PrismaListExpense.query';
+import { PrismaListTransfersQuery } from '@/transactions/infra/db/PrismaListTransfers.query';
 import { PrismaTransactionsRepository } from '@/transactions/infra/db/PrismaTransactions.repository';
 import { TransactionsController } from '@/transactions/infra/controllers/Transactions.controller';
 
@@ -46,6 +49,11 @@ import { TransactionsController } from '@/transactions/infra/controllers/Transac
     {
       provide: ListExpenseQuery,
       useFactory: (prisma: PrismaService) => new PrismaListExpenseQuery(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: ListTransfersQuery,
+      useFactory: (prisma: PrismaService) => new PrismaListTransfersQuery(prisma),
       inject: [PrismaService],
     },
     {
@@ -92,6 +100,12 @@ import { TransactionsController } from '@/transactions/infra/controllers/Transac
       provide: ListExpenseUseCase,
       useFactory: (listExpenseQuery: ListExpenseQuery) => new ListExpenseUseCase(listExpenseQuery),
       inject: [ListExpenseQuery],
+    },
+    {
+      provide: ListTransfersUseCase,
+      useFactory: (listTransfersQuery: ListTransfersQuery) =>
+        new ListTransfersUseCase(listTransfersQuery),
+      inject: [ListTransfersQuery],
     },
   ],
 })
