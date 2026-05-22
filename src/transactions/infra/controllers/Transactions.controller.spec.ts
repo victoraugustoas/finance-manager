@@ -9,11 +9,16 @@ import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExp
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
 import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
+import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
+import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
+import { ListIncomeQueryResult } from '@/transactions/core/provider/ListIncome.query';
+import { ListExpenseQueryResult } from '@/transactions/core/provider/ListExpense.query';
 import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
 import { RegisterTransferDto } from '@/transactions/infra/dtos/RegisterTransfer.dto';
 import { EditExpenseDto } from '@/transactions/infra/dtos/EditExpense.dto';
 import { EditIncomeDto } from '@/transactions/infra/dtos/EditIncome.dto';
+import { ListTransactionsQueryDto } from '@/transactions/infra/dtos/ListTransactionsQuery.dto';
 import { Expense } from '@/transactions/core/model/Expense';
 import { Income } from '@/transactions/core/model/Income';
 import { TransactionType } from '@/shared/enums/TransactionType';
@@ -52,6 +57,8 @@ describe('TransactionsController', () => {
   let registerIncomeMock: jest.Mock;
   let registerTransferMock: jest.Mock;
   let editTransactionMock: jest.Mock;
+  let listIncomeMock: jest.Mock;
+  let listExpenseMock: jest.Mock;
   let loggerErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -59,17 +66,183 @@ describe('TransactionsController', () => {
     registerIncomeMock = jest.fn();
     registerTransferMock = jest.fn();
     editTransactionMock = jest.fn();
+    listIncomeMock = jest.fn();
+    listExpenseMock = jest.fn();
     controller = new TransactionsController(
       { execute: registerExpenseMock } as unknown as RegisterExpenseUseCase,
       { execute: registerIncomeMock } as unknown as RegisterIncomeUseCase,
       { execute: registerTransferMock } as unknown as RegisterTransferUseCase,
       { execute: editTransactionMock } as unknown as EditTransactionUseCase,
+      { execute: listIncomeMock } as unknown as ListIncomeUseCase,
+      { execute: listExpenseMock } as unknown as ListExpenseUseCase,
     );
     loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
     loggerErrorSpy.mockRestore();
+  });
+
+  describe('listExpenses()', () => {
+    const query: ListTransactionsQueryDto = {
+      startDate: '2026-01-01T00:00:00.000Z',
+      endDate: '2026-01-31T23:59:59.999Z',
+    };
+
+    const expense: ListExpenseQueryResult = {
+      id: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+      name: 'Groceries',
+      amount: 49.9,
+      categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+      categoryName: 'Food',
+      subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+      subCategoryName: 'Groceries',
+      notes: 'weekly shop',
+      dueDate: new Date('2026-01-15T12:00:00.000Z'),
+      entryDate: new Date('2026-01-10T12:00:00.000Z'),
+      paymentDate: new Date('2026-01-12T12:00:00.000Z'),
+      effectivated: true,
+      accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+      accountName: 'Checking',
+    };
+
+    it('should call ListExpenseUseCase.execute with parsed optional period', async () => {
+      listExpenseMock.mockResolvedValue(Result.ok([]));
+
+      await controller.listExpenses(query);
+
+      expect(listExpenseMock).toHaveBeenCalledTimes(1);
+      expect(listExpenseMock).toHaveBeenCalledWith({
+        startDate: new Date('2026-01-01T00:00:00.000Z'),
+        endDate: new Date('2026-01-31T23:59:59.999Z'),
+      });
+    });
+
+    it('should call ListExpenseUseCase.execute with undefined dates when period is omitted', async () => {
+      listExpenseMock.mockResolvedValue(Result.ok([]));
+
+      await controller.listExpenses({});
+
+      expect(listExpenseMock).toHaveBeenCalledWith({
+        startDate: undefined,
+        endDate: undefined,
+      });
+    });
+
+    it('should return ListExpenseResponseDto mapped from query rows', async () => {
+      listExpenseMock.mockResolvedValue(Result.ok([expense]));
+
+      const response = await controller.listExpenses(query);
+
+      expect(response.expenses).toEqual([
+        {
+          id: expense.id,
+          name: 'Groceries',
+          amount: 49.9,
+          categoryId: expense.categoryId,
+          categoryName: 'Food',
+          subCategoryId: expense.subCategoryId,
+          subCategoryName: 'Groceries',
+          notes: 'weekly shop',
+          dueDate: '2026-01-15T12:00:00.000Z',
+          entryDate: '2026-01-10T12:00:00.000Z',
+          paymentDate: '2026-01-12T12:00:00.000Z',
+          effectivated: true,
+          accountId: expense.accountId,
+          accountName: 'Checking',
+        },
+      ]);
+    });
+
+    it('should log and throw InternalServerErrorException when list expenses fails', async () => {
+      listExpenseMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(controller.listExpenses(query)).rejects.toThrow(InternalServerErrorException);
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during list expenses');
+    });
+  });
+
+  describe('listIncomes()', () => {
+    const query: ListTransactionsQueryDto = {
+      startDate: '2026-01-01T00:00:00.000Z',
+      endDate: '2026-01-31T23:59:59.999Z',
+    };
+
+    const income: ListIncomeQueryResult = {
+      id: 'eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee',
+      name: 'Salary',
+      amount: 3500,
+      categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+      categoryName: 'Work',
+      subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+      subCategoryName: 'Monthly salary',
+      notes: 'january',
+      dueDate: new Date('2026-01-31T12:00:00.000Z'),
+      entryDate: new Date('2026-01-01T12:00:00.000Z'),
+      receiptDate: new Date('2026-01-05T12:00:00.000Z'),
+      effectivated: true,
+      accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+      accountName: 'Checking',
+    };
+
+    it('should call ListIncomeUseCase.execute with parsed optional period', async () => {
+      listIncomeMock.mockResolvedValue(Result.ok([]));
+
+      await controller.listIncomes(query);
+
+      expect(listIncomeMock).toHaveBeenCalledTimes(1);
+      expect(listIncomeMock).toHaveBeenCalledWith({
+        startDate: new Date('2026-01-01T00:00:00.000Z'),
+        endDate: new Date('2026-01-31T23:59:59.999Z'),
+      });
+    });
+
+    it('should call ListIncomeUseCase.execute with undefined dates when period is omitted', async () => {
+      listIncomeMock.mockResolvedValue(Result.ok([]));
+
+      await controller.listIncomes({});
+
+      expect(listIncomeMock).toHaveBeenCalledWith({
+        startDate: undefined,
+        endDate: undefined,
+      });
+    });
+
+    it('should return ListIncomeResponseDto mapped from query rows', async () => {
+      listIncomeMock.mockResolvedValue(Result.ok([income]));
+
+      const response = await controller.listIncomes(query);
+
+      expect(response.incomes).toEqual([
+        {
+          id: income.id,
+          name: 'Salary',
+          amount: 3500,
+          categoryId: income.categoryId,
+          categoryName: 'Work',
+          subCategoryId: income.subCategoryId,
+          subCategoryName: 'Monthly salary',
+          notes: 'january',
+          dueDate: '2026-01-31T12:00:00.000Z',
+          entryDate: '2026-01-01T12:00:00.000Z',
+          receiptDate: '2026-01-05T12:00:00.000Z',
+          effectivated: true,
+          accountId: income.accountId,
+          accountName: 'Checking',
+        },
+      ]);
+    });
+
+    it('should log and throw InternalServerErrorException when list incomes fails', async () => {
+      listIncomeMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(controller.listIncomes(query)).rejects.toThrow(InternalServerErrorException);
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during list incomes');
+    });
   });
 
   describe('registerExpense()', () => {

@@ -1,4 +1,4 @@
-import { ReportingPeriod } from '@/reporting/core/model/ReportingPeriod';
+import { ReportingPeriod } from '@/shared/ValueObjects/ReportingPeriod';
 import { Errors } from '@/shared/base/Errors';
 
 describe('ReportingPeriod', () => {

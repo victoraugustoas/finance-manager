@@ -1,7 +1,7 @@
 import { PrismaBreakdownCategoriesQuery } from '@/reporting/infra/db/PrismaBreakdownCategories.query';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { ReportingPeriod } from '@/reporting/core/model/ReportingPeriod';
+import { ReportingPeriod } from '@/shared/ValueObjects';
 
 jest.mock(
   'generated/prisma/client',

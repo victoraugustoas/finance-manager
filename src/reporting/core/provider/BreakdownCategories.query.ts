@@ -1,6 +1,6 @@
 import { Result } from '@/shared/base';
 import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
-import { ReportingPeriod } from '@/reporting/core/model/ReportingPeriod';
+import { ReportingPeriod } from '@/shared/ValueObjects';
 
 export interface BreakdownCategoriesQueryProps {
   categoriesId?: Array<string>;

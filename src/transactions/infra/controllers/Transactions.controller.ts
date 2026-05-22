@@ -1,5 +1,24 @@
-import { Body, Controller, HttpCode, HttpStatus, Logger, Param, Post, Put } from '@nestjs/common';
-import { ApiBody, ApiCreatedResponse, ApiNoContentResponse, ApiParam } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Post,
+  Put,
+  Query,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiParam,
+} from '@nestjs/swagger';
 import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dto';
 import { RegisterExpenseResponseDto } from '@/transactions/infra/dtos/RegisterExpenseResponse.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
@@ -7,10 +26,15 @@ import { RegisterIncomeResponseDto } from '@/transactions/infra/dtos/RegisterInc
 import { RegisterTransferDto } from '@/transactions/infra/dtos/RegisterTransfer.dto';
 import { EditExpenseDto } from '@/transactions/infra/dtos/EditExpense.dto';
 import { EditIncomeDto } from '@/transactions/infra/dtos/EditIncome.dto';
+import { ListTransactionsQueryDto } from '@/transactions/infra/dtos/ListTransactionsQuery.dto';
+import { ListIncomeResponseDto } from '@/transactions/infra/dtos/ListIncomeResponse.dto';
+import { ListExpenseResponseDto } from '@/transactions/infra/dtos/ListExpenseResponse.dto';
 import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
 import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
 import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
 import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
+import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
+import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
 import { TransactionType } from '@/shared/enums/TransactionType';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 
@@ -23,7 +47,45 @@ export class TransactionsController {
     private readonly registerIncomeUseCase: RegisterIncomeUseCase,
     private readonly registerTransferUseCase: RegisterTransferUseCase,
     private readonly editTransactionUseCase: EditTransactionUseCase,
+    private readonly listIncomeUseCase: ListIncomeUseCase,
+    private readonly listExpenseUseCase: ListExpenseUseCase,
   ) {}
+
+  @Get('expenses')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @ApiOkResponse({ type: ListExpenseResponseDto })
+  async listExpenses(@Query() query: ListTransactionsQueryDto): Promise<ListExpenseResponseDto> {
+    const result = await this.listExpenseUseCase.execute({
+      startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
+      endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
+    });
+
+    if (result.isFailure) {
+      this.logger.error(`Error during list expenses: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+
+    return ListExpenseResponseDto.fromDomain(result.value);
+  }
+
+  @Get('incomes')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @ApiOkResponse({ type: ListIncomeResponseDto })
+  async listIncomes(@Query() query: ListTransactionsQueryDto): Promise<ListIncomeResponseDto> {
+    const result = await this.listIncomeUseCase.execute({
+      startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
+      endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
+    });
+
+    if (result.isFailure) {
+      this.logger.error(`Error during list incomes: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+
+    return ListIncomeResponseDto.fromDomain(result.value);
+  }
 
   @Post('expenses')
   @HttpCode(HttpStatus.CREATED)

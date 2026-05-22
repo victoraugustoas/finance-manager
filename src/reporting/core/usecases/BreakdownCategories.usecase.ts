@@ -4,7 +4,7 @@ import {
   BreakdownCategoriesQueryProps,
 } from '@/reporting/core/provider/BreakdownCategories.query';
 import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories.dto';
-import { ReportingPeriod } from '@/reporting/core/model/ReportingPeriod';
+import { ReportingPeriod } from '@/shared/ValueObjects';
 import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer';
 
 type BreakdownCategoriesParams = Omit<BreakdownCategoriesQueryProps, 'period'> & {

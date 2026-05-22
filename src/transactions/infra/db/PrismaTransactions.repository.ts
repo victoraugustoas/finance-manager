@@ -1,4 +1,4 @@
-import { TransactionType } from 'generated/prisma/client';
+import { TransactionType as PrismaTransactionType } from 'generated/prisma/client';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
@@ -25,7 +25,7 @@ export class PrismaTransactionsRepository implements TransactionsRepository {
             entryDate: expense.props.entryDate,
             effectivatedDate: expense.props.effectivatedDate ?? null,
             effectivated: expense.props.effectivated,
-            type: TransactionType.EXPENSE,
+            type: PrismaTransactionType.EXPENSE,
             categoryId: expense.props.categoryId,
             subCategoryId: expense.props.subCategoryId,
             accountId: expense.props.accountId,
@@ -69,7 +69,7 @@ export class PrismaTransactionsRepository implements TransactionsRepository {
             entryDate: income.props.entryDate,
             effectivatedDate: income.props.effectivatedDate ?? null,
             effectivated: income.props.effectivated,
-            type: TransactionType.INCOME,
+            type: PrismaTransactionType.INCOME,
             categoryId: income.props.categoryId,
             subCategoryId: income.props.subCategoryId,
             accountId: income.props.accountId,
@@ -102,7 +102,7 @@ export class PrismaTransactionsRepository implements TransactionsRepository {
   async findIncomeById(id: string): Promise<Result<Income>> {
     try {
       const raw = await this.prisma.transaction.findFirst({
-        where: { id, type: TransactionType.INCOME },
+        where: { id, type: PrismaTransactionType.INCOME },
       });
       if (!raw)
         return Result.fail({
@@ -137,7 +137,7 @@ export class PrismaTransactionsRepository implements TransactionsRepository {
   async findExpenseById(id: string): Promise<Result<Expense>> {
     try {
       const raw = await this.prisma.transaction.findFirst({
-        where: { id, type: TransactionType.EXPENSE },
+        where: { id, type: PrismaTransactionType.EXPENSE },
       });
       if (!raw)
         return Result.fail({

@@ -2,7 +2,7 @@ import { Result, ValueObject } from '@/shared/base';
 import { endOfDay, isAfter, isSameDay, startOfDay } from 'date-fns';
 import { Errors } from '@/shared/base/Errors';
 
-interface ReportingPeriodProps {
+export interface ReportingPeriodProps {
   startDate: Date;
   endDate: Date;
 }

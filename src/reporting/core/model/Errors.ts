@@ -1,3 +1,0 @@
-export enum ReportingErrors {
-  END_DATE_NOT_AFTER_START_DATE = 'END_DATE_NOT_AFTER_START_DATE',
-}

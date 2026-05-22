@@ -87,7 +87,7 @@ Top-level under `src/`: `main.ts`, `entrypoint/` (root Nest module), `shared/`, 
 (`accounts`, `category`, `reporting`, `transactions`).
 
 **`shared/`** — cross-cutting building blocks: `base/` (e.g. `Result`, `Entity`, `ValueObject`, `UseCase`,
-`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`), `infra/` (e.g. `PrismaService`, HTTP error mapping),
+`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`, `ReportingPeriod`), `infra/` (e.g. `PrismaService`, HTTP error mapping),
 and `events/` (outbox infrastructure — `OutboxEvent`, `EventsModule`, and sub-folders `infra/` with
 `saveWithOutbox`, `OutboxRelayService`, `EventConsumer`, `NestEventEmitterPublisher`, `PrismaOutboxRepository`,
 and `ports/` with `EventPublisher`, `OutboxRepository`).
