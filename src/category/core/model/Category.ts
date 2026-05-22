@@ -4,7 +4,6 @@ import { Result } from '@/shared/base/Result';
 import { SubCategory } from './SubCategory';
 import { CategoryType } from '@/shared/enums/CategoryType';
 
-export { CategoryType };
 export const DEFAULT_SUBCATEGORY_NAME = 'Others' as const;
 
 export interface CategoryProps {

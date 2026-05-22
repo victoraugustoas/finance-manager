@@ -4,6 +4,8 @@ import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.u
 import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
 import { CreateCategoryDto } from '@/category/infra/dtos/CreateCategory.dto';
 import { CreateSubCategoryDto } from '@/category/infra/dtos/CreateSubCategory.dto';
+import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpenseCategories.usecase';
+import { ListIncomeCategoriesUseCase } from '@/category/core/usecases/ListIncomeCategories.usecase';
 import { CategoriesController } from '@/category/infra/controllers/Categories.controller';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
@@ -18,13 +20,19 @@ describe('CategoriesController', () => {
   let controller: CategoriesController;
   let createCategoryExecuteMock: jest.Mock;
   let createSubCategoryExecuteMock: jest.Mock;
+  let listIncomeExecuteMock: jest.Mock;
+  let listExpenseExecuteMock: jest.Mock;
 
   beforeEach(() => {
     createCategoryExecuteMock = jest.fn();
     createSubCategoryExecuteMock = jest.fn();
+    listIncomeExecuteMock = jest.fn();
+    listExpenseExecuteMock = jest.fn();
     controller = new CategoriesController(
       { execute: createCategoryExecuteMock } as unknown as CreateCategoryUseCase,
       { execute: createSubCategoryExecuteMock } as unknown as CreateSubCategoryUseCase,
+      { execute: listIncomeExecuteMock } as unknown as ListIncomeCategoriesUseCase,
+      { execute: listExpenseExecuteMock } as unknown as ListExpenseCategoriesUseCase,
     );
   });
 

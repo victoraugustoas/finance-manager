@@ -1,12 +1,15 @@
 import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
 import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
+import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpenseCategories.usecase';
+import { ListIncomeCategoriesUseCase } from '@/category/core/usecases/ListIncomeCategories.usecase';
 import { CreateCategoryDto } from '@/category/infra/dtos/CreateCategory.dto';
 import { CreateCategoryResponseDto } from '@/category/infra/dtos/CreateCategoryResponse.dto';
 import { CreateSubCategoryDto } from '@/category/infra/dtos/CreateSubCategory.dto';
 import { CreateSubCategoryResponseDto } from '@/category/infra/dtos/CreateSubCategoryResponse.dto';
+import { ListCategoriesResponseDto } from '@/category/infra/dtos/ListCategoriesResponse.dto';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
-import { Body, Controller, HttpCode, HttpStatus, Logger, Param, Post } from '@nestjs/common';
-import { ApiBody, ApiCreatedResponse, ApiParam } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Param, Post } from '@nestjs/common';
+import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiParam } from '@nestjs/swagger';
 
 @Controller('categories')
 export class CategoriesController {
@@ -15,7 +18,39 @@ export class CategoriesController {
   constructor(
     private readonly createCategoryUseCase: CreateCategoryUseCase,
     private readonly createSubCategoryUseCase: CreateSubCategoryUseCase,
+    private readonly listIncomeCategoriesUseCase: ListIncomeCategoriesUseCase,
+    private readonly listExpenseCategoriesUseCase: ListExpenseCategoriesUseCase,
   ) {}
+
+  @Get('income')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description: 'All income categories have been successfully listed.',
+    type: ListCategoriesResponseDto,
+  })
+  async listIncome(): Promise<ListCategoriesResponseDto> {
+    const result = await this.listIncomeCategoriesUseCase.execute();
+    if (result.isFailure) {
+      this.logger.error(`Error during list income categories: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+    return ListCategoriesResponseDto.fromDomain(result.value);
+  }
+
+  @Get('expense')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description: 'All expense categories have been successfully listed.',
+    type: ListCategoriesResponseDto,
+  })
+  async listExpense(): Promise<ListCategoriesResponseDto> {
+    const result = await this.listExpenseCategoriesUseCase.execute();
+    if (result.isFailure) {
+      this.logger.error(`Error during list expense categories: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+    return ListCategoriesResponseDto.fromDomain(result.value);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

@@ -5,6 +5,8 @@ import { PrismaCategoriesRepository } from '@/category/infra/db/PrismaCategories
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
 import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
+import { ListIncomeCategoriesUseCase } from '@/category/core/usecases/ListIncomeCategories.usecase';
+import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpenseCategories.usecase';
 
 @Module({
   imports: [],
@@ -24,6 +26,16 @@ import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCate
     {
       provide: CreateSubCategoryUseCase,
       useFactory: (repo: CategoriesRepository) => new CreateSubCategoryUseCase(repo),
+      inject: [CategoriesRepository],
+    },
+    {
+      provide: ListIncomeCategoriesUseCase,
+      useFactory: (repo: CategoriesRepository) => new ListIncomeCategoriesUseCase(repo),
+      inject: [CategoriesRepository],
+    },
+    {
+      provide: ListExpenseCategoriesUseCase,
+      useFactory: (repo: CategoriesRepository) => new ListExpenseCategoriesUseCase(repo),
       inject: [CategoriesRepository],
     },
   ],
