@@ -1,15 +1,35 @@
-import { Body, Controller, HttpCode, HttpStatus, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Post } from '@nestjs/common';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
+import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
 import { CreateAccountDto } from '@/accounts/infra/dtos/CreateAccount.dto';
 import { CreateAccountResponseDto } from '@/accounts/infra/dtos/CreateAccountResponse.dto';
+import { ListAccountsResponseDto } from '@/accounts/infra/dtos/ListAccountsResponse.dto';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
-import { ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 
 @Controller('accounts')
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 
-  constructor(private readonly createAccountUseCase: CreateAccountUseCase) {}
+  constructor(
+    private readonly createAccountUseCase: CreateAccountUseCase,
+    private readonly listAccountsUseCase: ListAccountsUseCase,
+  ) {}
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description: 'All accounts have been successfully listed.',
+    type: ListAccountsResponseDto,
+  })
+  async list(): Promise<ListAccountsResponseDto> {
+    const result = await this.listAccountsUseCase.execute();
+    if (result.isFailure) {
+      this.logger.error(`Error during list accounts: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+    return ListAccountsResponseDto.fromDomain(result.value);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

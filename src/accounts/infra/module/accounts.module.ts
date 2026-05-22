@@ -9,6 +9,7 @@ import { TransactionRegisteredHandler } from '@/accounts/infra/controllers/event
 import { TransactionEditedHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransactionEditedHandler';
 import { TransferRegisteredHandler } from '@/accounts/infra/controllers/events/UpdateAccountBalance/TransferRegisteredHandler';
 import { ApplyTransferBetweenAccountsUseCase } from '@/accounts/core/usecases/ApplyTransferBetweenAccounts.usecase';
+import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
 
 const eventHandlers: Provider[] = [
   TransactionRegisteredHandler,
@@ -29,6 +30,11 @@ const eventHandlers: Provider[] = [
     {
       provide: CreateAccountUseCase,
       useFactory: (repo: AccountsRepository) => new CreateAccountUseCase(repo),
+      inject: [AccountsRepository],
+    },
+    {
+      provide: ListAccountsUseCase,
+      useFactory: (repo: AccountsRepository) => new ListAccountsUseCase(repo),
       inject: [AccountsRepository],
     },
     {

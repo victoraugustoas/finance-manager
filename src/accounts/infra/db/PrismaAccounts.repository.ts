@@ -62,4 +62,27 @@ export class PrismaAccountsRepository implements AccountsRepository {
       });
     }
   }
+
+  async findAll(): Promise<Result<Account[]>> {
+    try {
+      const rawAccounts = await this.prisma.account.findMany();
+
+      return Result.ok(
+        rawAccounts.map((raw) =>
+          Account.new({
+            id: raw.id,
+            name: raw.name,
+            balance: raw.balance / 100,
+            openingBalance: raw.openingBalance / 100,
+          }),
+        ),
+      );
+    } catch (e) {
+      return Result.fail({
+        code: Errors.PRISMA_QUERY_ERROR,
+        cls: this.constructor.name,
+        data: { error: String(e) },
+      });
+    }
+  }
 }

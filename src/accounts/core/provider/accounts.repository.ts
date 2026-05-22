@@ -4,4 +4,5 @@ import { Account } from '../model/Account';
 export abstract class AccountsRepository {
   abstract save(account: Account): Promise<Result<void>>;
   abstract findById(id: string): Promise<Result<Account>>;
+  abstract findAll(): Promise<Result<Account[]>>;
 }

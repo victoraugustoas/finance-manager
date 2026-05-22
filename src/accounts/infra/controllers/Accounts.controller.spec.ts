@@ -1,5 +1,6 @@
 import { BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
+import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
 import { Account } from '@/accounts/core/model/Account';
 import { CreateAccountDto } from '@/accounts/infra/dtos/CreateAccount.dto';
 import { Result } from '@/shared/base';
@@ -8,13 +9,78 @@ import { AccountsController } from './Accounts.controller';
 
 describe('AccountsController', () => {
   let controller: AccountsController;
-  let executeMock: jest.Mock;
+  let createExecuteMock: jest.Mock;
+  let listExecuteMock: jest.Mock;
 
   beforeEach(() => {
-    executeMock = jest.fn();
-    controller = new AccountsController({
-      execute: executeMock,
-    } as unknown as CreateAccountUseCase);
+    createExecuteMock = jest.fn();
+    listExecuteMock = jest.fn();
+    controller = new AccountsController(
+      {
+        execute: createExecuteMock,
+      } as unknown as CreateAccountUseCase,
+      {
+        execute: listExecuteMock,
+      } as unknown as ListAccountsUseCase,
+    );
+  });
+
+  describe('list()', () => {
+    it('should call ListAccountsUseCase.execute without params', async () => {
+      listExecuteMock.mockResolvedValue(Result.ok([]));
+
+      await controller.list();
+
+      expect(listExecuteMock).toHaveBeenCalledTimes(1);
+      expect(listExecuteMock).toHaveBeenCalledWith();
+    });
+
+    it('should return ListAccountsResponseDto mapped from listed accounts', async () => {
+      const checking = Account.new({
+        id: '11111111-1111-1111-1111-111111111111',
+        name: 'Checking',
+        balance: 100.5,
+        openingBalance: 25,
+      });
+      const savings = Account.new({
+        id: '22222222-2222-2222-2222-222222222222',
+        name: 'Savings',
+        balance: 800,
+        openingBalance: 150,
+      });
+      listExecuteMock.mockResolvedValue(Result.ok([checking, savings]));
+
+      const response = await controller.list();
+
+      expect(response.accounts).toEqual([
+        {
+          id: checking.id,
+          name: 'Checking',
+          balance: 100.5,
+          openingBalance: 25,
+          actualBalance: 125.5,
+        },
+        {
+          id: savings.id,
+          name: 'Savings',
+          balance: 800,
+          openingBalance: 150,
+          actualBalance: 950,
+        },
+      ]);
+    });
+
+    it('should log and throw InternalServerErrorException when list fails', async () => {
+      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+      listExecuteMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(controller.list()).rejects.toThrow(InternalServerErrorException);
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during list accounts');
+
+      loggerErrorSpy.mockRestore();
+    });
   });
 
   describe('create()', () => {
@@ -25,12 +91,12 @@ describe('AccountsController', () => {
         balance: 0,
         openingBalance: 150,
       });
-      executeMock.mockResolvedValue(Result.ok(account));
+      createExecuteMock.mockResolvedValue(Result.ok(account));
 
       await controller.create(dto);
 
-      expect(executeMock).toHaveBeenCalledTimes(1);
-      expect(executeMock).toHaveBeenCalledWith({
+      expect(createExecuteMock).toHaveBeenCalledTimes(1);
+      expect(createExecuteMock).toHaveBeenCalledWith({
         name: 'Nubank',
         openingBalance: 150,
         balance: 0,
@@ -44,7 +110,7 @@ describe('AccountsController', () => {
         balance: 0,
         openingBalance: 42.5,
       });
-      executeMock.mockResolvedValue(Result.ok(account));
+      createExecuteMock.mockResolvedValue(Result.ok(account));
 
       const response = await controller.create(dto);
 
@@ -56,7 +122,7 @@ describe('AccountsController', () => {
     it('should log and throw InternalServerErrorException when persistence fails', async () => {
       const dto: CreateAccountDto = { name: 'X', openingBalance: 0 };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      executeMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_INSERT_ERROR }));
+      createExecuteMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_INSERT_ERROR }));
 
       await expect(controller.create(dto)).rejects.toThrow(InternalServerErrorException);
 
@@ -69,7 +135,7 @@ describe('AccountsController', () => {
     it('should throw BadRequestException when domain validation fails', async () => {
       const dto: CreateAccountDto = { name: 'Y', openingBalance: 0 };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      executeMock.mockResolvedValue(Result.fail({ code: Errors.MONEY_NOT_FINITE }));
+      createExecuteMock.mockResolvedValue(Result.fail({ code: Errors.MONEY_NOT_FINITE }));
 
       await expect(controller.create(dto)).rejects.toThrow(BadRequestException);
 
