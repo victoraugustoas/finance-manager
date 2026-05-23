@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/github/victoraugustoas/finance-manager/graph/badge.svg?token=E48S83JRKN)](https://codecov.io/github/victoraugustoas/finance-manager)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-10-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![pnpm](https://img.shields.io/badge/pnpm-11-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 Personal finance manager in TypeScript: record expenses, incomes, and transfers between accounts, with a foundation for analyses (for example, charts of largest expenses and incomes). The project follows **Clean Architecture** and **DDD** (Domain-Driven Design).
 
@@ -19,7 +19,7 @@ Personal finance manager in TypeScript: record expenses, incomes, and transfers 
 | Prisma 7          | ORM (`prisma/schema.prisma`; run `pnpm prisma:generate` after schema edits) |
 | ESLint + Prettier | Linting and formatting |
 | Jest 30           | Unit tests |
-| pnpm 10           | Package manager (Corepack / CI) |
+| pnpm 11           | Package manager (Corepack / CI) |
 
 Exact versions are listed in `package.json`.
 
@@ -87,7 +87,8 @@ Top-level under `src/`: `main.ts`, `entrypoint/` (root Nest module), `shared/`, 
 (`accounts`, `category`, `reporting`, `transactions`).
 
 **`shared/`** — cross-cutting building blocks: `base/` (e.g. `Result`, `Entity`, `ValueObject`, `UseCase`,
-`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`, `ReportingPeriod`), `infra/` (e.g. `PrismaService`, HTTP error mapping),
+`AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`, `ReportingPeriod`), `enums/` (e.g. `CategoryType`, `TransactionType`),
+`infra/` (e.g. `PrismaService`, HTTP error mapping),
 and `events/` (outbox infrastructure — `OutboxEvent`, `EventsModule`, and sub-folders `infra/` with
 `saveWithOutbox`, `OutboxRelayService`, `EventConsumer`, `NestEventEmitterPublisher`, `PrismaOutboxRepository`,
 and `ports/` with `EventPublisher`, `OutboxRepository`).
@@ -100,9 +101,9 @@ adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per c
 
 | Context          | Extra paths (beyond the common layout) |
 | ---------------- | -------------------------------------- |
-| **accounts**     | `infra/controllers/events/` — event handlers (e.g. `UpdateAccountBalance/TransactionRegisteredHandler`, `TransactionEditedHandler`) |
+| **accounts**     | `core/service/` — domain services (e.g. `ApplyTransferBetweenAccounts`); `infra/controllers/events/` — event handlers (e.g. `UpdateAccountBalance/TransactionRegisteredHandler`, `TransactionEditedHandler`) |
 | **reporting**    | `core/dto/`, `core/service/` |
-| **transactions** | `core/events/` — domain events (`TransactionRegisteredEvent`, `TransactionEditedEvent`); `infra/acl/account/` — read-only access into the Account context |
+| **transactions** | `core/events/` — domain events (`TransactionRegisteredEvent`, `TransactionEditedEvent`); `infra/acl/account/` — read-only access into the Account context; `infra/acl/category/` — read-only access into the Category context |
 
 Other project roots: `http/` holds sample **REST Client** requests (one `.http` file per bounded context with HTTP:
 `accounts`, `category`, `reporting`, `transactions`); `prisma/` holds the schema and migrations.
