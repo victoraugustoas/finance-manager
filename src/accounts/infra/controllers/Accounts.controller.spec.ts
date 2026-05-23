@@ -1,7 +1,9 @@
 import { BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
 import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
+import { EstimatedBalanceUseCase } from '@/accounts/core/usecases/EstimatedBalance.usecase';
 import { Account } from '@/accounts/core/model/Account';
+import { Money } from '@/shared/ValueObjects';
 import { CreateAccountDto } from '@/accounts/infra/dtos/CreateAccount.dto';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
@@ -11,10 +13,12 @@ describe('AccountsController', () => {
   let controller: AccountsController;
   let createExecuteMock: jest.Mock;
   let listExecuteMock: jest.Mock;
+  let estimatedBalanceExecuteMock: jest.Mock;
 
   beforeEach(() => {
     createExecuteMock = jest.fn();
     listExecuteMock = jest.fn();
+    estimatedBalanceExecuteMock = jest.fn();
     controller = new AccountsController(
       {
         execute: createExecuteMock,
@@ -22,6 +26,9 @@ describe('AccountsController', () => {
       {
         execute: listExecuteMock,
       } as unknown as ListAccountsUseCase,
+      {
+        execute: estimatedBalanceExecuteMock,
+      } as unknown as EstimatedBalanceUseCase,
     );
   });
 
@@ -138,6 +145,55 @@ describe('AccountsController', () => {
       createExecuteMock.mockResolvedValue(Result.fail({ code: Errors.MONEY_NOT_FINITE }));
 
       await expect(controller.create(dto)).rejects.toThrow(BadRequestException);
+
+      loggerErrorSpy.mockRestore();
+    });
+  });
+
+  describe('estimatedBalance()', () => {
+    it('should return EstimatedBalanceResponseDto when use case succeeds', async () => {
+      estimatedBalanceExecuteMock.mockResolvedValue(
+        Result.ok({ estimatedBalance: Money.new(1500) }),
+      );
+
+      const response = await controller.estimatedBalance('account-1', {});
+
+      expect(estimatedBalanceExecuteMock).toHaveBeenCalledWith({
+        accountId: 'account-1',
+        startDate: undefined,
+        endDate: undefined,
+      });
+      expect(response.estimatedBalance).toBe(1500);
+    });
+
+    it('should pass parsed dates to the use case when provided', async () => {
+      estimatedBalanceExecuteMock.mockResolvedValue(
+        Result.ok({ estimatedBalance: Money.new(200) }),
+      );
+
+      await controller.estimatedBalance('account-2', {
+        startDate: '2026-05-01T00:00:00.000Z',
+        endDate: '2026-05-31T23:59:59.000Z',
+      });
+
+      const call = estimatedBalanceExecuteMock.mock.calls[0][0];
+      expect(call.accountId).toBe('account-2');
+      expect(call.startDate).toBeInstanceOf(Date);
+      expect(call.endDate).toBeInstanceOf(Date);
+    });
+
+    it('should log and throw InternalServerErrorException when use case fails', async () => {
+      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+      estimatedBalanceExecuteMock.mockResolvedValue(
+        Result.fail({ code: Errors.PRISMA_QUERY_ERROR }),
+      );
+
+      await expect(controller.estimatedBalance('account-1', {})).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during estimated balance');
 
       loggerErrorSpy.mockRestore();
     });
