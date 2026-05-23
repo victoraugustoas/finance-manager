@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsOptional, IsUUID } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { CategoryType } from '@/shared/enums/CategoryType';
 
 export class BreakdownCategoriesQueryDto {
   @IsDateString()
@@ -32,4 +33,8 @@ export class BreakdownCategoriesQueryDto {
     example: ['a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000002'],
   })
   categoriesId?: string[];
+
+  @IsEnum(CategoryType)
+  @ApiProperty({ enum: CategoryType, example: CategoryType.EXPENSE })
+  type!: CategoryType;
 }

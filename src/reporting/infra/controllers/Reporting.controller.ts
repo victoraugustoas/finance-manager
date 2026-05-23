@@ -22,6 +22,7 @@ export class ReportingController {
       endDate: new Date(query.endDate),
       effectivated: query.effectivated,
       categoriesId: query.categoriesId,
+      type: query.type,
     });
 
     if (result.isFailure) {

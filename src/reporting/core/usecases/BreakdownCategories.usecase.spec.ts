@@ -9,6 +9,7 @@ import { BreakdownCategoriesUseCase } from '@/reporting/core/usecases/BreakdownC
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 import { Money } from '@/shared/ValueObjects';
+import { CategoryType } from '@/shared/enums/CategoryType';
 
 describe('BreakdownCategoriesUseCase', () => {
   const executeMock = jest.fn<
@@ -35,6 +36,7 @@ describe('BreakdownCategoriesUseCase', () => {
         startDate: new Date(2024, 2, 10),
         endDate: new Date(2024, 2, 9),
         effectivated: true,
+        type: CategoryType.EXPENSE,
       });
 
       expect(result.isFailure).toBe(true);
@@ -56,6 +58,7 @@ describe('BreakdownCategoriesUseCase', () => {
         startDate,
         endDate,
         effectivated: false,
+        type: CategoryType.EXPENSE,
       });
 
       const expectedDto: BreakdownCategoriesDTO = {
@@ -85,6 +88,7 @@ describe('BreakdownCategoriesUseCase', () => {
         startDate: new Date(2024, 5, 1),
         endDate: new Date(2024, 5, 30),
         effectivated: true,
+        type: CategoryType.EXPENSE,
       });
 
       expect(result.isSuccess).toBe(true);
@@ -120,6 +124,7 @@ describe('BreakdownCategoriesUseCase', () => {
         endDate,
         effectivated: true,
         categoriesId,
+        type: CategoryType.EXPENSE,
       });
 
       expect(executeMock).toHaveBeenCalledWith(
@@ -128,6 +133,43 @@ describe('BreakdownCategoriesUseCase', () => {
           effectivated: true,
         }),
       );
+    });
+
+    it('should forward type to the query', async () => {
+      executeMock.mockResolvedValue(Result.ok([]));
+
+      const query = new StubBreakdownCategoriesQuery();
+      const useCase = new BreakdownCategoriesUseCase(query);
+
+      await useCase.execute({
+        startDate: new Date(2024, 5, 1),
+        endDate: new Date(2024, 5, 30),
+        effectivated: false,
+        type: CategoryType.INCOME,
+      });
+
+      expect(executeMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: CategoryType.INCOME }),
+      );
+    });
+
+    it('should propagate query failure without calling the composer', async () => {
+      executeMock.mockResolvedValue(
+        Result.fail({ code: Errors.PRISMA_QUERY_ERROR, cls: 'StubQuery', data: {} }),
+      );
+
+      const query = new StubBreakdownCategoriesQuery();
+      const useCase = new BreakdownCategoriesUseCase(query);
+
+      const result = await useCase.execute({
+        startDate: new Date(2024, 5, 1),
+        endDate: new Date(2024, 5, 30),
+        effectivated: true,
+        type: CategoryType.EXPENSE,
+      });
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
     });
   });
 });

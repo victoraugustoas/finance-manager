@@ -5,6 +5,7 @@ import { BreakdownCategoriesQueryDto } from '@/reporting/infra/dtos/BreakdownCat
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 import { Money } from '@/shared/ValueObjects';
+import { CategoryType } from '@/shared/enums/CategoryType';
 import { ReportingController } from './Reporting.controller';
 
 describe('ReportingController', () => {
@@ -28,6 +29,7 @@ describe('ReportingController', () => {
           'a0000000-0000-4000-8000-000000000001',
           'b0000000-0000-4000-8000-000000000002',
         ],
+        type: CategoryType.EXPENSE,
       };
       const dto: BreakdownCategoriesDTO = {
         categories: [{ name: 'Food', total: Money.new(10) }],
@@ -42,6 +44,7 @@ describe('ReportingController', () => {
         endDate: new Date('2026-01-31T23:59:59.999Z'),
         effectivated: true,
         categoriesId: query.categoriesId,
+        type: CategoryType.EXPENSE,
       });
     });
 
@@ -50,6 +53,7 @@ describe('ReportingController', () => {
         startDate: '2026-02-01T00:00:00.000Z',
         endDate: '2026-02-28T23:59:59.999Z',
         effectivated: false,
+        type: CategoryType.INCOME,
       };
       const dto: BreakdownCategoriesDTO = {
         categories: [
@@ -71,6 +75,7 @@ describe('ReportingController', () => {
         startDate: '2026-03-01T00:00:00.000Z',
         endDate: '2026-03-31T23:59:59.999Z',
         effectivated: true,
+        type: CategoryType.EXPENSE,
       };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
       executeMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
@@ -92,6 +97,7 @@ describe('ReportingController', () => {
         startDate: '2026-04-10T00:00:00.000Z',
         endDate: '2026-04-09T00:00:00.000Z',
         effectivated: false,
+        type: CategoryType.EXPENSE,
       };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
       executeMock.mockResolvedValue(Result.fail({ code: Errors.END_DATE_NOT_AFTER_START_DATE }));

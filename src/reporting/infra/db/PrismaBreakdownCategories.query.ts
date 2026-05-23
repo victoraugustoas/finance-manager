@@ -29,9 +29,10 @@ export class PrismaBreakdownCategoriesQuery implements BreakdownCategoriesQuery 
           c."name" AS name,
           COALESCE(SUM(t."amount"), 0)::bigint AS total_cents
         FROM "Transaction" t
-        INNER JOIN "Category" c ON c."id" = t."categoryId"
+        JOIN "Category" c ON c."id" = t."categoryId"
         WHERE
-          t."entryDate" >= ${props.period.startDate}
+          c."type"::text = ${props.type}
+          AND t."entryDate" >= ${props.period.startDate}
           AND t."entryDate" <= ${props.period.endDate}
           AND t."effectivated" = ${props.effectivated}
           ${categoriesFilter}

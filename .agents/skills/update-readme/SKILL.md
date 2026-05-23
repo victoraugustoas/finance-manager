@@ -1,8 +1,10 @@
-****---
+---
 name: update-readme
-description: Keeps README.md aligned with the real project—run after changes to src layout, dependencies, scripts,
-bounded contexts, env docs, conventions, infra, hooks, or CI—by refreshing only outdated sections using package.json,
-AGENTS.md, and the repo layout.
+description: >-
+  Keeps README.md aligned with the real project. Run after changes to src
+  layout, dependencies, scripts, bounded contexts, env docs, conventions,
+  infra, hooks, or CI by refreshing only outdated sections using package.json,
+  AGENTS.md, and the repo layout.
 ---
 
 ## When to use

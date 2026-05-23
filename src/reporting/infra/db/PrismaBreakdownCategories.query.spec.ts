@@ -2,6 +2,7 @@ import { PrismaBreakdownCategoriesQuery } from '@/reporting/infra/db/PrismaBreak
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { ReportingPeriod } from '@/shared/ValueObjects';
+import { CategoryType } from '@/shared/enums/CategoryType';
 
 jest.mock(
   'generated/prisma/client',
@@ -40,7 +41,11 @@ describe('PrismaBreakdownCategoriesQuery', () => {
     it('should return an empty array when the database returns no rows', async () => {
       queryRaw.mockResolvedValue([]);
 
-      const result = await query.execute({ period, effectivated: true });
+      const result = await query.execute({
+        period,
+        effectivated: true,
+        type: CategoryType.EXPENSE,
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual([]);
@@ -52,7 +57,11 @@ describe('PrismaBreakdownCategoriesQuery', () => {
         { name: 'Transport', total_cents: BigInt(3000) },
       ]);
 
-      const result = await query.execute({ period, effectivated: true });
+      const result = await query.execute({
+        period,
+        effectivated: true,
+        type: CategoryType.EXPENSE,
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toHaveLength(2);
@@ -65,7 +74,11 @@ describe('PrismaBreakdownCategoriesQuery', () => {
     it('should accept total_cents as a plain number (not bigint)', async () => {
       queryRaw.mockResolvedValue([{ name: 'Salary', total_cents: 200000 }]);
 
-      const result = await query.execute({ period, effectivated: true });
+      const result = await query.execute({
+        period,
+        effectivated: true,
+        type: CategoryType.EXPENSE,
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value[0].total.amountInCents).toBe(200000);
@@ -74,7 +87,11 @@ describe('PrismaBreakdownCategoriesQuery', () => {
     it('should handle a zero total correctly', async () => {
       queryRaw.mockResolvedValue([{ name: 'Leisure', total_cents: BigInt(0) }]);
 
-      const result = await query.execute({ period, effectivated: true });
+      const result = await query.execute({
+        period,
+        effectivated: true,
+        type: CategoryType.EXPENSE,
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value[0].total.amountInCents).toBe(0);
@@ -84,7 +101,11 @@ describe('PrismaBreakdownCategoriesQuery', () => {
       const dbError = new Error('connection refused');
       queryRaw.mockRejectedValue(dbError);
 
-      const result = await query.execute({ period, effectivated: false });
+      const result = await query.execute({
+        period,
+        effectivated: false,
+        type: CategoryType.EXPENSE,
+      });
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
@@ -99,6 +120,7 @@ describe('PrismaBreakdownCategoriesQuery', () => {
         period,
         effectivated: true,
         categoriesId: ['cat-uuid-1', 'cat-uuid-2'],
+        type: CategoryType.EXPENSE,
       });
 
       expect(result.isSuccess).toBe(true);
