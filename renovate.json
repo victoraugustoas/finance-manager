@@ -1,7 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "rebaseWhen": "behind-base-branch"
+  "extends": ["config:recommended"],
+  "rebaseWhen": "behind-base-branch",
+  "minimumReleaseAge": "14 days"
 }
