@@ -180,9 +180,9 @@ describe('Account', () => {
     });
 
     describe('EDIT', () => {
-      it('should add back old EXPENSE and subtract new when going from effectivated to not effectivated', () => {
-        // balance -50, expense was 20 (effectivated), changed to 10 (not effectivated)
-        // → -50 + 20 - 10 = -40
+      it('should only add back old EXPENSE when going from effectivated to not effectivated', () => {
+        // balance -50, expense was 20 (effectivated), now not effectivated (amount irrelevant)
+        // → -50 + 20 = -30
         const account = makeAccount(-50);
         account.updateBalance({
           updatedBy: 'EDIT',
@@ -192,12 +192,12 @@ describe('Account', () => {
           oldEffectivated: true,
           newEffectivated: false,
         });
-        expect(account.balance.amount).toBe(-40);
+        expect(account.balance.amount).toBe(-30);
       });
 
-      it('should subtract old INCOME and add new when going from effectivated to not effectivated', () => {
-        // balance 100, income was 40 (effectivated), changed to 60 (not effectivated)
-        // → 100 - 40 + 60 = 120
+      it('should only subtract old INCOME when going from effectivated to not effectivated', () => {
+        // balance 100, income was 40 (effectivated), now not effectivated (amount irrelevant)
+        // → 100 - 40 = 60
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
@@ -207,7 +207,7 @@ describe('Account', () => {
           oldEffectivated: true,
           newEffectivated: false,
         });
-        expect(account.balance.amount).toBe(120);
+        expect(account.balance.amount).toBe(60);
       });
 
       it('should only subtract new EXPENSE when going from not effectivated to effectivated', () => {
@@ -236,13 +236,27 @@ describe('Account', () => {
         expect(account.balance.amount).toBe(150);
       });
 
-      it('should not change balance when both EXPENSE states are effectivated', () => {
+      it('should adjust balance when both EXPENSE states are effectivated and amount changes', () => {
+        // balance 100, expense changed from 20 to 30 (both effectivated) → 100 + 20 - 30 = 90
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
           type: TransactionType.EXPENSE,
           oldValue: money(20),
           newValue: money(30),
+          oldEffectivated: true,
+          newEffectivated: true,
+        });
+        expect(account.balance.amount).toBe(90);
+      });
+
+      it('should not change balance when both EXPENSE states are effectivated and amount is the same', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: TransactionType.EXPENSE,
+          oldValue: money(20),
+          newValue: money(20),
           oldEffectivated: true,
           newEffectivated: true,
         });
@@ -262,13 +276,27 @@ describe('Account', () => {
         expect(account.balance.amount).toBe(100);
       });
 
-      it('should not change balance when both INCOME states are effectivated', () => {
+      it('should adjust balance when both INCOME states are effectivated and amount changes', () => {
+        // balance 100, income changed from 20 to 50 (both effectivated) → 100 - 20 + 50 = 130
         const account = makeAccount(100);
         account.updateBalance({
           updatedBy: 'EDIT',
           type: TransactionType.INCOME,
           oldValue: money(20),
           newValue: money(50),
+          oldEffectivated: true,
+          newEffectivated: true,
+        });
+        expect(account.balance.amount).toBe(130);
+      });
+
+      it('should not change balance when both INCOME states are effectivated and amount is the same', () => {
+        const account = makeAccount(100);
+        account.updateBalance({
+          updatedBy: 'EDIT',
+          type: TransactionType.INCOME,
+          oldValue: money(20),
+          newValue: money(20),
           oldEffectivated: true,
           newEffectivated: true,
         });

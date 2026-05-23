@@ -108,24 +108,29 @@ export class Account extends AggregateRoot<AccountProps> {
     oldEffectivated: boolean,
     newEffectivated: boolean,
   ) {
+    // | old effectivated | new effectivated | EXPENSE adjustment      | INCOME adjustment       | reason                                          |
+    // |------------------|------------------|-------------------------|-------------------------|-------------------------------------------------|
+    // | true             | false            | +oldValue               | -oldValue               | left the balance: reverses the previous impact  |
+    // | false            | true             | -newValue               | +newValue               | entered the balance: applies the new value      |
+    // | true             | true             | +oldValue - newValue    | -oldValue + newValue    | stayed in the balance: replaces the old value   |
+    // | false            | false            | (no change)             | (no change)             | outside the balance before and after: no-op     |
     if (oldEffectivated && !newEffectivated) {
       if (type === 'EXPENSE') {
         this.balance = this.balance.add(oldValue);
-        this.balance = this.balance.subtract(newValue);
-      } else {
-        if (type === 'INCOME') {
-          this.balance = this.balance.subtract(oldValue);
-          this.balance = this.balance.add(newValue);
-        }
+      } else if (type === 'INCOME') {
+        this.balance = this.balance.subtract(oldValue);
       }
-    }
-    if (!oldEffectivated && newEffectivated) {
+    } else if (!oldEffectivated && newEffectivated) {
       if (type === 'EXPENSE') {
         this.balance = this.balance.subtract(newValue);
-      } else {
-        if (type === 'INCOME') {
-          this.balance = this.balance.add(newValue);
-        }
+      } else if (type === 'INCOME') {
+        this.balance = this.balance.add(newValue);
+      }
+    } else if (oldEffectivated && newEffectivated) {
+      if (type === 'EXPENSE') {
+        this.balance = this.balance.add(oldValue).subtract(newValue);
+      } else if (type === 'INCOME') {
+        this.balance = this.balance.subtract(oldValue).add(newValue);
       }
     }
   }

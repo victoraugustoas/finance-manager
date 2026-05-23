@@ -197,6 +197,44 @@ describe('Transaction', () => {
     });
   });
 
+  describe('edit()', () => {
+    it('should mutate the props on the original instance', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', name: 'Original', amount: 100 }));
+
+      transaction.edit(baseProps({ name: 'Updated', amount: 200 }));
+
+      expect(transaction.props.name).toBe('Updated');
+      expect(transaction.props.amount).toBe(200);
+    });
+
+    it('should update the amount value object in place', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', amount: 100 }));
+
+      transaction.edit(baseProps({ amount: 350 }));
+
+      expect(transaction.amount.amount).toBe(350);
+    });
+
+    it('should preserve the id after edit', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-fixed' }));
+
+      transaction.edit(baseProps({ name: 'Changed' }));
+
+      expect(transaction.id).toBe('tx-fixed');
+    });
+
+    it('should return failure and not mutate when validation fails', () => {
+      const transaction = Transaction.new(baseProps({ id: 'tx-1', name: 'Original', amount: 100 }));
+
+      const result = transaction.edit(baseProps({ amount: -1 }));
+
+      expect(result.isFailure).toBe(true);
+      expect(result.errors[0].code).toBe(Errors.AMOUNT_NOT_ZERO_OR_NEGATIVE);
+      expect(transaction.props.name).toBe('Original');
+      expect(transaction.props.amount).toBe(100);
+    });
+  });
+
   describe('effectivate()', () => {
     it('should succeed when effectivatedDate is on the same calendar day as entryDate', () => {
       const entryDate = new Date('2026-06-01T08:00:00.000Z');

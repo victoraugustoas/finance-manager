@@ -42,18 +42,14 @@ export class EditTransactionUseCase implements UseCase<EditTransactionParams, vo
   }
 
   private editIncome(income: Income, params: EditTransactionParams) {
-    const incomeResult = income.edit(params);
-    if (incomeResult.isFailure) {
-      return incomeResult.asFail();
-    }
-    return this.transactionsRepository.saveIncome(incomeResult.value);
+    const editResult = income.edit(params);
+    if (editResult.isFailure) return editResult.asFail();
+    return this.transactionsRepository.saveIncome(income);
   }
 
   private editExpense(expense: Expense, params: EditTransactionParams) {
-    const expenseResult = expense.edit(params);
-    if (expenseResult.isFailure) {
-      return expenseResult.asFail();
-    }
-    return this.transactionsRepository.saveExpense(expenseResult.value);
+    const editResult = expense.edit(params);
+    if (editResult.isFailure) return editResult.asFail();
+    return this.transactionsRepository.saveExpense(expense);
   }
 }

@@ -6,6 +6,7 @@ import {
   TransactionType,
 } from '@/transactions/core/model/Transaction';
 import { TransactionRegisteredEvent } from '@/transactions/core/events/TransactionRegisteredEvent';
+import { TransactionEditedEvent } from '@/transactions/core/events/TransactionEditedEvent';
 
 function expenseProps(expense: Expense): TransactionProps {
   return (expense as unknown as { props: TransactionProps }).props;
@@ -137,6 +138,58 @@ describe('Expense', () => {
 
       expect(expense).toBeInstanceOf(Expense);
       expect(expenseProps(expense).type).toBe(TransactionType.EXPENSE);
+    });
+  });
+
+  describe('edit()', () => {
+    it('should mutate the expense props in place', () => {
+      const expense = Expense.create(baseProps({ name: 'Original', amount: 100 })).value;
+
+      expense.edit(baseProps({ name: 'Updated', amount: 200 }));
+
+      expect(expenseProps(expense).name).toBe('Updated');
+      expect(expenseProps(expense).amount).toBe(200);
+    });
+
+    it('should attach a TransactionEditedEvent to the expense', () => {
+      const expense = Expense.create(baseProps()).value;
+
+      expense.edit(baseProps({ name: 'Updated' }));
+
+      expect(expense.domainEvents).toHaveLength(1);
+      expect(expense.domainEvents[0]).toBeInstanceOf(TransactionEditedEvent);
+    });
+
+    it('should capture oldValues before mutation in the event payload', () => {
+      const original = baseProps({ name: 'Original', amount: 100 });
+      const expense = Expense.create(original).value;
+
+      expense.edit(baseProps({ name: 'Updated', amount: 200 }));
+
+      expect(expense.domainEvents[0].payload).toEqual(
+        expect.objectContaining({
+          oldValues: expect.objectContaining({ name: 'Original', amount: 100 }),
+          newValues: expect.objectContaining({ name: 'Updated', amount: 200 }),
+        }),
+      );
+    });
+
+    it('should not add a domain event when validation fails', () => {
+      const expense = Expense.create(baseProps()).value;
+
+      const result = expense.edit(baseProps({ amount: 0 }));
+
+      expect(result.isFailure).toBe(true);
+      expect(expense.domainEvents).toHaveLength(0);
+    });
+
+    it('should not mutate props when validation fails', () => {
+      const expense = Expense.create(baseProps({ name: 'Original', amount: 100 })).value;
+
+      expense.edit(baseProps({ amount: -1 }));
+
+      expect(expenseProps(expense).name).toBe('Original');
+      expect(expenseProps(expense).amount).toBe(100);
     });
   });
 });

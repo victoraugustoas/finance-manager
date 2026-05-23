@@ -42,17 +42,16 @@ export class Income extends Transaction {
     return new Income(effectiveProps);
   }
 
-  edit(props: Omit<TransactionProps, 'type' | 'id'>): Result<Income> {
-    const income = super.edit(props);
-    if (income.isFailure) {
-      return income.asFail();
-    }
+  edit(props: Omit<TransactionProps, 'type' | 'id'>): Result<void> {
+    const oldValues = { ...this.props };
+    const editResult = super.edit(props);
+    if (editResult.isFailure) return editResult.asFail();
     this.addDomainEvent(
       new TransactionEditedEvent({
         newValues: { ...props, type: this.props.type },
-        oldValues: this.props,
+        oldValues,
       }),
     );
-    return Result.ok(income.value);
+    return Result.ok();
   }
 }

@@ -6,6 +6,7 @@ import {
   TransactionType,
 } from '@/transactions/core/model/Transaction';
 import { TransactionRegisteredEvent } from '@/transactions/core/events/TransactionRegisteredEvent';
+import { TransactionEditedEvent } from '@/transactions/core/events/TransactionEditedEvent';
 
 function incomeProps(income: Income): TransactionProps {
   return (income as unknown as { props: TransactionProps }).props;
@@ -137,6 +138,58 @@ describe('Income', () => {
 
       expect(income).toBeInstanceOf(Income);
       expect(incomeProps(income).type).toBe(TransactionType.INCOME);
+    });
+  });
+
+  describe('edit()', () => {
+    it('should mutate the income props in place', () => {
+      const income = Income.create(baseProps({ name: 'Original', amount: 5000 })).value;
+
+      income.edit(baseProps({ name: 'Updated', amount: 6000 }));
+
+      expect(incomeProps(income).name).toBe('Updated');
+      expect(incomeProps(income).amount).toBe(6000);
+    });
+
+    it('should attach a TransactionEditedEvent to the income', () => {
+      const income = Income.create(baseProps()).value;
+
+      income.edit(baseProps({ name: 'Updated' }));
+
+      expect(income.domainEvents).toHaveLength(1);
+      expect(income.domainEvents[0]).toBeInstanceOf(TransactionEditedEvent);
+    });
+
+    it('should capture oldValues before mutation in the event payload', () => {
+      const original = baseProps({ name: 'Original', amount: 5000 });
+      const income = Income.create(original).value;
+
+      income.edit(baseProps({ name: 'Updated', amount: 6000 }));
+
+      expect(income.domainEvents[0].payload).toEqual(
+        expect.objectContaining({
+          oldValues: expect.objectContaining({ name: 'Original', amount: 5000 }),
+          newValues: expect.objectContaining({ name: 'Updated', amount: 6000 }),
+        }),
+      );
+    });
+
+    it('should not add a domain event when validation fails', () => {
+      const income = Income.create(baseProps()).value;
+
+      const result = income.edit(baseProps({ amount: 0 }));
+
+      expect(result.isFailure).toBe(true);
+      expect(income.domainEvents).toHaveLength(0);
+    });
+
+    it('should not mutate props when validation fails', () => {
+      const income = Income.create(baseProps({ name: 'Original', amount: 5000 })).value;
+
+      income.edit(baseProps({ amount: -1 }));
+
+      expect(incomeProps(income).name).toBe('Original');
+      expect(incomeProps(income).amount).toBe(5000);
     });
   });
 });

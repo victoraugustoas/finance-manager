@@ -60,14 +60,16 @@ export class Transaction extends AggregateRoot<TransactionProps> {
     return new Transaction(props);
   }
 
-  edit(props: Omit<TransactionProps, 'type'>): Result<Transaction> {
-    const transactionResult = Transaction.create({
-      ...props,
-      id: this.id,
-      type: this.props.type,
+  edit(props: Omit<TransactionProps, 'type' | 'id'>): Result<void> {
+    const validation = Transaction.create({ ...props, id: this.id, type: this.props.type });
+    if (validation.isFailure) return validation.asFail();
+    Object.assign(this.props, props);
+    this.amount = Money.new(props.amount);
+    this.effectivated = Effectivated.new({
+      effectivated: props.effectivated,
+      effectivatedDate: props.effectivatedDate,
     });
-    if (transactionResult.isFailure) return transactionResult.asFail();
-    return Result.ok(this.copyWith(props));
+    return Result.ok();
   }
 
   override copyWith(props: Partial<TransactionProps>): this {
@@ -86,6 +88,6 @@ export class Transaction extends AggregateRoot<TransactionProps> {
     }
 
     this.props.effectivatedDate = effectivatedDate;
-    return Result.ok(undefined);
+    return Result.ok();
   }
 }

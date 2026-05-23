@@ -131,8 +131,9 @@ describe('UpdateAccountBalance', () => {
   });
 
   describe('EDIT', () => {
-    it('should reverse old EXPENSE and apply new when going from effectivated to not effectivated', async () => {
-      // balance -50, expense was 20 (effectivated → not effectivated), changed to 10 → -50 + 20 - 10 = -40
+    it('should only reverse old EXPENSE when going from effectivated to not effectivated', async () => {
+      // balance -50, expense was 20 (effectivated → not effectivated) → -50 + 20 = -30
+      // new amount is irrelevant: non-effectivated transactions do not affect the balance
       const account = makeAccount(-50);
       const repo = makeRepo(account);
       const useCase = new UpdateAccountBalance(repo);
@@ -148,12 +149,13 @@ describe('UpdateAccountBalance', () => {
       });
 
       expect(result.isSuccess).toBe(true);
-      expect(account.balance.amount).toBe(-40);
+      expect(account.balance.amount).toBe(-30);
       expect(repo.save).toHaveBeenCalledWith(account);
     });
 
-    it('should reverse old INCOME and apply new when going from effectivated to not effectivated', async () => {
-      // balance 100, income was 40 (effectivated → not effectivated), changed to 60 → 100 - 40 + 60 = 120
+    it('should only reverse old INCOME when going from effectivated to not effectivated', async () => {
+      // balance 100, income was 40 (effectivated → not effectivated) → 100 - 40 = 60
+      // new amount is irrelevant: non-effectivated transactions do not affect the balance
       const account = makeAccount(100);
       const repo = makeRepo(account);
       const useCase = new UpdateAccountBalance(repo);
@@ -168,7 +170,7 @@ describe('UpdateAccountBalance', () => {
         newEffectivated: false,
       });
 
-      expect(account.balance.amount).toBe(120);
+      expect(account.balance.amount).toBe(60);
     });
 
     it('should only apply new EXPENSE when going from not effectivated to effectivated', async () => {
@@ -188,6 +190,44 @@ describe('UpdateAccountBalance', () => {
       });
 
       expect(account.balance.amount).toBe(70);
+    });
+
+    it('should adjust balance when both states are effectivated and amount changes for EXPENSE', async () => {
+      // balance 100, expense changed from 20 to 30 (both effectivated) → 100 + 20 - 30 = 90
+      const account = makeAccount(100);
+      const repo = makeRepo(account);
+      const useCase = new UpdateAccountBalance(repo);
+
+      await useCase.execute({
+        updatedBy: 'EDIT',
+        accountId: 'acc-1',
+        oldValue: 20,
+        newValue: 30,
+        type: TransactionType.EXPENSE,
+        oldEffectivated: true,
+        newEffectivated: true,
+      });
+
+      expect(account.balance.amount).toBe(90);
+    });
+
+    it('should adjust balance when both states are effectivated and amount changes for INCOME', async () => {
+      // balance 100, income changed from 20 to 50 (both effectivated) → 100 - 20 + 50 = 130
+      const account = makeAccount(100);
+      const repo = makeRepo(account);
+      const useCase = new UpdateAccountBalance(repo);
+
+      await useCase.execute({
+        updatedBy: 'EDIT',
+        accountId: 'acc-1',
+        oldValue: 20,
+        newValue: 50,
+        type: TransactionType.INCOME,
+        oldEffectivated: true,
+        newEffectivated: true,
+      });
+
+      expect(account.balance.amount).toBe(130);
     });
 
     it('should fail without calling save when a Money value is invalid', async () => {
