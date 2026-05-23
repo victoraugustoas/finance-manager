@@ -1,11 +1,26 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Post,
+  Query,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
 import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
+import { EstimatedBalanceUseCase } from '@/accounts/core/usecases/EstimatedBalance.usecase';
 import { CreateAccountDto } from '@/accounts/infra/dtos/CreateAccount.dto';
 import { CreateAccountResponseDto } from '@/accounts/infra/dtos/CreateAccountResponse.dto';
 import { ListAccountsResponseDto } from '@/accounts/infra/dtos/ListAccountsResponse.dto';
+import { EstimatedBalanceResponseDto } from '@/accounts/infra/dtos/EstimatedBalanceResponse.dto';
+import { ListTransactionsQueryDto } from '@/transactions/infra/dtos/ListTransactionsQuery.dto';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
-import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiParam } from '@nestjs/swagger';
 
 @Controller('accounts')
 export class AccountsController {
@@ -14,6 +29,7 @@ export class AccountsController {
   constructor(
     private readonly createAccountUseCase: CreateAccountUseCase,
     private readonly listAccountsUseCase: ListAccountsUseCase,
+    private readonly estimatedBalanceUseCase: EstimatedBalanceUseCase,
   ) {}
 
   @Get()
@@ -29,6 +45,32 @@ export class AccountsController {
       MapResultErrorToHttpException.throwException(result);
     }
     return ListAccountsResponseDto.fromDomain(result.value);
+  }
+
+  @Get(':id/estimated-balance')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({
+    description: 'Estimated balance for the account over the given period.',
+    type: EstimatedBalanceResponseDto,
+  })
+  async estimatedBalance(
+    @Param('id') id: string,
+    @Query() query: ListTransactionsQueryDto,
+  ): Promise<EstimatedBalanceResponseDto> {
+    const result = await this.estimatedBalanceUseCase.execute({
+      accountId: id,
+      startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
+      endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
+    });
+
+    if (result.isFailure) {
+      this.logger.error(`Error during estimated balance: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+
+    return EstimatedBalanceResponseDto.fromDomain(result.value.estimatedBalance);
   }
 
   @Post()
