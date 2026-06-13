@@ -27,13 +27,24 @@ describe('AccountsController', () => {
   });
 
   describe('list()', () => {
-    it('should call ListAccountsUseCase.execute without params', async () => {
+    it('should call ListAccountsUseCase.execute without endDate when query is empty', async () => {
       listExecuteMock.mockResolvedValue(Result.ok([]));
 
       await controller.list();
 
       expect(listExecuteMock).toHaveBeenCalledTimes(1);
-      expect(listExecuteMock).toHaveBeenCalledWith();
+      expect(listExecuteMock).toHaveBeenCalledWith({ endDate: undefined });
+    });
+
+    it('should call ListAccountsUseCase.execute with parsed endDate', async () => {
+      listExecuteMock.mockResolvedValue(Result.ok([]));
+
+      await controller.list({ endDate: '2026-01-31T23:59:59.999Z' });
+
+      expect(listExecuteMock).toHaveBeenCalledTimes(1);
+      expect(listExecuteMock).toHaveBeenCalledWith({
+        endDate: new Date('2026-01-31T23:59:59.999Z'),
+      });
     });
 
     it('should return ListAccountsResponseDto mapped from listed accounts', async () => {

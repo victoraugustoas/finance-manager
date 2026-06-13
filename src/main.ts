@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(EntryPointModule);
 
+  app.enableCors();
+
   const config = new DocumentBuilder()
     .setTitle('Finance Manager API')
     .setDescription(

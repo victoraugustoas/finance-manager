@@ -23,12 +23,10 @@ export class ListExpenseUseCase implements UseCase<ListExpenseParams, ListExpens
     if (period.isFailure) {
       return period.asFail();
     }
-
     const expenses = await this.listExpenseQuery.execute({ period: period.value });
     if (expenses.isFailure) {
       return expenses.asFail();
     }
-
     return Result.ok(expenses.value);
   }
 }

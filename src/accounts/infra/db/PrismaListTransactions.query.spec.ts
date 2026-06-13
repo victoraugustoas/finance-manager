@@ -41,7 +41,10 @@ describe('PrismaListTransactionsQuery', () => {
     it('should map an INCOME transaction to movementType INCOME', async () => {
       transactionFindMany.mockResolvedValue([{ amount: 10000, type: 'INCOME', dueDate }]);
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual([{ amountInCents: 10000, movementType: 'INCOME', dueDate }]);
@@ -50,7 +53,10 @@ describe('PrismaListTransactionsQuery', () => {
     it('should map an EXPENSE transaction to movementType EXPENSE', async () => {
       transactionFindMany.mockResolvedValue([{ amount: 5000, type: 'EXPENSE', dueDate }]);
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual([{ amountInCents: 5000, movementType: 'EXPENSE', dueDate }]);
@@ -61,7 +67,10 @@ describe('PrismaListTransactionsQuery', () => {
     it('should map a transfer where the account is the origin to TRANSFER_OUT', async () => {
       transferFindMany.mockResolvedValue([{ amount: 3000, accountIdOrigin: ACCOUNT_ID, dueDate }]);
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual([
@@ -74,7 +83,10 @@ describe('PrismaListTransactionsQuery', () => {
         { amount: 7000, accountIdOrigin: OTHER_ACCOUNT_ID, dueDate },
       ]);
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual([{ amountInCents: 7000, movementType: 'TRANSFER_IN', dueDate }]);
@@ -85,7 +97,7 @@ describe('PrismaListTransactionsQuery', () => {
     it('should query transactions and transfers with period and effectivated filters', async () => {
       const period = makePeriod();
 
-      await query.execute({ accountId: ACCOUNT_ID, period, effectivated: true });
+      await query.listTransactions({ accountId: ACCOUNT_ID, period, effectivated: true });
 
       expect(transactionFindMany).toHaveBeenCalledWith({
         where: {
@@ -106,7 +118,7 @@ describe('PrismaListTransactionsQuery', () => {
     });
 
     it('should omit optional filters when they are not provided', async () => {
-      await query.execute({ accountId: ACCOUNT_ID });
+      await query.listTransactions({ accountId: ACCOUNT_ID });
 
       expect(transactionFindMany).toHaveBeenCalledWith({
         where: {
@@ -122,13 +134,43 @@ describe('PrismaListTransactionsQuery', () => {
       });
     });
 
+    it('should query transactions and transfers until the end date', async () => {
+      const endDate = new Date('2026-05-31T23:59:59.999Z');
+
+      await query.listTransactionsToEndDate({
+        accountId: ACCOUNT_ID,
+        effectivated: true,
+        endDate,
+      });
+
+      expect(transactionFindMany).toHaveBeenCalledWith({
+        where: {
+          accountId: ACCOUNT_ID,
+          effectivated: true,
+          dueDate: { lte: endDate },
+        },
+        select: { amount: true, type: true, dueDate: true },
+      });
+      expect(transferFindMany).toHaveBeenCalledWith({
+        where: {
+          OR: [{ accountIdOrigin: ACCOUNT_ID }, { accountIdDestination: ACCOUNT_ID }],
+          effectivated: true,
+          dueDate: { lte: endDate },
+        },
+        select: { amount: true, accountIdOrigin: true, dueDate: true },
+      });
+    });
+
     it('should run both queries in parallel and combine results', async () => {
       transactionFindMany.mockResolvedValue([{ amount: 1000, type: 'INCOME', dueDate }]);
       transferFindMany.mockResolvedValue([
         { amount: 2000, accountIdOrigin: OTHER_ACCOUNT_ID, dueDate },
       ]);
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toHaveLength(2);
@@ -141,7 +183,10 @@ describe('PrismaListTransactionsQuery', () => {
     it('should return PRISMA_QUERY_ERROR when transaction query throws', async () => {
       transactionFindMany.mockRejectedValue(new Error('Connection lost'));
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
@@ -151,7 +196,10 @@ describe('PrismaListTransactionsQuery', () => {
     it('should return PRISMA_QUERY_ERROR when transfer query throws', async () => {
       transferFindMany.mockRejectedValue(new Error('Timeout'));
 
-      const result = await query.execute({ accountId: ACCOUNT_ID, period: makePeriod() });
+      const result = await query.listTransactions({
+        accountId: ACCOUNT_ID,
+        period: makePeriod(),
+      });
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);

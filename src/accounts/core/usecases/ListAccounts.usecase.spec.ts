@@ -6,6 +6,7 @@ import { Result } from '@/shared/base/Result';
 import { ListTransactionsQuery } from '@/accounts/core/provider/ListTransactions.query';
 import { AccountBalanceCalculatorService } from '@/accounts/core/service/AccountBalanceCalculator.service';
 import { Money } from '@/shared/ValueObjects';
+import { endOfDay } from 'date-fns';
 
 jest.mock('@/accounts/core/service/AccountBalanceCalculator.service');
 
@@ -44,10 +45,11 @@ describe('ListAccountsUseCase', () => {
       findAll: jest.fn().mockResolvedValue(Result.ok(accounts)),
     } as unknown as AccountsRepository;
     const listTransactionsQuery = {
-      execute: jest
+      listTransactions: jest
         .fn()
         .mockResolvedValueOnce(Result.ok(checkingTransactions))
         .mockResolvedValueOnce(Result.ok(savingsTransactions)),
+      listTransactionsToEndDate: jest.fn(),
     } as unknown as ListTransactionsQuery;
     calculateMock
       .mockReturnValueOnce(Money.create(95).value)
@@ -63,16 +65,62 @@ describe('ListAccountsUseCase', () => {
     expect(result.value[1].account).toBe(accounts[1]);
     expect(result.value[1].balance.amountInCents).toBe(6000);
     expect(accountsRepository.findAll).toHaveBeenCalledTimes(1);
-    expect(listTransactionsQuery.execute).toHaveBeenCalledTimes(2);
-    expect(listTransactionsQuery.execute).toHaveBeenNthCalledWith(1, {
+    expect(listTransactionsQuery.listTransactions).toHaveBeenCalledTimes(2);
+    expect(listTransactionsQuery.listTransactions).toHaveBeenNthCalledWith(1, {
       accountId: 'account-1',
       effectivated: true,
     });
-    expect(listTransactionsQuery.execute).toHaveBeenNthCalledWith(2, {
+    expect(listTransactionsQuery.listTransactions).toHaveBeenNthCalledWith(2, {
       accountId: 'account-2',
       effectivated: true,
     });
     expect(calculateMock).toHaveBeenCalledTimes(2);
+    expect(calculateMock).toHaveBeenNthCalledWith(1, accounts[0], checkingTransactions);
+    expect(calculateMock).toHaveBeenNthCalledWith(2, accounts[1], savingsTransactions);
+  });
+
+  it('should calculate balances with effectivated transactions until the given end date', async () => {
+    const endDate = new Date('2026-01-10T12:00:00.000Z');
+    const accounts = [makeAccount('account-1', 'Checking'), makeAccount('account-2', 'Savings')];
+    const checkingTransactions = [
+      { amountInCents: 10000, movementType: 'INCOME' as const, dueDate: new Date() },
+    ];
+    const savingsTransactions = [
+      { amountInCents: 1500, movementType: 'TRANSFER_OUT' as const, dueDate: new Date() },
+    ];
+    const accountsRepository = {
+      findAll: jest.fn().mockResolvedValue(Result.ok(accounts)),
+    } as unknown as AccountsRepository;
+    const listTransactionsQuery = {
+      listTransactions: jest.fn(),
+      listTransactionsToEndDate: jest
+        .fn()
+        .mockResolvedValueOnce(Result.ok(checkingTransactions))
+        .mockResolvedValueOnce(Result.ok(savingsTransactions)),
+    } as unknown as ListTransactionsQuery;
+    calculateMock
+      .mockReturnValueOnce(Money.create(125).value)
+      .mockReturnValueOnce(Money.create(10).value);
+
+    const useCase = new ListAccountsUseCase(accountsRepository, listTransactionsQuery);
+
+    const result = await useCase.execute({ endDate });
+
+    expect(result.isSuccess).toBe(true);
+    expect(listTransactionsQuery.listTransactions).not.toHaveBeenCalled();
+    expect(listTransactionsQuery.listTransactionsToEndDate).toHaveBeenCalledTimes(2);
+    expect(listTransactionsQuery.listTransactionsToEndDate).toHaveBeenNthCalledWith(1, {
+      accountId: 'account-1',
+      effectivated: true,
+      endDate: endOfDay(endDate),
+    });
+    expect(listTransactionsQuery.listTransactionsToEndDate).toHaveBeenNthCalledWith(2, {
+      accountId: 'account-2',
+      effectivated: true,
+      endDate: endOfDay(endDate),
+    });
+    expect(result.value[0].balance.amountInCents).toBe(12500);
+    expect(result.value[1].balance.amountInCents).toBe(1000);
     expect(calculateMock).toHaveBeenNthCalledWith(1, accounts[0], checkingTransactions);
     expect(calculateMock).toHaveBeenNthCalledWith(2, accounts[1], savingsTransactions);
   });
@@ -87,7 +135,8 @@ describe('ListAccountsUseCase', () => {
       ),
     } as unknown as AccountsRepository;
     const listTransactionsQuery = {
-      execute: jest.fn(),
+      listTransactions: jest.fn(),
+      listTransactionsToEndDate: jest.fn(),
     } as unknown as ListTransactionsQuery;
 
     const useCase = new ListAccountsUseCase(accountsRepository, listTransactionsQuery);
@@ -97,7 +146,7 @@ describe('ListAccountsUseCase', () => {
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
     expect(accountsRepository.findAll).toHaveBeenCalledTimes(1);
-    expect(listTransactionsQuery.execute).not.toHaveBeenCalled();
+    expect(listTransactionsQuery.listTransactions).not.toHaveBeenCalled();
   });
 
   it('should propagate transaction query failures', async () => {
@@ -106,12 +155,13 @@ describe('ListAccountsUseCase', () => {
       findAll: jest.fn().mockResolvedValue(Result.ok(accounts)),
     } as unknown as AccountsRepository;
     const listTransactionsQuery = {
-      execute: jest.fn().mockResolvedValue(
+      listTransactions: jest.fn().mockResolvedValue(
         Result.fail({
           code: Errors.PRISMA_QUERY_ERROR,
           cls: 'test',
         }),
       ),
+      listTransactionsToEndDate: jest.fn(),
     } as unknown as ListTransactionsQuery;
 
     const useCase = new ListAccountsUseCase(accountsRepository, listTransactionsQuery);
@@ -120,6 +170,6 @@ describe('ListAccountsUseCase', () => {
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
-    expect(listTransactionsQuery.execute).toHaveBeenCalledTimes(1);
+    expect(listTransactionsQuery.listTransactions).toHaveBeenCalledTimes(1);
   });
 });

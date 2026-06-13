@@ -4,8 +4,11 @@ import { Result, UseCase } from '@/shared/base';
 import { ListTransactionsQuery } from '@/accounts/core/provider/ListTransactions.query';
 import { Money } from '@/shared/ValueObjects';
 import { AccountBalanceCalculatorService } from '@/accounts/core/service/AccountBalanceCalculator.service';
+import { endOfDay } from 'date-fns';
 
-export type ListAccountsParams = Record<string, never>;
+export type ListAccountsParams = {
+  endDate?: Date;
+};
 
 export type ListedAccount = {
   account: Account;
@@ -20,7 +23,7 @@ export class ListAccountsUseCase implements UseCase<ListAccountsParams, ListedAc
     private readonly listTransactionsQuery: ListTransactionsQuery,
   ) {}
 
-  async execute(_params: ListAccountsParams = {}): Promise<Result<ListedAccount[]>> {
+  async execute(params: ListAccountsParams = {}): Promise<Result<ListedAccount[]>> {
     const accounts = await this.accountsRepository.findAll();
     if (accounts.isFailure) {
       return accounts.asFail();
@@ -28,10 +31,17 @@ export class ListAccountsUseCase implements UseCase<ListAccountsParams, ListedAc
 
     const listedAccounts = await Promise.all(
       accounts.value.map(async (account) => {
-        const transactions = await this.listTransactionsQuery.execute({
-          accountId: account.id,
-          effectivated: true,
-        });
+        const transactions =
+          params.endDate !== undefined
+            ? await this.listTransactionsQuery.listTransactionsToEndDate({
+                accountId: account.id,
+                effectivated: true,
+                endDate: endOfDay(params.endDate),
+              })
+            : await this.listTransactionsQuery.listTransactions({
+                accountId: account.id,
+                effectivated: true,
+              });
         if (transactions.isFailure) return transactions.asFail();
 
         return Result.ok({
