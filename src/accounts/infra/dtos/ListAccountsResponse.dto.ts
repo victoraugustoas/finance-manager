@@ -1,4 +1,4 @@
-import { Account } from '@/accounts/core/model/Account';
+import { ListedAccount } from '@/accounts/core/usecases/ListAccounts.usecase';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ListAccountsItemResponseDto {
@@ -8,29 +8,25 @@ export class ListAccountsItemResponseDto {
   @ApiProperty({ example: 'Nubank' })
   name!: string;
 
-  @ApiProperty({ example: 100.5, description: 'Current balance as a decimal amount' })
-  balance!: number;
-
   @ApiProperty({ example: 100.5, description: 'Opening balance as a decimal amount' })
   openingBalance!: number;
 
-  @ApiProperty({ example: 201, description: 'Current balance plus opening balance' })
-  actualBalance!: number;
+  @ApiProperty({ example: 201, description: 'Calculated account balance as a decimal amount' })
+  balance!: number;
 }
 
 export class ListAccountsResponseDto {
   @ApiProperty({ type: [ListAccountsItemResponseDto] })
   accounts!: ListAccountsItemResponseDto[];
 
-  static fromDomain(accounts: Account[]): ListAccountsResponseDto {
+  static fromDomain(accounts: ListedAccount[]): ListAccountsResponseDto {
     const dto = new ListAccountsResponseDto();
-    dto.accounts = accounts.map((account) => {
+    dto.accounts = accounts.map(({ account, balance }) => {
       const item = new ListAccountsItemResponseDto();
       item.id = account.id;
       item.name = account.name;
-      item.balance = account.balance.amount;
       item.openingBalance = account.openingBalance.amount;
-      item.actualBalance = account.actualBalance.amount;
+      item.balance = balance.amount;
       return item;
     });
     return dto;

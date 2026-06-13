@@ -16,7 +16,6 @@ datasource db {
 model Account {
   id                     String        @id @default(uuid())
   name                   String        @unique
-  balance                Int
   openingBalance         Int
   transactions           Transaction[]
   transfersAsOrigin      Transfer[]    @relation("TransferOrigin")

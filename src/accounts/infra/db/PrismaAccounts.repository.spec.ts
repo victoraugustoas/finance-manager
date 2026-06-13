@@ -9,7 +9,6 @@ const makeAccount = (): Account => {
   const result = Account.create({
     id: accountId,
     name: 'Checking',
-    balance: 100.5,
     openingBalance: 25,
   });
   if (result.isFailure) throw new Error('Expected Account.create to succeed in test setup');
@@ -48,7 +47,7 @@ describe('PrismaAccountsRepository', () => {
       expect(result.isSuccess).toBe(true);
     });
 
-    it('should call upsert with amounts in cents', async () => {
+    it('should call upsert with opening balance in cents', async () => {
       const account = makeAccount();
 
       await repository.save(account);
@@ -59,12 +58,10 @@ describe('PrismaAccountsRepository', () => {
         create: {
           id: accountId,
           name: 'Checking',
-          balance: 10050,
           openingBalance: 2500,
         },
         update: {
           name: 'Checking',
-          balance: 10050,
         },
       });
     });
@@ -87,7 +84,6 @@ describe('PrismaAccountsRepository', () => {
       findUnique.mockResolvedValue({
         id: accountId,
         name: 'Checking',
-        balance: 10050,
         openingBalance: 2500,
       });
 
@@ -96,7 +92,6 @@ describe('PrismaAccountsRepository', () => {
       expect(result.isSuccess).toBe(true);
       expect(result.value.id).toBe(accountId);
       expect(result.value.name).toBe('Checking');
-      expect(result.value.balance.amountInCents).toBe(10050);
       expect(result.value.openingBalance.amountInCents).toBe(2500);
     });
 
@@ -104,7 +99,6 @@ describe('PrismaAccountsRepository', () => {
       findUnique.mockResolvedValue({
         id: accountId,
         name: 'Checking',
-        balance: 10050,
         openingBalance: 2500,
       });
 
@@ -138,13 +132,11 @@ describe('PrismaAccountsRepository', () => {
         {
           id: accountId,
           name: 'Checking',
-          balance: 10050,
           openingBalance: 2500,
         },
         {
           id: '22222222-2222-2222-2222-222222222222',
           name: 'Savings',
-          balance: 80000,
           openingBalance: 15000,
         },
       ]);
@@ -155,11 +147,9 @@ describe('PrismaAccountsRepository', () => {
       expect(result.value).toHaveLength(2);
       expect(result.value[0].id).toBe(accountId);
       expect(result.value[0].name).toBe('Checking');
-      expect(result.value[0].balance.amountInCents).toBe(10050);
       expect(result.value[0].openingBalance.amountInCents).toBe(2500);
       expect(result.value[1].id).toBe('22222222-2222-2222-2222-222222222222');
       expect(result.value[1].name).toBe('Savings');
-      expect(result.value[1].balance.amountInCents).toBe(80000);
       expect(result.value[1].openingBalance.amountInCents).toBe(15000);
     });
 

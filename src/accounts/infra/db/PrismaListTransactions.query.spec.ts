@@ -82,31 +82,41 @@ describe('PrismaListTransactionsQuery', () => {
   });
 
   describe('query parameters', () => {
-    it('should query transactions with correct where clause', async () => {
+    it('should query transactions and transfers with period and effectivated filters', async () => {
       const period = makePeriod();
 
-      await query.execute({ accountId: ACCOUNT_ID, period });
+      await query.execute({ accountId: ACCOUNT_ID, period, effectivated: true });
 
       expect(transactionFindMany).toHaveBeenCalledWith({
         where: {
           accountId: ACCOUNT_ID,
-          effectivated: false,
+          effectivated: true,
           dueDate: { gte: period.startDate, lte: period.endDate },
         },
         select: { amount: true, type: true, dueDate: true },
       });
-    });
-
-    it('should query transfers with OR clause covering both origin and destination', async () => {
-      const period = makePeriod();
-
-      await query.execute({ accountId: ACCOUNT_ID, period });
-
       expect(transferFindMany).toHaveBeenCalledWith({
         where: {
           OR: [{ accountIdOrigin: ACCOUNT_ID }, { accountIdDestination: ACCOUNT_ID }],
-          effectivated: false,
+          effectivated: true,
           dueDate: { gte: period.startDate, lte: period.endDate },
+        },
+        select: { amount: true, accountIdOrigin: true, dueDate: true },
+      });
+    });
+
+    it('should omit optional filters when they are not provided', async () => {
+      await query.execute({ accountId: ACCOUNT_ID });
+
+      expect(transactionFindMany).toHaveBeenCalledWith({
+        where: {
+          accountId: ACCOUNT_ID,
+        },
+        select: { amount: true, type: true, dueDate: true },
+      });
+      expect(transferFindMany).toHaveBeenCalledWith({
+        where: {
+          OR: [{ accountIdOrigin: ACCOUNT_ID }, { accountIdDestination: ACCOUNT_ID }],
         },
         select: { amount: true, accountIdOrigin: true, dueDate: true },
       });

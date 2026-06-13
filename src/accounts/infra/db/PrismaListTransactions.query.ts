@@ -13,22 +13,23 @@ export class PrismaListTransactionsQuery implements ListTransactionsQuery {
 
   async execute(props: ListTransactionsQueryProps): Promise<Result<ListTransactionsQueryResult[]>> {
     try {
-      const { accountId, period } = props;
+      const { accountId, effectivated, period } = props;
+      const dueDate = period ? { gte: period.startDate, lte: period.endDate } : undefined;
 
       const [rawTransactions, rawTransfers] = await Promise.all([
         this.prisma.transaction.findMany({
           where: {
             accountId,
-            effectivated: false,
-            dueDate: { gte: period.startDate, lte: period.endDate },
+            ...(effectivated !== undefined ? { effectivated } : {}),
+            ...(dueDate ? { dueDate } : {}),
           },
           select: { amount: true, type: true, dueDate: true },
         }),
         this.prisma.transfer.findMany({
           where: {
             OR: [{ accountIdOrigin: accountId }, { accountIdDestination: accountId }],
-            effectivated: false,
-            dueDate: { gte: period.startDate, lte: period.endDate },
+            ...(effectivated !== undefined ? { effectivated } : {}),
+            ...(dueDate ? { dueDate } : {}),
           },
           select: { amount: true, accountIdOrigin: true, dueDate: true },
         }),

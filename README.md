@@ -101,7 +101,7 @@ adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per c
 
 | Context          | Extra paths (beyond the common layout) |
 | ---------------- | -------------------------------------- |
-| **accounts**     | `core/service/` — domain services (e.g. `ApplyTransferBetweenAccounts`); `infra/controllers/events/` — event handlers (e.g. `UpdateAccountBalance/TransactionRegisteredHandler`, `TransactionEditedHandler`) |
+| **accounts**     | `core/service/` — domain services (e.g. `AccountBalanceCalculatorService`) |
 | **reporting**    | `core/dto/`, `core/service/` |
 | **transactions** | `core/events/` — domain events (`TransactionRegisteredEvent`, `TransactionEditedEvent`); `infra/acl/account/` — read-only access into the Account context; `infra/acl/category/` — read-only access into the Category context |
 

@@ -6,7 +6,6 @@ import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.use
 describe('CreateAccountUseCase', () => {
   const baseParams = {
     name: 'Checking',
-    balance: 100.5,
     openingBalance: 25,
   };
 
@@ -19,7 +18,7 @@ describe('CreateAccountUseCase', () => {
 
     const result = await useCase.execute({
       ...baseParams,
-      balance: NaN,
+      openingBalance: NaN,
     });
 
     expect(result.isFailure).toBe(true);
@@ -58,7 +57,6 @@ describe('CreateAccountUseCase', () => {
     expect(result.isSuccess).toBe(true);
     expect(result.value.id).toEqual(expect.any(String));
     expect(result.value.name).toBe(baseParams.name);
-    expect(result.value.balance.amount).toBe(baseParams.balance);
     expect(result.value.openingBalance.amount).toBe(baseParams.openingBalance);
     expect(accountsRepository.save).toHaveBeenCalledTimes(1);
     expect(accountsRepository.save).toHaveBeenCalledWith(result.value);

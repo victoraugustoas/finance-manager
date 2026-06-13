@@ -16,12 +16,10 @@ export class PrismaAccountsRepository implements AccountsRepository {
           create: {
             id: account.id,
             name: account.name,
-            balance: account.balance.amountInCents,
             openingBalance: account.openingBalance.amountInCents,
           },
           update: {
             name: account.name,
-            balance: account.balance.amountInCents,
           },
         });
       });
@@ -50,7 +48,6 @@ export class PrismaAccountsRepository implements AccountsRepository {
         Account.new({
           id: raw.id,
           name: raw.name,
-          balance: raw.balance / 100,
           openingBalance: raw.openingBalance / 100,
         }),
       );
@@ -72,7 +69,6 @@ export class PrismaAccountsRepository implements AccountsRepository {
           Account.new({
             id: raw.id,
             name: raw.name,
-            balance: raw.balance / 100,
             openingBalance: raw.openingBalance / 100,
           }),
         ),

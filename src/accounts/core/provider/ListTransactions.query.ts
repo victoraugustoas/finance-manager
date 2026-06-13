@@ -3,7 +3,8 @@ import { ReportingPeriod } from '@/shared/ValueObjects';
 
 export type ListTransactionsQueryProps = {
   accountId: string;
-  period: ReportingPeriod;
+  period?: ReportingPeriod;
+  effectivated?: boolean;
 };
 
 export type TransactionMovementType = 'INCOME' | 'EXPENSE' | 'TRANSFER_IN' | 'TRANSFER_OUT';
