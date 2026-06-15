@@ -1,11 +1,11 @@
 import { RegisterIncomeCommand } from './RegisterIncome.command';
-import { Result } from '@/shared/base';
+import { CommandHandler, Result } from '@/shared/base';
 import { Income } from '@/transactions/core/model/Income';
 import { TransactionAccountReader } from '@/transactions/core/ports/acl/TransactionAccount.reader';
 import { TransactionCategoryHierarchyReader } from '@/transactions/core/ports/acl/TransactionCategoryHierarchy.reader';
 import { TransactionsRepository } from '@/transactions/core/ports/repositories/Transactions.repository';
 
-export class RegisterIncomeHandler {
+export class RegisterIncomeHandler implements CommandHandler<RegisterIncomeCommand, Income> {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountReader,

@@ -76,7 +76,7 @@ export class MyActionService {
 **How to use inside a command/query handler:**
 
 ```typescript
-// inside MyUseCase.execute():
+// inside MyHandler.handle():
 const someAggregate = await this.someRepo.findById(params.someId);
 const anotherAggregate = await this.anotherRepo.findById(params.anotherId);
 
@@ -111,10 +111,10 @@ export class MyComposerService {
 **How to use inside a command/query handler:**
 
 ```typescript
-// as a use-case field (instantiated once):
+// as a handler field (instantiated once):
 private readonly myComposer = new MyComposerService();
 
-// inside execute():
+// inside handle():
 const result = this.myComposer.computeResult(rows);
 ```
 

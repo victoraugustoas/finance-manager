@@ -123,7 +123,7 @@ import {
 export class MyThingActionHandler extends EventConsumer<MyThingActionPayload> {
   constructor(
     prisma: PrismaService,
-    private readonly myUseCase: MyHandler,
+    private readonly myHandler: MyHandler,
   ) {
     super(prisma);
   }
@@ -137,7 +137,7 @@ export class MyThingActionHandler extends EventConsumer<MyThingActionPayload> {
   }
 
   async callDomain(payload: MyThingActionPayload): Promise<Result<void>> {
-    return this.myUseCase.handle({
+    return this.myHandler.handle({
       // map payload fields to command/query input
     });
   }
@@ -285,16 +285,16 @@ const makeOutboxEvent = (payload: object) => ({
 describe('MyThingActionHandler', () => {
   const basePayload = { thingId: 'thing-1' };
 
-  let useCase: jest.Mocked<MyHandler>;
+  let handler: jest.Mocked<MyHandler>;
 
   beforeEach(() => {
-    useCase = {
+    handler = {
       execute: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as jest.Mocked<MyHandler>;
   });
 
   it('should call the handler with the correct input', async () => {
-    const handler = new MyThingActionHandler(makePrisma(1), useCase);
+    const handler = new MyThingActionHandler(makePrisma(1), handler);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);
 
@@ -302,7 +302,7 @@ describe('MyThingActionHandler', () => {
   });
 
   it('should skip processing when the event was already consumed (idempotency)', async () => {
-    const handler = new MyThingActionHandler(makePrisma(0), useCase);
+    const handler = new MyThingActionHandler(makePrisma(0), handler);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);
 
@@ -310,13 +310,13 @@ describe('MyThingActionHandler', () => {
   });
 
   it('should expose the correct consumerName for the idempotency key', () => {
-    const handler = new MyThingActionHandler(makePrisma(1), useCase);
+    const handler = new MyThingActionHandler(makePrisma(1), handler);
 
     expect(handler.consumerName).toBe('MyThingActionHandler');
   });
 
   it('should restore the payload from OutboxEventData', () => {
-    const handler = new MyThingActionHandler(makePrisma(1), useCase);
+    const handler = new MyThingActionHandler(makePrisma(1), handler);
 
     const restored = handler.restore(makeOutboxEvent(basePayload) as any);
 

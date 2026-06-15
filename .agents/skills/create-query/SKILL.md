@@ -58,6 +58,7 @@ src/transactions/infra/database/readers/PrismaListIncomeReader.ts
 - Reader port: `{Action}Reader`
 - Prisma adapter: `Prisma{Action}Reader`
 - Handler class: `{Action}Handler`
+- Handler contract: `implements QueryHandler<{Action}Query | undefined, T>`
 - Handler method: `handle(query): Promise<Result<T>>`
 - Reader method: `read(input): Promise<Result<T>>`
 
@@ -74,19 +75,20 @@ BreakdownCategoriesQuery
 ## Rules
 
 1. Queries **do not change state**.
-2. Query handlers may validate query concepts such as date ranges, pagination,
+2. Query handlers implement `QueryHandler<Query, Return>` from `@/shared/base`.
+3. Query handlers may validate query concepts such as date ranges, pagination,
    filters, and sorting.
-3. Query handlers call a reader port; they do not use repositories for list,
+4. Query handlers call a reader port; they do not use repositories for list,
    dashboard, or reporting screens.
-4. Query results are read models/DTO-shaped data.
-5. Do not instantiate domain aggregates just to return data to the UI.
-6. Reader ports live in `core/ports/readers/` as `abstract class` DI tokens.
-7. Reader implementations live in `infra/database/readers/`.
-8. Reader implementations may use Prisma `findMany`, `aggregate`, `groupBy`, or
+5. Query results are read models/DTO-shaped data.
+6. Do not instantiate domain aggregates just to return data to the UI.
+7. Reader ports live in `core/ports/readers/` as `abstract class` DI tokens.
+8. Reader implementations live in `infra/database/readers/`.
+9. Reader implementations may use Prisma `findMany`, `aggregate`, `groupBy`, or
    `$queryRaw` for optimized reads.
-9. Put query-specific result types beside the handler, not inside controller
+10. Put query-specific result types beside the handler, not inside controller
    DTOs.
-10. Write a unit spec next to every query handler and separate specs for Prisma
+11. Write a unit spec next to every query handler and separate specs for Prisma
     readers.
 
 ## Query template
@@ -130,14 +132,14 @@ export abstract class ListThingsReader {
 `{Action}.handler.ts`:
 
 ```typescript
-import { Result } from '@/shared/base';
+import { QueryHandler, Result } from '@/shared/base';
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { endOfMonth, startOfMonth } from 'date-fns';
 import { ListThingsReader } from '@/{context}/core/ports/readers/ListThingsReader';
 import { ListThingsQuery } from './ListThings.query';
 import { ListThingsResult } from './ListThings.result';
 
-export class ListThingsHandler {
+export class ListThingsHandler implements QueryHandler<ListThingsQuery | undefined, ListThingsResult[]> {
   constructor(private readonly reader: ListThingsReader) {}
 
   async handle(query: ListThingsQuery = {}): Promise<Result<ListThingsResult[]>> {
@@ -167,7 +169,7 @@ import {
   ListThingsReaderInput,
 } from '@/{context}/core/ports/readers/ListThingsReader';
 import { ListThingsResult } from '@/{context}/core/queries/ListThings/ListThings.result';
-import { PrismaService } from '@/shared/infra/db/PrismaService';
+import { PrismaService } from '@/shared/infra/PrismaService';
 
 export class PrismaListThingsReader implements ListThingsReader {
   constructor(private readonly prisma: PrismaService) {}

@@ -126,7 +126,7 @@ Contexts organize application operations as CQRS commands and queries in domain 
 | **Reporting**     | Aggregates for analysis (e.g. `GET /reporting/categories/breakdown` returns `{ "categories": [...] }` with at most six rows; overflow is aggregated under `Others` per domain rules) |
 | **Notifications** | Reactive context driven by events (to be reflected under `src/` when modeled) |
 
-The `src/shared` tree holds domain primitives under `shared/base` (`Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.
+The `src/shared` tree holds domain primitives under `shared/base` (`Result`, `UseCase`, `CommandHandler`, `QueryHandler`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.
 
 ## Conventions
 

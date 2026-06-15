@@ -48,6 +48,7 @@ src/transactions/core/commands/RegisterIncome/
 
 - Input type: `{Action}Command`
 - Handler class: `{Action}Handler`
+- Handler contract: `implements CommandHandler<{Action}Command, T>`
 - Handler method: `handle(command): Promise<Result<T>>`
 - File names:
   - `{Action}.command.ts`
@@ -69,20 +70,21 @@ EffectivateTransactionCommand
 1. Commands **change state**.
 2. Commands may use domain entities, aggregates, value objects, domain services,
    domain events, repositories, transactions, and outbox.
-3. Commands should not return screen/reporting projections. If the UI needs a
+3. Command handlers implement `CommandHandler<Command, Return>` from `@/shared/base`.
+4. Commands should not return screen/reporting projections. If the UI needs a
    view model, create a query.
-4. Handler constructors receive ports only: repositories, ACL readers, event
+5. Handler constructors receive ports only: repositories, ACL readers, event
    publishers, or other infrastructure boundaries.
-5. Repositories live in `core/ports/repositories/` as `abstract class` DI tokens.
-6. Repository implementations live in `infra/database/repositories/`.
-7. Cross-context lookups/checks use lightweight ACL reader ports in
+6. Repositories live in `core/ports/repositories/` as `abstract class` DI tokens.
+7. Repository implementations live in `infra/database/repositories/`.
+8. Cross-context lookups/checks use lightweight ACL reader ports in
    `core/ports/acl/`.
-8. Delegate business rules to domain objects/services; keep the handler as an
+9. Delegate business rules to domain objects/services; keep the handler as an
    application orchestration layer.
-9. Use `Result.combine([...])` for multiple validations.
-10. Use `.asFail()` to propagate failures.
-11. Use `Promise.all([...])` for independent async checks.
-12. Write a unit spec next to every command handler.
+10. Use `Result.combine([...])` for multiple validations.
+11. Use `.asFail()` to propagate failures.
+12. Use `Promise.all([...])` for independent async checks.
+13. Write a unit spec next to every command handler.
 
 ## Command template
 
@@ -99,13 +101,13 @@ export type RegisterThingCommand = {
 `{Action}.handler.ts`:
 
 ```typescript
-import { Result } from '@/shared/base';
+import { CommandHandler, Result } from '@/shared/base';
 import { ThingsRepository } from '@/{context}/core/ports/repositories/Things.repository';
 import { RelatedThingReader } from '@/{context}/core/ports/acl/RelatedThing.reader';
 import { Thing } from '@/{context}/core/model/Thing';
 import { RegisterThingCommand } from './RegisterThing.command';
 
-export class RegisterThingHandler {
+export class RegisterThingHandler implements CommandHandler<RegisterThingCommand, Thing> {
   constructor(
     private readonly thingsRepository: ThingsRepository,
     private readonly relatedThings: RelatedThingReader,

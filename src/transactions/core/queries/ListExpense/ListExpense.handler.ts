@@ -1,11 +1,14 @@
 import { ListExpenseReader } from '@/transactions/core/ports/readers/ListExpenseReader';
 import { ListExpenseQuery } from './ListExpense.query';
 import { ListExpenseResult } from './ListExpense.result';
-import { Result } from '@/shared/base';
+import { QueryHandler, Result } from '@/shared/base';
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { endOfMonth, startOfMonth } from 'date-fns';
 
-export class ListExpenseHandler {
+export class ListExpenseHandler implements QueryHandler<
+  ListExpenseQuery | undefined,
+  ListExpenseResult[]
+> {
   constructor(private readonly reader: ListExpenseReader) {}
 
   async handle(query: ListExpenseQuery = {}): Promise<Result<ListExpenseResult[]>> {

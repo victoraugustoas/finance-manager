@@ -1,11 +1,14 @@
 import { ListTransfersReader } from '@/transactions/core/ports/readers/ListTransfersReader';
 import { ListTransfersQuery } from './ListTransfers.query';
 import { ListTransfersResult } from './ListTransfers.result';
-import { Result } from '@/shared/base';
+import { QueryHandler, Result } from '@/shared/base';
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { endOfMonth, startOfMonth } from 'date-fns';
 
-export class ListTransfersHandler {
+export class ListTransfersHandler implements QueryHandler<
+  ListTransfersQuery | undefined,
+  ListTransfersResult[]
+> {
   constructor(private readonly reader: ListTransfersReader) {}
 
   async handle(query: ListTransfersQuery = {}): Promise<Result<ListTransfersResult[]>> {

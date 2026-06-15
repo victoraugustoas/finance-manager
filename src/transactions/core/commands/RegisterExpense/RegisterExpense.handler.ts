@@ -1,11 +1,11 @@
 import { RegisterExpenseCommand } from './RegisterExpense.command';
-import { Result } from '@/shared/base';
+import { CommandHandler, Result } from '@/shared/base';
 import { Expense } from '@/transactions/core/model/Expense';
 import { TransactionAccountReader } from '@/transactions/core/ports/acl/TransactionAccount.reader';
 import { TransactionCategoryHierarchyReader } from '@/transactions/core/ports/acl/TransactionCategoryHierarchy.reader';
 import { TransactionsRepository } from '@/transactions/core/ports/repositories/Transactions.repository';
 
-export class RegisterExpenseHandler {
+export class RegisterExpenseHandler implements CommandHandler<RegisterExpenseCommand, Expense> {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountReader,

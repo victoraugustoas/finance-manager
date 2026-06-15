@@ -1,11 +1,14 @@
 import { ListIncomeReader } from '@/transactions/core/ports/readers/ListIncomeReader';
 import { ListIncomeQuery } from './ListIncome.query';
 import { ListIncomeResult } from './ListIncome.result';
-import { Result } from '@/shared/base';
+import { QueryHandler, Result } from '@/shared/base';
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { endOfMonth, startOfMonth } from 'date-fns';
 
-export class ListIncomeHandler {
+export class ListIncomeHandler implements QueryHandler<
+  ListIncomeQuery | undefined,
+  ListIncomeResult[]
+> {
   constructor(private readonly reader: ListIncomeReader) {}
 
   async handle(query: ListIncomeQuery = {}): Promise<Result<ListIncomeResult[]>> {

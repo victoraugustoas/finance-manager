@@ -4,4 +4,6 @@ export * from './Entity';
 export * from './Result';
 export * from './ValueObject';
 export * from './UseCase';
+export * from './CommandHandler';
+export * from './QueryHandler';
 export * from './DomainEvent';

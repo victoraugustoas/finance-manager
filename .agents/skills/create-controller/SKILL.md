@@ -256,8 +256,8 @@ Add the controller to `controllers` and each command/query handler to `providers
 import { Module } from '@nestjs/common';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { MyContextController } from '@/{context}/infra/controllers/MyContext.controller';
-import { MyRepository } from '@/{context}/core/provider/My.repository';
-import { PrismaMyRepository } from '@/{context}/infra/db/PrismaMyRepository';
+import { MyRepository } from '@/{context}/core/ports/repositories/My.repository';
+import { PrismaMyRepository } from '@/{context}/infra/database/repositories/PrismaMyRepository';
 import { RegisterThingHandler } from '@/{context}/core/commands/RegisterThing/RegisterThing.handler';
 import { ListThingsHandler } from '@/{context}/core/queries/ListThings/ListThings.handler';
 
@@ -271,8 +271,8 @@ import { ListThingsHandler } from '@/{context}/core/queries/ListThings/ListThing
       inject: [PrismaService],
     },
     {
-      provide: MyActionUseCase,
-      useFactory: (repo: MyRepository) => new MyActionUseCase(repo),
+      provide: RegisterThingHandler,
+      useFactory: (repo: MyRepository) => new RegisterThingHandler(repo),
       inject: [MyRepository],
     },
   ],
@@ -304,13 +304,13 @@ case 'MY_NEW_ERROR_CODE':
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 
-  constructor(private readonly createAccountUseCase: CreateAccountUseCase) {}
+  constructor(private readonly registerThing: RegisterThingHandler) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ description: 'Account created.', type: CreateAccountResponseDto })
   async create(@Body() dto: CreateAccountDto): Promise<CreateAccountResponseDto> {
-    const result = await this.createAccountUseCase.execute({
+    const result = await this.registerThing.handle({
       name: dto.name,
       openingBalance: dto.openingBalance,
       balance: 0,
@@ -333,7 +333,7 @@ export class AccountsController {
 export class ReportingController {
   private readonly logger = new Logger(ReportingController.name);
 
-  constructor(private readonly breakdownCategoriesUseCase: BreakdownCategoriesUseCase) {}
+  constructor(private readonly listThings: ListThingsHandler) {}
 
   @Get('categories/breakdown')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -341,7 +341,7 @@ export class ReportingController {
   async breakdownCategories(
     @Query() query: BreakdownCategoriesQueryDto,
   ): Promise<BreakdownCategoriesResponseDto> {
-    const result = await this.breakdownCategoriesUseCase.execute({
+    const result = await this.listThings.handle({
       startDate: new Date(query.startDate),
       endDate: new Date(query.endDate),
       effectivated: query.effectivated,

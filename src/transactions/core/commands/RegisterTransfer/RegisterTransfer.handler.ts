@@ -1,10 +1,10 @@
 import { RegisterTransferCommand } from './RegisterTransfer.command';
-import { Result } from '@/shared/base';
+import { CommandHandler, Result } from '@/shared/base';
 import { TransactionsRepository } from '@/transactions/core/ports/repositories/Transactions.repository';
 import { TransactionAccountReader } from '@/transactions/core/ports/acl/TransactionAccount.reader';
 import { Transfer } from '@/transactions/core/model/Transfer';
 
-export class RegisterTransferHandler {
+export class RegisterTransferHandler implements CommandHandler<RegisterTransferCommand, void> {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accounts: TransactionAccountReader,

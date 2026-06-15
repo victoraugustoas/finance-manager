@@ -58,6 +58,7 @@ Reactive context, triggered by events.
 The shared folder contains base classes used across multiple contexts.
 
 - Result: class to encapsulate results.
+- UseCase, CommandHandler, QueryHandler: abstract operation contracts.
 - ValueObject: class to represent value objects.
 - Entity: class to represent entities.
 - RootAggregate: class to represent aggregate roots.
