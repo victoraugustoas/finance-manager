@@ -1,401 +1,220 @@
 ---
 name: create-use-case
 description: >-
-  Creates a Use Case following DDD principles for this project. Use when the
-  user asks to implement an application operation that orchestrates domain
-  objects, repositories, queries, and domain services to fulfill a single
-  business intent.
+  Creates a CQRS application operation for finance-manager. Use when adding a
+  command (write) or query (read) handler in a bounded context.
 ---
 
-# Create Use Case (finance-manager)
+# Create CQRS Handler (finance-manager)
 
-## What a Use Case is
+## Core convention
 
-A Use Case is the entry point for a single business operation. It:
+The project uses CQRS inside each bounded context.
 
-- Receives a **flat params object** (primitives, no domain objects).
-- Delegates domain logic to **entities**, **domain services**, and **value objects**.
-- Uses **providers** (repositories, queries) to load and persist data.
-- Returns `Promise<Result<T>>` — either the produced value or a structured error.
+- **Commands** change state and may use domain aggregates, value objects, domain services, repositories, events, transactions, and outbox.
+- **Queries** only read data and return read models/DTO-shaped results. They must not rebuild domain aggregates just to display data.
 
-A Use Case does **not** contain domain rules itself. If a validation or computation feels like business logic, it belongs in an entity or a domain service.
+Default layout:
 
----
+```text
+src/{context}/core/
+  commands/{Action}/
+    {Action}.command.ts
+    {Action}.handler.ts
+    {Action}.handler.spec.ts
 
-## Providers: repositories vs. queries
+  queries/{Action}/
+    {Action}.query.ts
+    {Action}.result.ts
+    {Action}.handler.ts
+    {Action}.handler.spec.ts
 
-Both are **`abstract class`** (not interfaces) in `src/{context}/core/provider/` so that NestJS can use them as injection tokens.
+  model/
+  service/
+  events/
+  ports/
+    repositories/
+    readers/
+    acl/
 
-| Kind | Naming | Purpose | Example methods |
+src/{context}/infra/
+  database/
+    repositories/
+    readers/
+  controllers/
+  dtos/
+  module/
+```
+
+## Ports
+
+Ports are `abstract class` declarations, not TypeScript interfaces, so NestJS can use them as DI tokens.
+
+| Kind | Location | Naming | Purpose |
 |---|---|---|---|
-| **Repository** | `{Context}Repository` | Persist and load aggregates of the **same context** | `save()`, `findById()` |
-| **Query** | `{Purpose}Query` | Read-only checks or projections, often **cross-context** | `existsById()`, `ensureHierarchy()` |
+| Repository | `core/ports/repositories/` | `{Context}Repository` | Persist/load aggregates owned by the context |
+| Reader | `core/ports/readers/` | `{Action}Reader` | Return read models for query handlers |
+| ACL Reader | `core/ports/acl/` | `{ExternalConcept}Reader` | Check/read lightweight data from another context |
 
-> Repositories return full domain entities. Queries return `Result<void>` (existence checks) or lightweight DTOs — never full aggregates from another context.
+Rules:
 
----
+- Repositories return domain entities/aggregates.
+- Readers return read models/results, never domain aggregates.
+- Do not add screen/reporting methods to repositories; create a dedicated reader/query instead.
+- Infrastructure implementations go under `infra/database/repositories/` or `infra/database/readers/`.
 
-## Rules for this project
+## Command rules
 
-1. Implement `UseCase<Params, Return>` from `@/shared/base`.
-2. Place the file in `src/{context}/core/usecases/{Action}.usecase.ts`.
-3. Export the params type from the same file: `export type {Action}Params = { … }`.
-4. The **constructor** receives only providers (repositories and queries). Domain services are **not** injected — instantiate them with `new` inside `execute()`.
-5. `execute()` is always `async` and returns `Promise<Result<Return>>`.
-6. Use `Result.combine([…])` to batch-check multiple results before proceeding.
-7. Use `.asFail()` to propagate a typed failure up the call chain.
-8. Use `Result.ok()` (no argument) when the return type is `void`.
-9. Fire independent async calls in parallel with `Promise.all([…])`.
-10. Write a `*.spec.ts` next to the source file; mock all providers with `jest.fn()`.
+1. Put commands under `src/{context}/core/commands/{Action}/`.
+2. Name input type `{Action}Command` in `{Action}.command.ts`.
+3. Name handler `{Action}Handler` in `{Action}.handler.ts`.
+4. Handler method is `handle(command): Promise<Result<T>>`.
+5. Constructor receives only ports: repositories, readers/ACLs, or publishers.
+6. Delegate domain rules to entities, value objects, and domain services.
+7. Use `Result.combine([...])` for multiple validations.
+8. Use `.asFail()` to propagate failures.
+9. Use `Promise.all([...])` for independent async checks.
+10. Write `{Action}.handler.spec.ts` next to the handler.
 
----
-
-## Execution flow patterns
-
-### Pattern 1 — Create and persist
-
-Used when the operation simply creates a new aggregate and saves it.
+Command template:
 
 ```typescript
-async execute(params: MyParams): Promise<Result<MyAggregate>> {
-  const created = MyAggregate.create(params);
-  if (created.isFailure) return created.asFail();
-
-  const persisted = await this.myRepository.save(created.value);
-  if (persisted.isFailure) return persisted.asFail();
-
-  return Result.ok(created.value);
-}
-```
-
----
-
-### Pattern 2 — Create with reference checks
-
-Used when the new aggregate references IDs that must exist beforehand. Domain creation and reference checks are independent — run them in parallel, then combine.
-
-```typescript
-async execute(params: MyParams): Promise<Result<MyAggregate>> {
-  const created = MyAggregate.register(params);          // domain validation (sync)
-  const [refA, refB] = await Promise.all([               // reference checks (async)
-    this.someQuery.existsById(params.someId),
-    this.otherQuery.existsById(params.otherId),
-  ]);
-
-  const combined = Result.combine([created, refA, refB]);
-  if (combined.isFailure) return combined.asFail();
-
-  const persisted = await this.myRepository.save(created.value);
-  if (persisted.isFailure) return persisted.asFail();
-
-  return Result.ok(created.value);
-}
-```
-
----
-
-### Pattern 3 — Load, mutate, and save
-
-Used when the operation modifies an existing aggregate.
-
-```typescript
-async execute(params: MyParams): Promise<Result<void>> {
-  const loaded = await this.myRepository.findById(params.id);
-  if (loaded.isFailure) return loaded.asFail();
-
-  const mutated = loaded.value.someAction(params);
-  if (mutated.isFailure) return mutated.asFail();
-
-  return this.myRepository.save(mutated.value);
-}
-```
-
----
-
-### Pattern 4 — Coordinate multiple aggregates via a domain service
-
-Used when the operation must mutate aggregates from the same or different contexts, delegating the coordination logic to a Domain Service.
-
-```typescript
-async execute(params: MyParams): Promise<Result<void>> {
-  const [aggA, aggB] = await Promise.all([
-    this.repoA.findById(params.aggAId),
-    this.repoB.findById(params.aggBId),
-  ]);
-
-  const combined = Result.combine([aggA, aggB]);
-  if (combined.isFailure) return combined.asFail();
-
-  const service = new MyDomainService(aggA.value, aggB.value);
-  service.apply(params);
-
-  const saved = Result.combine(
-    await Promise.all([
-      this.repoA.save(aggA.value),
-      this.repoB.save(aggB.value),
-    ]),
-  );
-  if (saved.isFailure) return saved;
-
-  return Result.ok();
-}
-```
-
----
-
-### Pattern 5 — Query and compute
-
-Used for read operations that apply domain logic to query results (no persistence).
-
-```typescript
-// domain service field — instantiated once, no provider dependency
-private readonly myComposer = new MyComposerService();
-
-async execute(params: MyParams): Promise<Result<MyDTO>> {
-  const period = SomeDomainConcept.create(params);
-  if (period.isFailure) return period.asFail();
-
-  const rows = await this.myQuery.execute({ period: period.value });
-  if (rows.isFailure) return rows.asFail();
-
-  return Result.ok(this.myComposer.compute(rows.value));
-}
-```
-
----
-
-## Full template
-
-```typescript
-// src/{context}/core/usecases/MyAction.usecase.ts
-import { Result, UseCase } from '@/shared/base';
-import { MyAggregate } from '@/{context}/core/model/MyAggregate';
-import { MyRepository } from '@/{context}/core/provider/My.repository';
-import { SomeQuery } from '@/{context}/core/provider/Some.query';
-
-export type MyActionParams = {
-  // flat primitives only — no domain objects
+// src/{context}/core/commands/RegisterThing/RegisterThing.command.ts
+export type RegisterThingCommand = {
   name: string;
-  amount: number;
   relatedId: string;
 };
+```
 
-export class MyActionUseCase implements UseCase<MyActionParams, MyActionReturn> {
+```typescript
+// src/{context}/core/commands/RegisterThing/RegisterThing.handler.ts
+import { Result } from '@/shared/base';
+import { ThingsRepository } from '@/{context}/core/ports/repositories/Things.repository';
+import { RelatedThingReader } from '@/{context}/core/ports/acl/RelatedThing.reader';
+import { Thing } from '@/{context}/core/model/Thing';
+import { RegisterThingCommand } from './RegisterThing.command';
+
+export class RegisterThingHandler {
   constructor(
-    private readonly myRepository: MyRepository,
-    private readonly someQuery: SomeQuery,
+    private readonly thingsRepository: ThingsRepository,
+    private readonly relatedThings: RelatedThingReader,
   ) {}
 
-  async execute(params: MyActionParams): Promise<Result<MyActionReturn>> {
-    const aggregate = MyAggregate.create(params);
-    const refCheck = await this.someQuery.existsById(params.relatedId);
+  async handle(command: RegisterThingCommand): Promise<Result<Thing>> {
+    const thing = Thing.register(command);
+    const related = await this.relatedThings.existsById(command.relatedId);
 
-    const combined = Result.combine([aggregate, refCheck]);
+    const combined = Result.combine([thing, related]);
     if (combined.isFailure) return combined.asFail();
 
-    const persisted = await this.myRepository.save(aggregate.value);
+    const persisted = await this.thingsRepository.save(thing.value);
     if (persisted.isFailure) return persisted.asFail();
 
-    return Result.ok(aggregate.value);
+    return Result.ok(thing.value);
   }
 }
 ```
 
----
+## Query rules
 
-## Concrete examples
+1. Put query handlers under `src/{context}/core/queries/{Action}/`.
+2. Name input type `{Action}Query` in `{Action}.query.ts`.
+3. Name output/read model `{Action}Result` in `{Action}.result.ts`.
+4. Name handler `{Action}Handler` in `{Action}.handler.ts`.
+5. Handler method is `handle(query): Promise<Result<ResultType>>`.
+6. Query handlers may validate query concepts such as periods/date ranges.
+7. Query handlers call a reader port; they do not use repositories for reporting/list screens.
+8. Reader implementations may use Prisma `findMany`, `aggregate`, `groupBy`, or `$queryRaw` for optimized reads.
+9. Return read models/DTO-shaped data; do not instantiate domain aggregates on the read side.
+10. Write `{Action}.handler.spec.ts` next to the handler.
 
-### Example 1: CreateCategoryUseCase (Pattern 1)
+Query template:
 
 ```typescript
-// src/category/core/usecases/CreateCategory.usecase.ts
-export class CreateCategoryUseCase implements UseCase<CreateCategoryParams, Category> {
-  constructor(private readonly categoriesRepository: CategoriesRepository) {}
+// src/{context}/core/queries/ListThings/ListThings.query.ts
+export type ListThingsQuery = {
+  startDate?: Date;
+  endDate?: Date;
+};
+```
 
-  async execute(params: CreateCategoryParams): Promise<Result<Category>> {
-    const created = Category.create(params);
-    if (created.isFailure) return created.asFail();
+```typescript
+// src/{context}/core/queries/ListThings/ListThings.result.ts
+export type ListThingsResult = {
+  id: string;
+  name: string;
+  total: number;
+};
+```
 
-    const persisted = await this.categoriesRepository.save(created.value);
-    if (persisted.isFailure) return persisted.asFail();
+```typescript
+// src/{context}/core/ports/readers/ListThings.reader.ts
+import { Result } from '@/shared/base';
+import { ListThingsResult } from '@/{context}/core/queries/ListThings/ListThings.result';
 
-    return Result.ok(created.value);
-  }
+export type ListThingsReaderInput = {
+  startDate: Date;
+  endDate: Date;
+};
+
+export abstract class ListThingsReader {
+  abstract read(input: ListThingsReaderInput): Promise<Result<ListThingsResult[]>>;
 }
 ```
 
----
-
-### Example 2: RegisterExpenseUseCase (Pattern 2)
-
 ```typescript
-// src/transactions/core/usecases/RegisterExpense.usecase.ts
-export class RegisterExpenseUseCase implements UseCase<RegisterExpenseParams, Expense> {
-  constructor(
-    private readonly transactionsRepository: TransactionsRepository,
-    private readonly accounts: TransactionAccountQuery,
-    private readonly categoryHierarchy: TransactionCategoryHierarchyQuery,
-  ) {}
+// src/{context}/core/queries/ListThings/ListThings.handler.ts
+import { Result } from '@/shared/base';
+import { ListThingsReader } from '@/{context}/core/ports/readers/ListThings.reader';
+import { ListThingsQuery } from './ListThings.query';
+import { ListThingsResult } from './ListThings.result';
 
-  async execute(params: RegisterExpenseParams): Promise<Result<Expense>> {
-    const expense = Expense.register(params);
-    const [accountRef, categoryRef] = await Promise.all([
-      this.accounts.existsById(params.accountId),
-      this.categoryHierarchy.ensureExpenseHierarchy(params.categoryId, params.subCategoryId),
-    ]);
+export class ListThingsHandler {
+  constructor(private readonly reader: ListThingsReader) {}
 
-    const combined = Result.combine([expense, accountRef, categoryRef]);
-    if (combined.isFailure) return combined.asFail();
-
-    const persisted = await this.transactionsRepository.saveExpense(expense.value);
-    if (persisted.isFailure) return persisted.asFail();
-
-    return Result.ok(expense.value);
-  }
-}
-```
-
----
-
-### Example 3: ApplyTransferBetweenAccountsUseCase (Pattern 4)
-
-```typescript
-// src/accounts/core/usecases/ApplyTransferBetweenAccounts.usecase.ts
-export class ApplyTransferBetweenAccountsUseCase implements UseCase<…, void> {
-  constructor(private readonly accountsRepository: AccountsRepository) {}
-
-  async execute(params: ApplyTransferBetweenAccountsParams): Promise<Result<void>> {
-    const [accountOrigin, accountDestination] = await Promise.all([
-      this.accountsRepository.findById(params.accountIdOrigin),
-      this.accountsRepository.findById(params.accountIdDestination),
-    ]);
-    const amount = Money.create(params.amount);
-
-    const combined = Result.combine([accountOrigin, accountDestination, amount]);
-    if (combined.isFailure) return combined.asFail();
-
-    const service = new ApplyTransferBetweenAccountsService(
-      accountOrigin.value,
-      accountDestination.value,
-    );
-    service.applyTransfer(amount.value, params.effectivated);
-
-    const saved = Result.combine(
-      await Promise.all([
-        this.accountsRepository.save(accountOrigin.value),
-        this.accountsRepository.save(accountDestination.value),
-      ]),
-    );
-    if (saved.isFailure) return saved;
-
-    return Result.ok();
-  }
-}
-```
-
----
-
-## Spec template
-
-Providers are mocked inline with `jest.fn()` and cast via `as unknown as ProviderType`.
-Entities are built with `.new()` — no validation needed in tests.
-
-```typescript
-// src/{context}/core/usecases/MyAction.usecase.spec.ts
-import { Result } from '@/shared/base/Result';
-import { Errors } from '@/shared/base/Errors';
-import { MyRepository } from '@/{context}/core/provider/My.repository';
-import { SomeQuery } from '@/{context}/core/provider/Some.query';
-import { MyActionUseCase } from './MyAction.usecase';
-
-describe('MyActionUseCase', () => {
-  const baseParams = {
-    name: 'valid name',
-    amount: 100,
-    relatedId: 'related-id',
-  };
-
-  const makeRepo = (overrides?: Partial<MyRepository>) =>
-    ({
-      save: jest.fn().mockResolvedValue(Result.ok(undefined)),
-      findById: jest.fn(),
-      ...overrides,
-    }) as unknown as MyRepository;
-
-  const makeQuery = (ok = true) =>
-    ({
-      existsById: jest.fn().mockResolvedValue(
-        ok ? Result.ok(undefined) : Result.fail({ code: Errors.REFERENCE_ACCOUNT_NOT_FOUND, cls: 'test' }),
-      ),
-    }) as unknown as SomeQuery;
-
-  it('should persist and return the aggregate when validation passes', async () => {
-    const repo = makeRepo();
-    const query = makeQuery();
-    const useCase = new MyActionUseCase(repo, query);
-
-    const result = await useCase.execute(baseParams);
-
-    expect(result.isSuccess).toBe(true);
-    expect(repo.save).toHaveBeenCalledTimes(1);
-  });
-
-  it('should fail on domain validation without calling persistence', async () => {
-    const repo = makeRepo();
-    const query = makeQuery();
-    const useCase = new MyActionUseCase(repo, query);
-
-    const result = await useCase.execute({ ...baseParams, amount: 0 });
-
-    expect(result.isFailure).toBe(true);
-    expect(result.errors[0].code).toBe(Errors.MY_AMOUNT_INVALID);
-    expect(repo.save).not.toHaveBeenCalled();
-  });
-
-  it('should fail on reference check without calling persistence', async () => {
-    const repo = makeRepo();
-    const query = makeQuery(false);
-    const useCase = new MyActionUseCase(repo, query);
-
-    const result = await useCase.execute(baseParams);
-
-    expect(result.isFailure).toBe(true);
-    expect(result.errors[0].code).toBe(Errors.REFERENCE_ACCOUNT_NOT_FOUND);
-    expect(repo.save).not.toHaveBeenCalled();
-  });
-
-  it('should propagate persistence failure', async () => {
-    const repo = makeRepo({
-      save: jest.fn().mockResolvedValue(
-        Result.fail({ code: Errors.PRISMA_INSERT_ERROR, cls: 'test' }),
-      ),
+  async handle(query: ListThingsQuery = {}): Promise<Result<ListThingsResult[]>> {
+    return this.reader.read({
+      startDate: query.startDate ?? new Date(),
+      endDate: query.endDate ?? new Date(),
     });
-    const query = makeQuery();
-    const useCase = new MyActionUseCase(repo, query);
-
-    const result = await useCase.execute(baseParams);
-
-    expect(result.isFailure).toBe(true);
-    expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
-  });
-});
+  }
+}
 ```
 
----
+## NestJS module registration
 
-## Execution checklist
+Register handlers and ports in `src/{context}/infra/module/{context}.module.ts`:
 
-1. [ ] Identify the pattern: **Create**, **Create with refs**, **Load+mutate**, **Domain service**, or **Query+compute**.
-2. [ ] Create `src/{context}/core/usecases/{Action}.usecase.ts` and export the params type.
-3. [ ] Create any missing provider (`abstract class`) in `src/{context}/core/provider/` if it does not exist yet.
-4. [ ] Implement `execute()` following the matching pattern above.
-5. [ ] Write `src/{context}/core/usecases/{Action}.usecase.spec.ts` covering all branches.
-6. [ ] Run `pnpm test -- {Action}.usecase.spec.ts` and confirm all tests pass.
-7. [ ] Run `pnpm lint` to ensure no linting issues.
-
-## Quick command reference
-
-```bash
-pnpm test -- MyAction.usecase.spec.ts
-pnpm lint
+```typescript
+{
+  provide: ThingsRepository,
+  useFactory: (prisma: PrismaService) => new PrismaThingsRepository(prisma),
+  inject: [PrismaService],
+},
+{
+  provide: ListThingsReader,
+  useFactory: (prisma: PrismaService) => new PrismaListThingsReader(prisma),
+  inject: [PrismaService],
+},
+{
+  provide: RegisterThingHandler,
+  useFactory: (repo: ThingsRepository, related: RelatedThingReader) =>
+    new RegisterThingHandler(repo, related),
+  inject: [ThingsRepository, RelatedThingReader],
+},
+{
+  provide: ListThingsHandler,
+  useFactory: (reader: ListThingsReader) => new ListThingsHandler(reader),
+  inject: [ListThingsReader],
+},
 ```
+
+## Testing
+
+- Commands: mock repositories and readers; assert domain creation/mutation and persistence calls.
+- Queries: mock reader ports; assert query validation/defaults and returned read model.
+- Infrastructure readers/repositories: test Prisma calls/mapping/error handling separately.
+
+## Migration note
+
+Older files named `*.usecase.ts` should be migrated to the command/query handler layout when touched. Do not add new use cases under `core/usecases/`.

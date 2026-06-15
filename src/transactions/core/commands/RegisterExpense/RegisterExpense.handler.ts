@@ -1,0 +1,45 @@
+import { RegisterExpenseCommand } from './RegisterExpense.command';
+import { Result } from '@/shared/base';
+import { Expense } from '@/transactions/core/model/Expense';
+import { TransactionAccountReader } from '@/transactions/core/ports/acl/TransactionAccount.reader';
+import { TransactionCategoryHierarchyReader } from '@/transactions/core/ports/acl/TransactionCategoryHierarchy.reader';
+import { TransactionsRepository } from '@/transactions/core/ports/repositories/Transactions.repository';
+
+export class RegisterExpenseHandler {
+  constructor(
+    private readonly transactionsRepository: TransactionsRepository,
+    private readonly accounts: TransactionAccountReader,
+    private readonly categoryHierarchy: TransactionCategoryHierarchyReader,
+  ) {}
+
+  async handle(params: RegisterExpenseCommand): Promise<Result<Expense>> {
+    const [accountRef, categoryRef] = await Promise.all([
+      this.accounts.existsById(params.accountId),
+      this.categoryHierarchy.ensureExpenseHierarchy(params.categoryId, params.subCategoryId),
+    ]);
+    const expense = Expense.register({
+      name: params.name,
+      amount: params.amount,
+      categoryId: params.categoryId,
+      subCategoryId: params.subCategoryId,
+      notes: params.notes,
+      dueDate: params.dueDate,
+      entryDate: params.entryDate,
+      effectivated: params.effectivated,
+      effectivatedDate: params.effectivated ? params.paymentDate : undefined,
+      accountId: params.accountId,
+    });
+
+    const combineResults = Result.combine([accountRef, categoryRef, expense]);
+    if (combineResults.isFailure) {
+      return combineResults.asFail();
+    }
+
+    const persisted = await this.transactionsRepository.saveExpense(expense.value);
+    if (persisted.isFailure) {
+      return persisted.asFail();
+    }
+
+    return Result.ok(expense.value);
+  }
+}

@@ -25,7 +25,7 @@ DDD (Domain Driven Design) principles. Written in TypeScript.
 
 ### Use cases
 
-Each context documents use cases under `src/{context}/core/definitions/` in `UseCasesDefinitions.md`.
+Each context organizes application operations with CQRS: commands under `src/{context}/core/commands/`, queries under `src/{context}/core/queries/`, and ports under `src/{context}/core/ports/`.
 Those files describe the use cases and their business rules.
 
 ### Bounded contexts
@@ -57,7 +57,6 @@ Reactive context, triggered by events.
 
 The shared folder contains base classes used across multiple contexts.
 
-- UseCase: abstract class for use cases.
 - Result: class to encapsulate results.
 - ValueObject: class to represent value objects.
 - Entity: class to represent entities.

@@ -1,4 +1,4 @@
-import { ListExpenseQueryResult } from '@/transactions/core/provider/ListExpense.query';
+import { ListExpenseResult } from '@/transactions/core/queries/ListExpense/ListExpense.result';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ListExpenseItemResponseDto {
@@ -49,7 +49,7 @@ export class ListExpenseResponseDto {
   @ApiProperty({ type: [ListExpenseItemResponseDto] })
   expenses!: ListExpenseItemResponseDto[];
 
-  static fromDomain(expenses: ListExpenseQueryResult[]): ListExpenseResponseDto {
+  static fromDomain(expenses: ListExpenseResult[]): ListExpenseResponseDto {
     const dto = new ListExpenseResponseDto();
     dto.expenses = expenses.map((expense) => {
       const item = new ListExpenseItemResponseDto();

@@ -1,4 +1,4 @@
-import { ListTransfersQueryResult } from '@/transactions/core/provider/ListTransfers.query';
+import { ListTransfersResult } from '@/transactions/core/queries/ListTransfers/ListTransfers.result';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ListTransfersItemResponseDto {
@@ -43,7 +43,7 @@ export class ListTransfersResponseDto {
   @ApiProperty({ type: [ListTransfersItemResponseDto] })
   transfers!: ListTransfersItemResponseDto[];
 
-  static fromDomain(transfers: ListTransfersQueryResult[]): ListTransfersResponseDto {
+  static fromDomain(transfers: ListTransfersResult[]): ListTransfersResponseDto {
     const dto = new ListTransfersResponseDto();
     dto.transfers = transfers.map((transfer) => {
       const item = new ListTransfersItemResponseDto();
