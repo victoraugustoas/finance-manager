@@ -1,6 +1,6 @@
 import { Category } from '@/category/core/model/Category';
 import { CategoryType } from '@/shared/enums/CategoryType';
-import { CategoriesRepository } from '@/category/core/provider/categories.repository';
+import { CategoriesRepository } from '@/category/core/ports/repositories/Categories.repository';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';

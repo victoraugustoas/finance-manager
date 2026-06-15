@@ -1,12 +1,12 @@
 import { CategoriesController } from '@/category/infra/controllers/Categories.controller';
-import { CategoriesRepository } from '@/category/core/provider/categories.repository';
+import { CategoriesRepository } from '@/category/core/ports/repositories/Categories.repository';
 import { Module } from '@nestjs/common';
-import { PrismaCategoriesRepository } from '@/category/infra/db/PrismaCategories.repository';
+import { PrismaCategoriesRepository } from '@/category/infra/database/repositories/PrismaCategories.repository';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
-import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
-import { ListIncomeCategoriesUseCase } from '@/category/core/usecases/ListIncomeCategories.usecase';
-import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpenseCategories.usecase';
+import { CreateCategoryHandler } from '@/category/core/commands/CreateCategory/CreateCategory.handler';
+import { CreateSubCategoryHandler } from '@/category/core/commands/CreateSubCategory/CreateSubCategory.handler';
+import { ListIncomeCategoriesHandler } from '@/category/core/queries/ListIncomeCategories/ListIncomeCategories.handler';
+import { ListExpenseCategoriesHandler } from '@/category/core/queries/ListExpenseCategories/ListExpenseCategories.handler';
 
 @Module({
   imports: [],
@@ -19,23 +19,23 @@ import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpen
       inject: [PrismaService],
     },
     {
-      provide: CreateCategoryUseCase,
-      useFactory: (repo: CategoriesRepository) => new CreateCategoryUseCase(repo),
+      provide: CreateCategoryHandler,
+      useFactory: (repo: CategoriesRepository) => new CreateCategoryHandler(repo),
       inject: [CategoriesRepository],
     },
     {
-      provide: CreateSubCategoryUseCase,
-      useFactory: (repo: CategoriesRepository) => new CreateSubCategoryUseCase(repo),
+      provide: CreateSubCategoryHandler,
+      useFactory: (repo: CategoriesRepository) => new CreateSubCategoryHandler(repo),
       inject: [CategoriesRepository],
     },
     {
-      provide: ListIncomeCategoriesUseCase,
-      useFactory: (repo: CategoriesRepository) => new ListIncomeCategoriesUseCase(repo),
+      provide: ListIncomeCategoriesHandler,
+      useFactory: (repo: CategoriesRepository) => new ListIncomeCategoriesHandler(repo),
       inject: [CategoriesRepository],
     },
     {
-      provide: ListExpenseCategoriesUseCase,
-      useFactory: (repo: CategoriesRepository) => new ListExpenseCategoriesUseCase(repo),
+      provide: ListExpenseCategoriesHandler,
+      useFactory: (repo: CategoriesRepository) => new ListExpenseCategoriesHandler(repo),
       inject: [CategoriesRepository],
     },
   ],
