@@ -1,4 +1,4 @@
-import { ListedAccount } from '@/accounts/core/usecases/ListAccounts.usecase';
+import { ListAccountsResult } from '@/accounts/core/queries/ListAccounts/ListAccounts.result';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ListAccountsItemResponseDto {
@@ -19,7 +19,7 @@ export class ListAccountsResponseDto {
   @ApiProperty({ type: [ListAccountsItemResponseDto] })
   accounts!: ListAccountsItemResponseDto[];
 
-  static fromDomain(accounts: ListedAccount[]): ListAccountsResponseDto {
+  static fromDomain(accounts: ListAccountsResult[]): ListAccountsResponseDto {
     const dto = new ListAccountsResponseDto();
     dto.accounts = accounts.map(({ account, balance }) => {
       const item = new ListAccountsItemResponseDto();

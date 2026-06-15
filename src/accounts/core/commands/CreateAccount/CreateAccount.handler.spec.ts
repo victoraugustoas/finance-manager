@@ -1,9 +1,9 @@
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
-import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
-import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
+import { AccountsRepository } from '@/accounts/core/ports/repositories/Accounts.repository';
+import { CreateAccountHandler } from '@/accounts/core/commands/CreateAccount/CreateAccount.handler';
 
-describe('CreateAccountUseCase', () => {
+describe('CreateAccountHandler', () => {
   const baseParams = {
     name: 'Checking',
     openingBalance: 25,
@@ -14,9 +14,9 @@ describe('CreateAccountUseCase', () => {
       save: jest.fn(),
     } as unknown as AccountsRepository;
 
-    const useCase = new CreateAccountUseCase(accountsRepository);
+    const handler = new CreateAccountHandler(accountsRepository);
 
-    const result = await useCase.execute({
+    const result = await handler.handle({
       ...baseParams,
       openingBalance: NaN,
     });
@@ -36,9 +36,9 @@ describe('CreateAccountUseCase', () => {
       ),
     } as unknown as AccountsRepository;
 
-    const useCase = new CreateAccountUseCase(accountsRepository);
+    const handler = new CreateAccountHandler(accountsRepository);
 
-    const result = await useCase.execute(baseParams);
+    const result = await handler.handle(baseParams);
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
@@ -50,9 +50,9 @@ describe('CreateAccountUseCase', () => {
       save: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as AccountsRepository;
 
-    const useCase = new CreateAccountUseCase(accountsRepository);
+    const handler = new CreateAccountHandler(accountsRepository);
 
-    const result = await useCase.execute(baseParams);
+    const result = await handler.handle(baseParams);
 
     expect(result.isSuccess).toBe(true);
     expect(result.value.id).toEqual(expect.any(String));

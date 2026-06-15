@@ -1,12 +1,12 @@
 import { AccountsController } from '@/accounts/infra/controllers/Accounts.controller';
-import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
+import { AccountsRepository } from '@/accounts/core/ports/repositories/Accounts.repository';
 import { Module } from '@nestjs/common';
-import { PrismaAccountsRepository } from '@/accounts/infra/db/PrismaAccounts.repository';
-import { PrismaListTransactionsQuery } from '@/accounts/infra/db/PrismaListTransactions.query';
+import { PrismaAccountsRepository } from '@/accounts/infra/database/repositories/PrismaAccounts.repository';
+import { PrismaListTransactionsReader } from '@/accounts/infra/database/readers/PrismaListTransactionsReader';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
-import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
-import { ListTransactionsQuery } from '@/accounts/core/provider/ListTransactions.query';
+import { CreateAccountHandler } from '@/accounts/core/commands/CreateAccount/CreateAccount.handler';
+import { ListAccountsHandler } from '@/accounts/core/queries/ListAccounts/ListAccounts.handler';
+import { ListTransactionsReader } from '@/accounts/core/ports/readers/ListTransactionsReader';
 
 @Module({
   imports: [],
@@ -19,19 +19,19 @@ import { ListTransactionsQuery } from '@/accounts/core/provider/ListTransactions
       inject: [PrismaService],
     },
     {
-      provide: CreateAccountUseCase,
-      useFactory: (repo: AccountsRepository) => new CreateAccountUseCase(repo),
+      provide: CreateAccountHandler,
+      useFactory: (repo: AccountsRepository) => new CreateAccountHandler(repo),
       inject: [AccountsRepository],
     },
     {
-      provide: ListAccountsUseCase,
-      useFactory: (repo: AccountsRepository, query: ListTransactionsQuery) =>
-        new ListAccountsUseCase(repo, query),
-      inject: [AccountsRepository, ListTransactionsQuery],
+      provide: ListAccountsHandler,
+      useFactory: (repo: AccountsRepository, query: ListTransactionsReader) =>
+        new ListAccountsHandler(repo, query),
+      inject: [AccountsRepository, ListTransactionsReader],
     },
     {
-      provide: ListTransactionsQuery,
-      useFactory: (prisma: PrismaService) => new PrismaListTransactionsQuery(prisma),
+      provide: ListTransactionsReader,
+      useFactory: (prisma: PrismaService) => new PrismaListTransactionsReader(prisma),
       inject: [PrismaService],
     },
   ],

@@ -3,18 +3,18 @@ import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import {
   ListTransactionsByAccountQueryProps,
-  ListTransactionsQuery,
-  ListTransactionsQueryResult,
+  ListTransactionsReader,
+  ListTransactionsReaderResult,
   ListTransactionsToEndDateQueryProps,
-} from '@/accounts/core/provider/ListTransactions.query';
+} from '@/accounts/core/ports/readers/ListTransactionsReader';
 import { TransactionType } from 'generated/prisma/client';
 
-export class PrismaListTransactionsQuery implements ListTransactionsQuery {
+export class PrismaListTransactionsReader implements ListTransactionsReader {
   constructor(private readonly prisma: PrismaService) {}
 
   async listTransactions(
     props: ListTransactionsByAccountQueryProps,
-  ): Promise<Result<ListTransactionsQueryResult[]>> {
+  ): Promise<Result<ListTransactionsReaderResult[]>> {
     try {
       const { accountId, effectivated, period } = props;
       const dueDate = period ? { gte: period.startDate, lte: period.endDate } : undefined;
@@ -38,7 +38,7 @@ export class PrismaListTransactionsQuery implements ListTransactionsQuery {
         }),
       ]);
 
-      const results: ListTransactionsQueryResult[] = [
+      const results: ListTransactionsReaderResult[] = [
         ...rawTransactions.map((t) => ({
           amountInCents: t.amount,
           movementType:
@@ -65,7 +65,7 @@ export class PrismaListTransactionsQuery implements ListTransactionsQuery {
 
   async listTransactionsToEndDate(
     props: ListTransactionsToEndDateQueryProps,
-  ): Promise<Result<ListTransactionsQueryResult[]>> {
+  ): Promise<Result<ListTransactionsReaderResult[]>> {
     try {
       const { accountId, effectivated, endDate } = props;
 
@@ -88,7 +88,7 @@ export class PrismaListTransactionsQuery implements ListTransactionsQuery {
         }),
       ]);
 
-      const results: ListTransactionsQueryResult[] = [
+      const results: ListTransactionsReaderResult[] = [
         ...rawTransactions.map((t) => ({
           amountInCents: t.amount,
           movementType:

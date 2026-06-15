@@ -10,8 +10,8 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { CreateAccountUseCase } from '@/accounts/core/usecases/CreateAccount.usecase';
-import { ListAccountsUseCase } from '@/accounts/core/usecases/ListAccounts.usecase';
+import { CreateAccountHandler } from '@/accounts/core/commands/CreateAccount/CreateAccount.handler';
+import { ListAccountsHandler } from '@/accounts/core/queries/ListAccounts/ListAccounts.handler';
 import { CreateAccountDto } from '@/accounts/infra/dtos/CreateAccount.dto';
 import { CreateAccountResponseDto } from '@/accounts/infra/dtos/CreateAccountResponse.dto';
 import { ListAccountsQueryDto } from '@/accounts/infra/dtos/ListAccountsQuery.dto';
@@ -24,8 +24,8 @@ export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 
   constructor(
-    private readonly createAccountUseCase: CreateAccountUseCase,
-    private readonly listAccountsUseCase: ListAccountsUseCase,
+    private readonly createAccountCommandHandler: CreateAccountHandler,
+    private readonly listAccountsQueryHandler: ListAccountsHandler,
   ) {}
 
   @Get()
@@ -36,7 +36,7 @@ export class AccountsController {
   })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async list(@Query() query: ListAccountsQueryDto = {}): Promise<ListAccountsResponseDto> {
-    const result = await this.listAccountsUseCase.execute({
+    const result = await this.listAccountsQueryHandler.handle({
       endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
     });
     if (result.isFailure) {
@@ -53,7 +53,7 @@ export class AccountsController {
     type: CreateAccountResponseDto,
   })
   async create(@Body() dto: CreateAccountDto): Promise<CreateAccountResponseDto> {
-    const result = await this.createAccountUseCase.execute({
+    const result = await this.createAccountCommandHandler.handle({
       name: dto.name,
       openingBalance: dto.openingBalance,
     });
