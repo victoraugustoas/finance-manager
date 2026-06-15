@@ -1,4 +1,4 @@
-import { PrismaBreakdownCategoriesQuery } from '@/reporting/infra/db/PrismaBreakdownCategories.query';
+import { PrismaBreakdownCategoriesReader } from '@/reporting/infra/database/readers/PrismaBreakdownCategoriesReader';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { ReportingPeriod } from '@/shared/ValueObjects';
@@ -25,23 +25,23 @@ const makePeriod = (): ReportingPeriod => {
   return result.value;
 };
 
-describe('PrismaBreakdownCategoriesQuery', () => {
+describe('PrismaBreakdownCategoriesReader', () => {
   let queryRaw: jest.Mock;
   let prisma: PrismaService;
-  let query: PrismaBreakdownCategoriesQuery;
+  let reader: PrismaBreakdownCategoriesReader;
   const period = makePeriod();
 
   beforeEach(() => {
     queryRaw = jest.fn();
     prisma = { $queryRaw: queryRaw } as unknown as PrismaService;
-    query = new PrismaBreakdownCategoriesQuery(prisma);
+    reader = new PrismaBreakdownCategoriesReader(prisma);
   });
 
-  describe('execute()', () => {
+  describe('read()', () => {
     it('should return an empty array when the database returns no rows', async () => {
       queryRaw.mockResolvedValue([]);
 
-      const result = await query.execute({
+      const result = await reader.read({
         period,
         effectivated: true,
         type: CategoryType.EXPENSE,
@@ -57,7 +57,7 @@ describe('PrismaBreakdownCategoriesQuery', () => {
         { name: 'Transport', total_cents: BigInt(3000) },
       ]);
 
-      const result = await query.execute({
+      const result = await reader.read({
         period,
         effectivated: true,
         type: CategoryType.EXPENSE,
@@ -74,7 +74,7 @@ describe('PrismaBreakdownCategoriesQuery', () => {
     it('should accept total_cents as a plain number (not bigint)', async () => {
       queryRaw.mockResolvedValue([{ name: 'Salary', total_cents: 200000 }]);
 
-      const result = await query.execute({
+      const result = await reader.read({
         period,
         effectivated: true,
         type: CategoryType.EXPENSE,
@@ -87,7 +87,7 @@ describe('PrismaBreakdownCategoriesQuery', () => {
     it('should handle a zero total correctly', async () => {
       queryRaw.mockResolvedValue([{ name: 'Leisure', total_cents: BigInt(0) }]);
 
-      const result = await query.execute({
+      const result = await reader.read({
         period,
         effectivated: true,
         type: CategoryType.EXPENSE,
@@ -101,7 +101,7 @@ describe('PrismaBreakdownCategoriesQuery', () => {
       const dbError = new Error('connection refused');
       queryRaw.mockRejectedValue(dbError);
 
-      const result = await query.execute({
+      const result = await reader.read({
         period,
         effectivated: false,
         type: CategoryType.EXPENSE,
@@ -109,14 +109,14 @@ describe('PrismaBreakdownCategoriesQuery', () => {
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
-      expect(result.errors[0].cls).toBe('PrismaBreakdownCategoriesQuery');
+      expect(result.errors[0].cls).toBe('PrismaBreakdownCategoriesReader');
       expect(result.errors[0].data).toEqual({ error: String(dbError) });
     });
 
     it('should work when categoriesId contains one or more ids (category filter active)', async () => {
       queryRaw.mockResolvedValue([{ name: 'Food', total_cents: BigInt(9900) }]);
 
-      const result = await query.execute({
+      const result = await reader.read({
         period,
         effectivated: true,
         categoriesId: ['cat-uuid-1', 'cat-uuid-2'],

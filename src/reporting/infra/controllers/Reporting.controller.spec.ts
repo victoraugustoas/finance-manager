@@ -1,6 +1,6 @@
 import { BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories.dto';
-import { BreakdownCategoriesUseCase } from '@/reporting/core/usecases/BreakdownCategories.usecase';
+import { BreakdownCategoriesHandler } from '@/reporting/core/queries/BreakdownCategories/BreakdownCategories.handler';
 import { BreakdownCategoriesQueryDto } from '@/reporting/infra/dtos/BreakdownCategoriesQuery.dto';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
@@ -10,17 +10,17 @@ import { ReportingController } from './Reporting.controller';
 
 describe('ReportingController', () => {
   let controller: ReportingController;
-  let executeMock: jest.Mock;
+  let handleMock: jest.Mock;
 
   beforeEach(() => {
-    executeMock = jest.fn();
+    handleMock = jest.fn();
     controller = new ReportingController({
-      execute: executeMock,
-    } as unknown as BreakdownCategoriesUseCase);
+      handle: handleMock,
+    } as unknown as BreakdownCategoriesHandler);
   });
 
   describe('breakdownCategories()', () => {
-    it('should call BreakdownCategoriesUseCase.execute with parsed dates and filters', async () => {
+    it('should call BreakdownCategoriesHandler.handle with parsed dates and filters', async () => {
       const query: BreakdownCategoriesQueryDto = {
         startDate: '2026-01-01T00:00:00.000Z',
         endDate: '2026-01-31T23:59:59.999Z',
@@ -34,12 +34,12 @@ describe('ReportingController', () => {
       const dto: BreakdownCategoriesDTO = {
         categories: [{ name: 'Food', total: Money.new(10) }],
       };
-      executeMock.mockResolvedValue(Result.ok(dto));
+      handleMock.mockResolvedValue(Result.ok(dto));
 
       await controller.breakdownCategories(query);
 
-      expect(executeMock).toHaveBeenCalledTimes(1);
-      expect(executeMock).toHaveBeenCalledWith({
+      expect(handleMock).toHaveBeenCalledTimes(1);
+      expect(handleMock).toHaveBeenCalledWith({
         startDate: new Date('2026-01-01T00:00:00.000Z'),
         endDate: new Date('2026-01-31T23:59:59.999Z'),
         effectivated: true,
@@ -61,7 +61,7 @@ describe('ReportingController', () => {
           { name: 'Food', total: Money.new(42.5) },
         ],
       };
-      executeMock.mockResolvedValue(Result.ok(dto));
+      handleMock.mockResolvedValue(Result.ok(dto));
 
       const response = await controller.breakdownCategories(query);
 
@@ -78,7 +78,7 @@ describe('ReportingController', () => {
         type: CategoryType.EXPENSE,
       };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      executeMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+      handleMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
 
       await expect(controller.breakdownCategories(query)).rejects.toThrow(
         InternalServerErrorException,
@@ -100,7 +100,7 @@ describe('ReportingController', () => {
         type: CategoryType.EXPENSE,
       };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      executeMock.mockResolvedValue(Result.fail({ code: Errors.END_DATE_NOT_AFTER_START_DATE }));
+      handleMock.mockResolvedValue(Result.fail({ code: Errors.END_DATE_NOT_AFTER_START_DATE }));
 
       await expect(controller.breakdownCategories(query)).rejects.toThrow(BadRequestException);
 

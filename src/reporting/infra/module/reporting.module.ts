@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { BreakdownCategoriesQuery } from '@/reporting/core/provider/BreakdownCategories.query';
-import { PrismaBreakdownCategoriesQuery } from '@/reporting/infra/db/PrismaBreakdownCategories.query';
-import { BreakdownCategoriesUseCase } from '@/reporting/core/usecases/BreakdownCategories.usecase';
+import { BreakdownCategoriesReader } from '@/reporting/core/ports/readers/BreakdownCategoriesReader';
+import { PrismaBreakdownCategoriesReader } from '@/reporting/infra/database/readers/PrismaBreakdownCategoriesReader';
+import { BreakdownCategoriesHandler } from '@/reporting/core/queries/BreakdownCategories/BreakdownCategories.handler';
 import { ReportingController } from '@/reporting/infra/controllers/Reporting.controller';
 
 @Module({
@@ -11,14 +11,14 @@ import { ReportingController } from '@/reporting/infra/controllers/Reporting.con
   providers: [
     PrismaService,
     {
-      provide: BreakdownCategoriesQuery,
-      useFactory: (prisma: PrismaService) => new PrismaBreakdownCategoriesQuery(prisma),
+      provide: BreakdownCategoriesReader,
+      useFactory: (prisma: PrismaService) => new PrismaBreakdownCategoriesReader(prisma),
       inject: [PrismaService],
     },
     {
-      provide: BreakdownCategoriesUseCase,
-      useFactory: (query: BreakdownCategoriesQuery) => new BreakdownCategoriesUseCase(query),
-      inject: [BreakdownCategoriesQuery],
+      provide: BreakdownCategoriesHandler,
+      useFactory: (reader: BreakdownCategoriesReader) => new BreakdownCategoriesHandler(reader),
+      inject: [BreakdownCategoriesReader],
     },
   ],
 })

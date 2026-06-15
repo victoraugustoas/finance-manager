@@ -2,37 +2,37 @@ import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories
 import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
 import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer';
 import {
-  BreakdownCategoriesQuery,
-  BreakdownCategoriesQueryProps,
-} from '@/reporting/core/provider/BreakdownCategories.query';
-import { BreakdownCategoriesUseCase } from '@/reporting/core/usecases/BreakdownCategories.usecase';
+  BreakdownCategoriesReader,
+  BreakdownCategoriesReadParams,
+} from '@/reporting/core/ports/readers/BreakdownCategoriesReader';
+import { BreakdownCategoriesHandler } from '@/reporting/core/queries/BreakdownCategories/BreakdownCategories.handler';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 import { Money } from '@/shared/ValueObjects';
 import { CategoryType } from '@/shared/enums/CategoryType';
 
-describe('BreakdownCategoriesUseCase', () => {
-  const executeMock = jest.fn<
+describe('BreakdownCategoriesHandler', () => {
+  const readMock = jest.fn<
     Promise<Result<CategoryBreakdownRow[]>>,
-    [BreakdownCategoriesQueryProps]
+    [BreakdownCategoriesReadParams]
   >();
 
-  class StubBreakdownCategoriesQuery extends BreakdownCategoriesQuery {
-    execute(props: BreakdownCategoriesQueryProps): Promise<Result<CategoryBreakdownRow[]>> {
-      return executeMock(props);
+  class StubBreakdownCategoriesReader extends BreakdownCategoriesReader {
+    read(params: BreakdownCategoriesReadParams): Promise<Result<CategoryBreakdownRow[]>> {
+      return readMock(params);
     }
   }
 
   beforeEach(() => {
-    executeMock.mockReset();
+    readMock.mockReset();
   });
 
-  describe('execute()', () => {
+  describe('handle()', () => {
     it('should return period validation failure without calling the query when dates are invalid', async () => {
-      const query = new StubBreakdownCategoriesQuery();
-      const useCase = new BreakdownCategoriesUseCase(query);
+      const reader = new StubBreakdownCategoriesReader();
+      const handler = new BreakdownCategoriesHandler(reader);
 
-      const result = await useCase.execute({
+      const result = await handler.handle({
         startDate: new Date(2024, 2, 10),
         endDate: new Date(2024, 2, 9),
         effectivated: true,
@@ -41,20 +41,20 @@ describe('BreakdownCategoriesUseCase', () => {
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.END_DATE_NOT_AFTER_START_DATE);
-      expect(executeMock).not.toHaveBeenCalled();
+      expect(readMock).not.toHaveBeenCalled();
     });
 
     it('should apply the domain composer after the query succeeds', async () => {
       const foodTotal = Money.new(250);
       const rows: CategoryBreakdownRow[] = [{ name: 'Food', total: foodTotal }];
-      executeMock.mockResolvedValue(Result.ok(rows));
+      readMock.mockResolvedValue(Result.ok(rows));
 
-      const query = new StubBreakdownCategoriesQuery();
-      const useCase = new BreakdownCategoriesUseCase(query);
+      const reader = new StubBreakdownCategoriesReader();
+      const handler = new BreakdownCategoriesHandler(reader);
 
       const startDate = new Date(2024, 5, 1);
       const endDate = new Date(2024, 5, 30);
-      const result = await useCase.execute({
+      const result = await handler.handle({
         startDate,
         endDate,
         effectivated: false,
@@ -66,7 +66,7 @@ describe('BreakdownCategoriesUseCase', () => {
       };
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual(expectedDto);
-      expect(executeMock).toHaveBeenCalledTimes(1);
+      expect(readMock).toHaveBeenCalledTimes(1);
     });
 
     it('should cap breakdown using the composer when query returns many categories', async () => {
@@ -79,12 +79,12 @@ describe('BreakdownCategoriesUseCase', () => {
         { name: 'f', total: Money.new(50) },
         { name: 'g', total: Money.new(40) },
       ];
-      executeMock.mockResolvedValue(Result.ok(rows));
+      readMock.mockResolvedValue(Result.ok(rows));
 
-      const query = new StubBreakdownCategoriesQuery();
-      const useCase = new BreakdownCategoriesUseCase(query);
+      const reader = new StubBreakdownCategoriesReader();
+      const handler = new BreakdownCategoriesHandler(reader);
 
-      const result = await useCase.execute({
+      const result = await handler.handle({
         startDate: new Date(2024, 5, 1),
         endDate: new Date(2024, 5, 30),
         effectivated: true,
@@ -107,10 +107,10 @@ describe('BreakdownCategoriesUseCase', () => {
     });
 
     it('should forward categoriesId to the query', async () => {
-      executeMock.mockResolvedValue(Result.ok([]));
+      readMock.mockResolvedValue(Result.ok([]));
 
-      const query = new StubBreakdownCategoriesQuery();
-      const useCase = new BreakdownCategoriesUseCase(query);
+      const reader = new StubBreakdownCategoriesReader();
+      const handler = new BreakdownCategoriesHandler(reader);
 
       const startDate = new Date(2024, 5, 1);
       const endDate = new Date(2024, 5, 30);
@@ -119,7 +119,7 @@ describe('BreakdownCategoriesUseCase', () => {
         'b0000000-0000-4000-8000-000000000002',
       ];
 
-      await useCase.execute({
+      await handler.handle({
         startDate,
         endDate,
         effectivated: true,
@@ -127,7 +127,7 @@ describe('BreakdownCategoriesUseCase', () => {
         type: CategoryType.EXPENSE,
       });
 
-      expect(executeMock).toHaveBeenCalledWith(
+      expect(readMock).toHaveBeenCalledWith(
         expect.objectContaining({
           categoriesId,
           effectivated: true,
@@ -136,32 +136,32 @@ describe('BreakdownCategoriesUseCase', () => {
     });
 
     it('should forward type to the query', async () => {
-      executeMock.mockResolvedValue(Result.ok([]));
+      readMock.mockResolvedValue(Result.ok([]));
 
-      const query = new StubBreakdownCategoriesQuery();
-      const useCase = new BreakdownCategoriesUseCase(query);
+      const reader = new StubBreakdownCategoriesReader();
+      const handler = new BreakdownCategoriesHandler(reader);
 
-      await useCase.execute({
+      await handler.handle({
         startDate: new Date(2024, 5, 1),
         endDate: new Date(2024, 5, 30),
         effectivated: false,
         type: CategoryType.INCOME,
       });
 
-      expect(executeMock).toHaveBeenCalledWith(
+      expect(readMock).toHaveBeenCalledWith(
         expect.objectContaining({ type: CategoryType.INCOME }),
       );
     });
 
     it('should propagate query failure without calling the composer', async () => {
-      executeMock.mockResolvedValue(
+      readMock.mockResolvedValue(
         Result.fail({ code: Errors.PRISMA_QUERY_ERROR, cls: 'StubQuery', data: {} }),
       );
 
-      const query = new StubBreakdownCategoriesQuery();
-      const useCase = new BreakdownCategoriesUseCase(query);
+      const reader = new StubBreakdownCategoriesReader();
+      const handler = new BreakdownCategoriesHandler(reader);
 
-      const result = await useCase.execute({
+      const result = await handler.handle({
         startDate: new Date(2024, 5, 1),
         endDate: new Date(2024, 5, 30),
         effectivated: true,

@@ -5,23 +5,23 @@ import { Prisma } from 'generated/prisma/client';
 import { Money } from '@/shared/ValueObjects';
 import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
 import {
-  BreakdownCategoriesQuery,
-  BreakdownCategoriesQueryProps,
-} from '@/reporting/core/provider/BreakdownCategories.query';
+  BreakdownCategoriesReader,
+  BreakdownCategoriesReadParams,
+} from '@/reporting/core/ports/readers/BreakdownCategoriesReader';
 
 type BreakdownAggregateRow = {
   name: string;
   total_cents: bigint | number;
 };
 
-export class PrismaBreakdownCategoriesQuery implements BreakdownCategoriesQuery {
+export class PrismaBreakdownCategoriesReader implements BreakdownCategoriesReader {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(props: BreakdownCategoriesQueryProps): Promise<Result<CategoryBreakdownRow[]>> {
+  async read(params: BreakdownCategoriesReadParams): Promise<Result<CategoryBreakdownRow[]>> {
     try {
       const categoriesFilter =
-        props.categoriesId !== undefined && props.categoriesId.length > 0
-          ? Prisma.sql`AND t."categoryId" IN (${Prisma.join(props.categoriesId)})`
+        params.categoriesId !== undefined && params.categoriesId.length > 0
+          ? Prisma.sql`AND t."categoryId" IN (${Prisma.join(params.categoriesId)})`
           : Prisma.empty;
 
       const aggregated = await this.prisma.$queryRaw<BreakdownAggregateRow[]>`
@@ -31,10 +31,10 @@ export class PrismaBreakdownCategoriesQuery implements BreakdownCategoriesQuery 
         FROM "Transaction" t
         JOIN "Category" c ON c."id" = t."categoryId"
         WHERE
-          c."type"::text = ${props.type}
-          AND t."entryDate" >= ${props.period.startDate}
-          AND t."entryDate" <= ${props.period.endDate}
-          AND t."effectivated" = ${props.effectivated}
+          c."type"::text = ${params.type}
+          AND t."entryDate" >= ${params.period.startDate}
+          AND t."entryDate" <= ${params.period.endDate}
+          AND t."effectivated" = ${params.effectivated}
           ${categoriesFilter}
         GROUP BY c."id", c."name"
         ORDER BY SUM(t."amount") DESC
