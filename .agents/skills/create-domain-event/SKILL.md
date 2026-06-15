@@ -41,7 +41,7 @@ Every domain event created in `core/events/` needs a matching consumer in `infra
 | Artefact | Location | Purpose |
 |---|---|---|
 | **Event class** | `src/{context}/core/events/{Name}Event.ts` | Defines the event name and payload; dispatched by the aggregate |
-| **Event handler** | `src/{context}/infra/controllers/events/{Group}/{Name}Handler.ts` | Subscribes to the event and calls a use case |
+| **Event handler** | `src/{context}/infra/controllers/events/{Group}/{Name}Handler.ts` | Subscribes to the event and calls a command/query handler |
 
 ---
 
@@ -138,7 +138,7 @@ export class MyThingActionHandler extends EventConsumer<MyThingActionPayload> {
 
   async callDomain(payload: MyThingActionPayload): Promise<Result<void>> {
     return this.myUseCase.handle({
-      // map payload fields to use case params
+      // map payload fields to command/query input
     });
   }
 
@@ -293,7 +293,7 @@ describe('MyThingActionHandler', () => {
     } as unknown as jest.Mocked<MyHandler>;
   });
 
-  it('should call the use case with the correct params', async () => {
+  it('should call the handler with the correct input', async () => {
     const handler = new MyThingActionHandler(makePrisma(1), useCase);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);

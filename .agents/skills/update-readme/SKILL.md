@@ -96,11 +96,10 @@ Survey `src/` and capture what exists, but **do not paste the same subtree under
 mirror each other.
 
 - List **top-level** entries under `src/` (`main.ts`, app bootstrap, shared, entry wiring, each bounded-context folder).
-- For bounded contexts that follow the **same layout** (for example `core/` for domain/use cases and `infra/` for
-  adapters—controllers, persistence, modules—plus optional folders like `definitions/`), describe that pattern **once**,
-  then name the contexts that use it. Only expand a full sub-tree when a folder **differs** (extra directories, ACL,
-  alternate layering) or when a one-off folder needs explicit detail (such as `shared/` which is not structured like a
-  context).
+- For bounded contexts that follow the **same layout** (for example `core/` for domain, commands, queries, and ports; `infra/` for
+  adapters), describe the pattern once and list exceptions only. Only expand a full sub-tree when a folder **differs**
+  (extra directories, ACL, alternate layering) or when a one-off folder needs explicit detail (such as `shared/` which
+  is not structured like a context).
 - Omit generated or irrelevant paths (`node_modules`, `dist`, `coverage`).
 
 ### 3. Update README.md

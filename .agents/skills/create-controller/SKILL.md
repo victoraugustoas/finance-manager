@@ -249,7 +249,7 @@ export class MyActionResponseDto {
 
 ## Module registration
 
-Add the controller to `controllers` and each use case to `providers` using the factory pattern:
+Add the controller to `controllers` and each command/query handler to `providers` using the factory pattern:
 
 ```typescript
 // src/{context}/infra/module/{context}.module.ts
@@ -280,7 +280,7 @@ import { ListThingsHandler } from '@/{context}/core/queries/ListThings/ListThing
 export class MyContextModule {}
 ```
 
-> **Adding to an existing module**: insert the controller in `controllers: [...]` and append the new use case provider object to `providers: [...]`.
+> **Adding to an existing module**: insert the controller in `controllers: [...]` and append the new command/query handler provider object to `providers: [...]`.
 
 ---
 
@@ -363,8 +363,8 @@ export class ReportingController {
 1. [ ] Create the request DTO at `src/{context}/infra/dtos/{Action}.dto.ts`.
 2. [ ] Create the response DTO at `src/{context}/infra/dtos/{Action}Response.dto.ts` with `static fromDomain()`.
 3. [ ] Create or update the controller at `src/{context}/infra/controllers/{Context}.controller.ts`.
-4. [ ] Register the controller and its use case providers in `src/{context}/infra/module/{context}.module.ts`.
-5. [ ] If the use case produces a new error code, add it to `MapResultErrorToHttpException`.
+4. [ ] Register the controller and its command/query handler providers in `src/{context}/infra/module/{context}.module.ts`.
+5. [ ] If the command/query handler produces a new error code, add it to `MapResultErrorToHttpException`.
 6. [ ] Run `pnpm lint` to ensure no linting issues.
 
 ## Quick command reference

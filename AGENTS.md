@@ -23,10 +23,10 @@ DDD (Domain Driven Design) principles. Written in TypeScript.
 - Prettier
 - Pnpm as a package manager
 
-### Use cases
+### Application operations
 
 Each context organizes application operations with CQRS: commands under `src/{context}/core/commands/`, queries under `src/{context}/core/queries/`, and ports under `src/{context}/core/ports/`.
-Those files describe the use cases and their business rules.
+Commands describe write-side business rules; queries describe read-side scenarios and return read models.
 
 ### Bounded contexts
 
@@ -64,7 +64,7 @@ The shared folder contains base classes used across multiple contexts.
 
 ### File naming convention
 
-Code component files (classes, entities, value objects, aggregates, use cases, etc.) must use **PascalCase**.
+Code component files (classes, entities, value objects, aggregates, command/query handlers, etc.) must use **PascalCase**.
 
 Examples: `Account.ts`, `Category.ts`, `SubCategory.ts`, `AggregateRoot.ts`, `Money.ts`, `Result.ts`.
 
@@ -75,6 +75,10 @@ Exceptions: `index.ts` (barrel files) remain in lowercase.
 ## Skills
 
 - `.agents/skills/update-readme/SKILL.md` — Keep `README.md` up to date. Use at the end of any task that changes the project's structure, dependencies, scripts, contexts, environment variables, or conventions.
+- `.agents/skills/create-command/SKILL.md` — Create a CQRS command/write operation. Use for state-changing operations that apply domain rules and persist aggregates.
+- `.agents/skills/create-query/SKILL.md` — Create a CQRS query/read operation. Use for list, detail, dashboard, report, search, and other read-model operations.
+- `.agents/skills/create-controller/SKILL.md` — Expose command/query handlers through REST controllers and DTOs.
+- `.agents/skills/write-unit-tests/SKILL.md` — Write tests for domain objects, command/query handlers, controllers, readers, and repositories.
 - `.agents/skills/create-value-object/SKILL.md` — Create a new Value Object following DDD. Use when encapsulating a primitive concept (email, CPF, phone, date range, etc.) that has invariants or behaviour.
 
 ## Commands

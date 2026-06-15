@@ -86,7 +86,7 @@ After starting the app (`pnpm start:dev` or `pnpm start`), **Swagger UI** and th
 Top-level under `src/`: `main.ts`, `entrypoint/` (root Nest module), `shared/`, and one folder per bounded context
 (`accounts`, `category`, `reporting`, `transactions`).
 
-**`shared/`** — cross-cutting building blocks: `base/` (e.g. `Result`, `Entity`, `ValueObject`, `UseCase`,
+**`shared/`** — cross-cutting building blocks: `base/` (e.g. `Result`, `Entity`, `ValueObject`,
 `AggregateRoot`, `DomainEvent`), `ValueObjects/` (e.g. `Money`, `ReportingPeriod`), `enums/` (e.g. `CategoryType`, `TransactionType`),
 `infra/` (e.g. `PrismaService`, HTTP error mapping),
 and `events/` (outbox infrastructure — `OutboxEvent`, `EventsModule`, and sub-folders `infra/` with
@@ -94,8 +94,8 @@ and `events/` (outbox infrastructure — `OutboxEvent`, `EventsModule`, and sub-
 and `ports/` with `EventPublisher`, `OutboxRepository`).
 
 **Bounded contexts (common layout)** — each context uses `core/` for domain and application code and `infra/` for
-adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per context), `model/`, `provider/`,
-`usecases/`. Typical `infra/`: `controllers/`, `db/`, `dtos/`, `module/`.
+adapters. Typical `core/` layers: `model/`, `commands/`, `queries/`, `ports/`, `service/`, and `events/`.
+Typical `infra/`: `controllers/`, `database/`, `dtos/`, and `module/`.
 
 **Context-specific additions**
 
@@ -103,16 +103,16 @@ adapters. Typical `core/` layers: `definitions/` (`UseCasesDefinitions.md` per c
 | ---------------- | -------------------------------------- |
 | **accounts**     | `core/service/` — domain services (e.g. `AccountBalanceCalculatorService`) |
 | **reporting**    | `core/dto/`, `core/service/` |
-| **transactions** | `core/events/` — domain events (`TransactionRegisteredEvent`, `TransactionEditedEvent`); `infra/acl/account/` — read-only access into the Account context; `infra/acl/category/` — read-only access into the Category context |
+| **transactions** | `core/commands/`, `core/queries/`, `core/ports/` — explicit CQRS layout; `infra/database/readers/` — read-side Prisma readers; `infra/database/repositories/` — write-side Prisma repositories |
 
 Other project roots: `http/` holds sample **REST Client** requests (one `.http` file per bounded context with HTTP:
 `accounts`, `category`, `reporting`, `transactions`); `prisma/` holds the schema and migrations.
 
-Contexts document use cases under `core/definitions/UseCasesDefinitions.md` in domain language.
+Contexts organize application operations as CQRS commands and queries in domain language.
 
 ## Architecture
 
-- **Clean Architecture:** separation between domain (`core/`), application use cases, and infrastructure (`infra/` — HTTP, Prisma). Cross-context reads at the persistence boundary may use ACLs under `infra/acl/` (ports in `core/provider/`, adapters that talk to Prisma or other integrations).
+- **Clean Architecture:** separation between domain/application (`core/`) and infrastructure (`infra/` — HTTP, Prisma). CQRS contexts put write operations under `core/commands/`, read operations under `core/queries/`, and DI ports under `core/ports/`. Infrastructure adapters live under `infra/database/readers/` or `infra/database/repositories/`.
 - **DDD:** aggregates, entities, value objects, and domain events where applicable; bounded contexts mapped to folders under `src/`.
 - **Outbox pattern:** domain events are persisted atomically alongside the aggregate in an `OutboxEvent` table via `saveWithOutbox`. `OutboxRelayService` polls every 5 s, dispatches pending events through NestJS `EventEmitter2`, and marks them processed. Consumers extend `EventConsumer<TPayload>` (in `shared/events/infra/`) which handles idempotency via a `ProcessedEvent` table.
 
@@ -126,7 +126,7 @@ Contexts document use cases under `core/definitions/UseCasesDefinitions.md` in d
 | **Reporting**     | Aggregates for analysis (e.g. `GET /reporting/categories/breakdown` returns `{ "categories": [...] }` with at most six rows; overflow is aggregated under `Others` per domain rules) |
 | **Notifications** | Reactive context driven by events (to be reflected under `src/` when modeled) |
 
-The `src/shared` tree holds domain primitives under `shared/base` (`UseCase`, `Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.
+The `src/shared` tree holds domain primitives under `shared/base` (`Result`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.
 
 ## Conventions
 
