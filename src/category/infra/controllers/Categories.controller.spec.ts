@@ -1,11 +1,11 @@
 import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
 import { CategoryType } from '@/shared/enums/CategoryType';
-import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
-import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
+import { CreateCategoryHandler } from '@/category/core/commands/CreateCategory/CreateCategory.handler';
+import { CreateSubCategoryHandler } from '@/category/core/commands/CreateSubCategory/CreateSubCategory.handler';
 import { CreateCategoryDto } from '@/category/infra/dtos/CreateCategory.dto';
 import { CreateSubCategoryDto } from '@/category/infra/dtos/CreateSubCategory.dto';
-import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpenseCategories.usecase';
-import { ListIncomeCategoriesUseCase } from '@/category/core/usecases/ListIncomeCategories.usecase';
+import { ListExpenseCategoriesHandler } from '@/category/core/queries/ListExpenseCategories/ListExpenseCategories.handler';
+import { ListIncomeCategoriesHandler } from '@/category/core/queries/ListIncomeCategories/ListIncomeCategories.handler';
 import { CategoriesController } from '@/category/infra/controllers/Categories.controller';
 import { Result } from '@/shared/base';
 import { Errors } from '@/shared/base/Errors';
@@ -18,37 +18,37 @@ import {
 
 describe('CategoriesController', () => {
   let controller: CategoriesController;
-  let createCategoryExecuteMock: jest.Mock;
-  let createSubCategoryExecuteMock: jest.Mock;
-  let listIncomeExecuteMock: jest.Mock;
-  let listExpenseExecuteMock: jest.Mock;
+  let createCategoryHandleMock: jest.Mock;
+  let createSubCategoryHandleMock: jest.Mock;
+  let listIncomeHandleMock: jest.Mock;
+  let listExpenseHandleMock: jest.Mock;
 
   beforeEach(() => {
-    createCategoryExecuteMock = jest.fn();
-    createSubCategoryExecuteMock = jest.fn();
-    listIncomeExecuteMock = jest.fn();
-    listExpenseExecuteMock = jest.fn();
+    createCategoryHandleMock = jest.fn();
+    createSubCategoryHandleMock = jest.fn();
+    listIncomeHandleMock = jest.fn();
+    listExpenseHandleMock = jest.fn();
     controller = new CategoriesController(
-      { execute: createCategoryExecuteMock } as unknown as CreateCategoryUseCase,
-      { execute: createSubCategoryExecuteMock } as unknown as CreateSubCategoryUseCase,
-      { execute: listIncomeExecuteMock } as unknown as ListIncomeCategoriesUseCase,
-      { execute: listExpenseExecuteMock } as unknown as ListExpenseCategoriesUseCase,
+      { handle: createCategoryHandleMock } as unknown as CreateCategoryHandler,
+      { handle: createSubCategoryHandleMock } as unknown as CreateSubCategoryHandler,
+      { handle: listIncomeHandleMock } as unknown as ListIncomeCategoriesHandler,
+      { handle: listExpenseHandleMock } as unknown as ListExpenseCategoriesHandler,
     );
   });
 
   describe('create()', () => {
-    it('should call CreateCategoryUseCase.execute with dto fields', async () => {
+    it('should call CreateCategoryHandler.handle with dto fields', async () => {
       const dto: CreateCategoryDto = { name: 'Groceries', type: CategoryType.EXPENSE };
       const created = Category.new({
         name: dto.name,
         type: dto.type,
       });
-      createCategoryExecuteMock.mockResolvedValue(Result.ok(created));
+      createCategoryHandleMock.mockResolvedValue(Result.ok(created));
 
       await controller.create(dto);
 
-      expect(createCategoryExecuteMock).toHaveBeenCalledTimes(1);
-      expect(createCategoryExecuteMock).toHaveBeenCalledWith({
+      expect(createCategoryHandleMock).toHaveBeenCalledTimes(1);
+      expect(createCategoryHandleMock).toHaveBeenCalledWith({
         name: 'Groceries',
         type: CategoryType.EXPENSE,
       });
@@ -64,7 +64,7 @@ describe('CategoriesController', () => {
       if (defaultSub.isFailure) {
         throw new Error('Expected addSubCategory to succeed in test setup');
       }
-      createCategoryExecuteMock.mockResolvedValue(Result.ok(created));
+      createCategoryHandleMock.mockResolvedValue(Result.ok(created));
 
       const response = await controller.create(dto);
 
@@ -78,9 +78,7 @@ describe('CategoriesController', () => {
     it('should log and throw BadRequestException when domain validation fails', async () => {
       const dto: CreateCategoryDto = { name: 'X', type: CategoryType.EXPENSE };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      createCategoryExecuteMock.mockResolvedValue(
-        Result.fail({ code: Errors.CATEGORY_NAME_EMPTY }),
-      );
+      createCategoryHandleMock.mockResolvedValue(Result.fail({ code: Errors.CATEGORY_NAME_EMPTY }));
 
       await expect(controller.create(dto)).rejects.toThrow(BadRequestException);
 
@@ -93,9 +91,7 @@ describe('CategoriesController', () => {
     it('should log and throw InternalServerErrorException when persistence fails', async () => {
       const dto: CreateCategoryDto = { name: 'X', type: CategoryType.EXPENSE };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      createCategoryExecuteMock.mockResolvedValue(
-        Result.fail({ code: Errors.PRISMA_INSERT_ERROR }),
-      );
+      createCategoryHandleMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_INSERT_ERROR }));
 
       await expect(controller.create(dto)).rejects.toThrow(InternalServerErrorException);
 
@@ -108,7 +104,7 @@ describe('CategoriesController', () => {
   describe('createSubcategory()', () => {
     const categoryId = '33333333-3333-3333-3333-333333333333';
 
-    it('should call CreateSubCategoryUseCase.execute with route param and dto name', async () => {
+    it('should call CreateSubCategoryHandler.handle with route param and dto name', async () => {
       const dto: CreateSubCategoryDto = { name: 'Coffee' };
       const category = Category.new({
         id: categoryId,
@@ -116,12 +112,12 @@ describe('CategoriesController', () => {
         type: CategoryType.EXPENSE,
       });
       const added = category.addSubCategory('Coffee');
-      createSubCategoryExecuteMock.mockResolvedValue(Result.ok(added.value));
+      createSubCategoryHandleMock.mockResolvedValue(Result.ok(added.value));
 
       await controller.createSubcategory(categoryId, dto);
 
-      expect(createSubCategoryExecuteMock).toHaveBeenCalledTimes(1);
-      expect(createSubCategoryExecuteMock).toHaveBeenCalledWith({
+      expect(createSubCategoryHandleMock).toHaveBeenCalledTimes(1);
+      expect(createSubCategoryHandleMock).toHaveBeenCalledWith({
         categoryId,
         name: 'Coffee',
       });
@@ -135,7 +131,7 @@ describe('CategoriesController', () => {
         type: CategoryType.EXPENSE,
       });
       const added = category.addSubCategory('Coffee');
-      createSubCategoryExecuteMock.mockResolvedValue(Result.ok(added.value));
+      createSubCategoryHandleMock.mockResolvedValue(Result.ok(added.value));
 
       const response = await controller.createSubcategory(categoryId, dto);
 
@@ -146,7 +142,7 @@ describe('CategoriesController', () => {
     it('should log and throw NotFoundException when category is missing', async () => {
       const dto: CreateSubCategoryDto = { name: 'Coffee' };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      createSubCategoryExecuteMock.mockResolvedValue(
+      createSubCategoryHandleMock.mockResolvedValue(
         Result.fail({ code: Errors.CATEGORY_NOT_FOUND }),
       );
 
@@ -165,7 +161,7 @@ describe('CategoriesController', () => {
     it('should throw BadRequestException when subcategory validation fails', async () => {
       const dto: CreateSubCategoryDto = { name: 'Coffee' };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      createSubCategoryExecuteMock.mockResolvedValue(
+      createSubCategoryHandleMock.mockResolvedValue(
         Result.fail({ code: Errors.SUBCATEGORY_DUPLICATE_NAME }),
       );
 
@@ -179,7 +175,7 @@ describe('CategoriesController', () => {
     it('should throw InternalServerErrorException when persistence fails', async () => {
       const dto: CreateSubCategoryDto = { name: 'Coffee' };
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-      createSubCategoryExecuteMock.mockResolvedValue(
+      createSubCategoryHandleMock.mockResolvedValue(
         Result.fail({ code: Errors.PRISMA_INSERT_ERROR }),
       );
 

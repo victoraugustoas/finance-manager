@@ -1,9 +1,9 @@
 import { Category } from '@/category/core/model/Category';
 import { CategoryType } from '@/shared/enums/CategoryType';
-import { CategoriesRepository } from '@/category/core/provider/categories.repository';
+import { CategoriesRepository } from '@/category/core/ports/repositories/Categories.repository';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
-import { ListExpenseCategoriesUseCase } from './ListExpenseCategories.usecase';
+import { ListExpenseCategoriesHandler } from './ListExpenseCategories.handler';
 
 const makeCategory = (id: string, name: string): Category =>
   Category.new({
@@ -13,15 +13,15 @@ const makeCategory = (id: string, name: string): Category =>
     subCategories: [{ id: `${id}-sub`, name: 'Others' }],
   });
 
-describe('ListExpenseCategoriesUseCase', () => {
+describe('ListExpenseCategoriesHandler', () => {
   it('should return all expense categories from repository', async () => {
     const categories = [makeCategory('cat-1', 'Food'), makeCategory('cat-2', 'Transport')];
     const categoriesRepository = {
       findAllByType: jest.fn().mockResolvedValue(Result.ok(categories)),
     } as unknown as CategoriesRepository;
 
-    const useCase = new ListExpenseCategoriesUseCase(categoriesRepository);
-    const result = await useCase.execute();
+    const handler = new ListExpenseCategoriesHandler(categoriesRepository);
+    const result = await handler.handle();
 
     expect(result.isSuccess).toBe(true);
     expect(result.value).toBe(categories);
@@ -38,8 +38,8 @@ describe('ListExpenseCategoriesUseCase', () => {
         ),
     } as unknown as CategoriesRepository;
 
-    const useCase = new ListExpenseCategoriesUseCase(categoriesRepository);
-    const result = await useCase.execute();
+    const handler = new ListExpenseCategoriesHandler(categoriesRepository);
+    const result = await handler.handle();
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);

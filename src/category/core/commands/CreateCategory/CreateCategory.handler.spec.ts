@@ -1,11 +1,11 @@
 import { DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
 import { CategoryType } from '@/shared/enums/CategoryType';
-import { CategoriesRepository } from '@/category/core/provider/categories.repository';
-import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
+import { CategoriesRepository } from '@/category/core/ports/repositories/Categories.repository';
+import { CreateCategoryHandler } from '@/category/core/commands/CreateCategory/CreateCategory.handler';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 
-describe('CreateCategoryUseCase', () => {
+describe('CreateCategoryHandler', () => {
   const baseParams = {
     name: 'Grocery',
     type: CategoryType.EXPENSE,
@@ -17,9 +17,9 @@ describe('CreateCategoryUseCase', () => {
       findById: jest.fn(),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateCategoryUseCase(categoriesRepository);
+    const handler = new CreateCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute({ ...baseParams, name: '   ' });
+    const result = await handler.handle({ ...baseParams, name: '   ' });
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.CATEGORY_NAME_EMPTY);
@@ -37,9 +37,9 @@ describe('CreateCategoryUseCase', () => {
       findById: jest.fn(),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateCategoryUseCase(categoriesRepository);
+    const handler = new CreateCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute(baseParams);
+    const result = await handler.handle(baseParams);
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_INSERT_ERROR);
@@ -52,9 +52,9 @@ describe('CreateCategoryUseCase', () => {
       findById: jest.fn(),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateCategoryUseCase(categoriesRepository);
+    const handler = new CreateCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute(baseParams);
+    const result = await handler.handle(baseParams);
 
     expect(result.isSuccess).toBe(true);
     expect(result.value.name).toBe(baseParams.name);

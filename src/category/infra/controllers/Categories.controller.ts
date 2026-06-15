@@ -1,7 +1,7 @@
-import { CreateCategoryUseCase } from '@/category/core/usecases/CreateCategory.usecase';
-import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
-import { ListExpenseCategoriesUseCase } from '@/category/core/usecases/ListExpenseCategories.usecase';
-import { ListIncomeCategoriesUseCase } from '@/category/core/usecases/ListIncomeCategories.usecase';
+import { CreateCategoryHandler } from '@/category/core/commands/CreateCategory/CreateCategory.handler';
+import { CreateSubCategoryHandler } from '@/category/core/commands/CreateSubCategory/CreateSubCategory.handler';
+import { ListExpenseCategoriesHandler } from '@/category/core/queries/ListExpenseCategories/ListExpenseCategories.handler';
+import { ListIncomeCategoriesHandler } from '@/category/core/queries/ListIncomeCategories/ListIncomeCategories.handler';
 import { CreateCategoryDto } from '@/category/infra/dtos/CreateCategory.dto';
 import { CreateCategoryResponseDto } from '@/category/infra/dtos/CreateCategoryResponse.dto';
 import { CreateSubCategoryDto } from '@/category/infra/dtos/CreateSubCategory.dto';
@@ -16,10 +16,10 @@ export class CategoriesController {
   private readonly logger = new Logger(CategoriesController.name);
 
   constructor(
-    private readonly createCategoryUseCase: CreateCategoryUseCase,
-    private readonly createSubCategoryUseCase: CreateSubCategoryUseCase,
-    private readonly listIncomeCategoriesUseCase: ListIncomeCategoriesUseCase,
-    private readonly listExpenseCategoriesUseCase: ListExpenseCategoriesUseCase,
+    private readonly createCategoryCommandHandler: CreateCategoryHandler,
+    private readonly createSubCategoryCommandHandler: CreateSubCategoryHandler,
+    private readonly listIncomeCategoriesQueryHandler: ListIncomeCategoriesHandler,
+    private readonly listExpenseCategoriesQueryHandler: ListExpenseCategoriesHandler,
   ) {}
 
   @Get('income')
@@ -29,7 +29,7 @@ export class CategoriesController {
     type: ListCategoriesResponseDto,
   })
   async listIncome(): Promise<ListCategoriesResponseDto> {
-    const result = await this.listIncomeCategoriesUseCase.execute();
+    const result = await this.listIncomeCategoriesQueryHandler.handle();
     if (result.isFailure) {
       this.logger.error(`Error during list income categories: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
@@ -44,7 +44,7 @@ export class CategoriesController {
     type: ListCategoriesResponseDto,
   })
   async listExpense(): Promise<ListCategoriesResponseDto> {
-    const result = await this.listExpenseCategoriesUseCase.execute();
+    const result = await this.listExpenseCategoriesQueryHandler.handle();
     if (result.isFailure) {
       this.logger.error(`Error during list expense categories: ${JSON.stringify(result.errors)}`);
       MapResultErrorToHttpException.throwException(result);
@@ -57,7 +57,7 @@ export class CategoriesController {
   @ApiBody({ type: CreateCategoryDto })
   @ApiCreatedResponse({ type: CreateCategoryResponseDto })
   async create(@Body() dto: CreateCategoryDto): Promise<CreateCategoryResponseDto> {
-    const result = await this.createCategoryUseCase.execute({
+    const result = await this.createCategoryCommandHandler.handle({
       name: dto.name,
       type: dto.type,
     });
@@ -77,7 +77,7 @@ export class CategoriesController {
     @Param('categoryId') categoryId: string,
     @Body() dto: CreateSubCategoryDto,
   ): Promise<CreateSubCategoryResponseDto> {
-    const result = await this.createSubCategoryUseCase.execute({
+    const result = await this.createSubCategoryCommandHandler.handle({
       categoryId,
       name: dto.name,
     });

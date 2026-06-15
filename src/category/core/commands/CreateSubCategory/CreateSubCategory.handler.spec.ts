@@ -1,11 +1,11 @@
 import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
 import { CategoryType } from '@/shared/enums/CategoryType';
-import { CategoriesRepository } from '@/category/core/provider/categories.repository';
-import { CreateSubCategoryUseCase } from '@/category/core/usecases/CreateSubCategory.usecase';
+import { CategoriesRepository } from '@/category/core/ports/repositories/Categories.repository';
+import { CreateSubCategoryHandler } from '@/category/core/commands/CreateSubCategory/CreateSubCategory.handler';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
 
-describe('CreateSubCategoryUseCase', () => {
+describe('CreateSubCategoryHandler', () => {
   const categoryId = 'cat-1';
 
   it('should fail when category does not exist without persisting', async () => {
@@ -14,9 +14,9 @@ describe('CreateSubCategoryUseCase', () => {
       save: jest.fn(),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateSubCategoryUseCase(categoriesRepository);
+    const handler = new CreateSubCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute({
+    const result = await handler.handle({
       categoryId,
       name: 'College',
     });
@@ -39,9 +39,9 @@ describe('CreateSubCategoryUseCase', () => {
       save: jest.fn(),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateSubCategoryUseCase(categoriesRepository);
+    const handler = new CreateSubCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute({
+    const result = await handler.handle({
       categoryId,
       name: '   ',
     });
@@ -63,9 +63,9 @@ describe('CreateSubCategoryUseCase', () => {
       save: jest.fn(),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateSubCategoryUseCase(categoriesRepository);
+    const handler = new CreateSubCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute({
+    const result = await handler.handle({
       categoryId,
       name: DEFAULT_SUBCATEGORY_NAME.toLowerCase(),
     });
@@ -92,9 +92,9 @@ describe('CreateSubCategoryUseCase', () => {
       ),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateSubCategoryUseCase(categoriesRepository);
+    const handler = new CreateSubCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute({
+    const result = await handler.handle({
       categoryId,
       name: 'College',
     });
@@ -117,9 +117,9 @@ describe('CreateSubCategoryUseCase', () => {
       save: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as CategoriesRepository;
 
-    const useCase = new CreateSubCategoryUseCase(categoriesRepository);
+    const handler = new CreateSubCategoryHandler(categoriesRepository);
 
-    const result = await useCase.execute({
+    const result = await handler.handle({
       categoryId,
       name: 'College',
     });

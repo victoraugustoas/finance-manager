@@ -1,6 +1,6 @@
 import { Category, DEFAULT_SUBCATEGORY_NAME } from '@/category/core/model/Category';
 import { CategoryType } from '@/shared/enums/CategoryType';
-import { PrismaCategoriesRepository } from '@/category/infra/db/PrismaCategories.repository';
+import { PrismaCategoriesRepository } from '@/category/infra/database/repositories/PrismaCategories.repository';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 
