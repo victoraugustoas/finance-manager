@@ -26,7 +26,7 @@ export class RegisterExpenseHandler implements CommandHandler<RegisterExpenseCom
       dueDate: params.dueDate,
       entryDate: params.entryDate,
       effectivated: params.effectivated,
-      effectivatedDate: params.effectivated ? params.paymentDate : undefined,
+      effectivatedDate: params.effectivated ? params.effectivatedDate : undefined,
       accountId: params.accountId,
     });
 

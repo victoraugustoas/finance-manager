@@ -86,8 +86,8 @@ export class MyContextController {
   private readonly logger = new Logger(MyContextController.name);
 
   constructor(
-    private readonly registerThing: RegisterThingHandler,
-    private readonly listThings: ListThingsHandler,
+    private readonly registerThingCommandHandler: RegisterThingHandler,
+    private readonly listThingsQueryHandler: ListThingsHandler,
   ) {}
 
   @Post()
@@ -95,7 +95,7 @@ export class MyContextController {
   @ApiBody({ type: MyActionDto })
   @ApiCreatedResponse({ type: MyActionResponseDto })
   async myAction(@Body() dto: MyActionDto): Promise<MyActionResponseDto> {
-    const result = await this.registerThing.handle({
+    const result = await this.registerThingCommandHandler.handle({
       // map dto fields to command fields (convert types as needed)
       name: dto.name,
       amount: dto.amount,
@@ -115,7 +115,7 @@ export class MyContextController {
   @ApiBody({ type: MyActionDto })
   @ApiNoContentResponse()
   async updateMyAction(@Param('id') id: string, @Body() dto: MyActionDto): Promise<void> {
-    const result = await this.registerThing.handle({ id, name: dto.name });
+    const result = await this.registerThingCommandHandler.handle({ id, name: dto.name });
 
     if (result.isFailure) {
       this.logger.error(`Error during update my action: ${JSON.stringify(result.errors)}`);
@@ -127,7 +127,7 @@ export class MyContextController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @ApiOkResponse({ type: MyActionResponseDto })
   async listMyAction(@Query() query: MyActionQueryDto): Promise<MyActionResponseDto> {
-    const result = await this.listThings.handle({
+    const result = await this.listThingsQueryHandler.handle({
       startDate: new Date(query.startDate),
     });
 
@@ -304,13 +304,13 @@ case 'MY_NEW_ERROR_CODE':
 export class AccountsController {
   private readonly logger = new Logger(AccountsController.name);
 
-  constructor(private readonly registerThing: RegisterThingHandler) {}
+  constructor(private readonly registerThingCommandHandler: RegisterThingHandler) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ description: 'Account created.', type: CreateAccountResponseDto })
   async create(@Body() dto: CreateAccountDto): Promise<CreateAccountResponseDto> {
-    const result = await this.registerThing.handle({
+    const result = await this.registerThingCommandHandler.handle({
       name: dto.name,
       openingBalance: dto.openingBalance,
       balance: 0,
@@ -333,7 +333,7 @@ export class AccountsController {
 export class ReportingController {
   private readonly logger = new Logger(ReportingController.name);
 
-  constructor(private readonly listThings: ListThingsHandler) {}
+  constructor(private readonly listThingsQueryHandler: ListThingsHandler) {}
 
   @Get('categories/breakdown')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -341,7 +341,7 @@ export class ReportingController {
   async breakdownCategories(
     @Query() query: BreakdownCategoriesQueryDto,
   ): Promise<BreakdownCategoriesResponseDto> {
-    const result = await this.listThings.handle({
+    const result = await this.listThingsQueryHandler.handle({
       startDate: new Date(query.startDate),
       endDate: new Date(query.endDate),
       effectivated: query.effectivated,

@@ -77,25 +77,30 @@ EffectivateTransactionCommand
    publishers, or other infrastructure boundaries.
 6. Repositories live in `core/ports/repositories/` as `abstract class` DI tokens.
 7. Repository implementations live in `infra/database/repositories/`.
-8. Cross-context lookups/checks use lightweight ACL reader ports in
+8. Commands with `effectivated` / `effectivatedDate` fields should declare an
+   `interface` that extends `EffectivatedProps` from
+   `@/shared/ValueObjects/Effectivated`.
+9. Cross-context lookups/checks use lightweight ACL reader ports in
    `core/ports/acl/`.
-9. Delegate business rules to domain objects/services; keep the handler as an
+10. Delegate business rules to domain objects/services; keep the handler as an
    application orchestration layer.
-10. Use `Result.combine([...])` for multiple validations.
-11. Use `.asFail()` to propagate failures.
-12. Use `Promise.all([...])` for independent async checks.
-13. Write a unit spec next to every command handler.
+11. Use `Result.combine([...])` for multiple validations.
+12. Use `.asFail()` to propagate failures.
+13. Use `Promise.all([...])` for independent async checks.
+14. Write a unit spec next to every command handler.
 
 ## Command template
 
 `{Action}.command.ts`:
 
 ```typescript
-export type RegisterThingCommand = {
+import { EffectivatedProps } from '@/shared/ValueObjects/Effectivated';
+
+export interface RegisterThingCommand extends EffectivatedProps {
   name: string;
   amount: number;
   relatedId: string;
-};
+}
 ```
 
 `{Action}.handler.ts`:
@@ -118,6 +123,8 @@ export class RegisterThingHandler implements CommandHandler<RegisterThingCommand
       name: command.name,
       amount: command.amount,
       relatedId: command.relatedId,
+      effectivated: command.effectivated,
+      effectivatedDate: command.effectivatedDate,
     });
 
     const related = await this.relatedThings.existsById(command.relatedId);

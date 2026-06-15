@@ -45,13 +45,13 @@ export class TransactionsController {
   private readonly logger = new Logger(TransactionsController.name);
 
   constructor(
-    private readonly registerExpenseUseCase: RegisterExpenseHandler,
-    private readonly registerIncomeUseCase: RegisterIncomeHandler,
-    private readonly registerTransferUseCase: RegisterTransferHandler,
-    private readonly editTransactionUseCase: EditTransactionHandler,
-    private readonly listIncomeUseCase: ListIncomeHandler,
-    private readonly listExpenseUseCase: ListExpenseHandler,
-    private readonly listTransfersUseCase: ListTransfersHandler,
+    private readonly registerExpenseCommandHandler: RegisterExpenseHandler,
+    private readonly registerIncomeCommandHandler: RegisterIncomeHandler,
+    private readonly registerTransferCommandHandler: RegisterTransferHandler,
+    private readonly editTransactionCommandHandler: EditTransactionHandler,
+    private readonly listIncomeQueryHandler: ListIncomeHandler,
+    private readonly listExpenseQueryHandler: ListExpenseHandler,
+    private readonly listTransfersQueryHandler: ListTransfersHandler,
   ) {}
 
   @Get('expenses')
@@ -59,7 +59,7 @@ export class TransactionsController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @ApiOkResponse({ type: ListExpenseResponseDto })
   async listExpenses(@Query() query: ListTransactionsQueryDto): Promise<ListExpenseResponseDto> {
-    const result = await this.listExpenseUseCase.handle({
+    const result = await this.listExpenseQueryHandler.handle({
       startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
       endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
     });
@@ -77,7 +77,7 @@ export class TransactionsController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @ApiOkResponse({ type: ListIncomeResponseDto })
   async listIncomes(@Query() query: ListTransactionsQueryDto): Promise<ListIncomeResponseDto> {
-    const result = await this.listIncomeUseCase.handle({
+    const result = await this.listIncomeQueryHandler.handle({
       startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
       endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
     });
@@ -95,7 +95,7 @@ export class TransactionsController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @ApiOkResponse({ type: ListTransfersResponseDto })
   async listTransfers(@Query() query: ListTransactionsQueryDto): Promise<ListTransfersResponseDto> {
-    const result = await this.listTransfersUseCase.handle({
+    const result = await this.listTransfersQueryHandler.handle({
       startDate: query.startDate !== undefined ? new Date(query.startDate) : undefined,
       endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
     });
@@ -113,12 +113,12 @@ export class TransactionsController {
   @ApiBody({ type: RegisterExpenseDto })
   @ApiCreatedResponse({ type: RegisterExpenseResponseDto })
   async registerExpense(@Body() dto: RegisterExpenseDto): Promise<RegisterExpenseResponseDto> {
-    const result = await this.registerExpenseUseCase.handle({
+    const result = await this.registerExpenseCommandHandler.handle({
       name: dto.name,
       amount: dto.amount,
       dueDate: new Date(dto.dueDate),
       entryDate: new Date(dto.entryDate),
-      paymentDate: dto.paymentDate !== undefined ? new Date(dto.paymentDate) : undefined,
+      effectivatedDate: dto.paymentDate !== undefined ? new Date(dto.paymentDate) : undefined,
       effectivated: dto.effectivated,
       accountId: dto.accountId,
       categoryId: dto.categoryId,
@@ -138,12 +138,12 @@ export class TransactionsController {
   @ApiBody({ type: RegisterIncomeDto })
   @ApiCreatedResponse({ type: RegisterIncomeResponseDto })
   async registerIncome(@Body() dto: RegisterIncomeDto): Promise<RegisterIncomeResponseDto> {
-    const result = await this.registerIncomeUseCase.handle({
+    const result = await this.registerIncomeCommandHandler.handle({
       name: dto.name,
       amount: dto.amount,
       dueDate: new Date(dto.dueDate),
       entryDate: new Date(dto.entryDate),
-      receiptDate: dto.receiptDate !== undefined ? new Date(dto.receiptDate) : undefined,
+      effectivatedDate: dto.receiptDate !== undefined ? new Date(dto.receiptDate) : undefined,
       effectivated: dto.effectivated,
       accountId: dto.accountId,
       categoryId: dto.categoryId,
@@ -163,7 +163,7 @@ export class TransactionsController {
   @ApiBody({ type: RegisterTransferDto })
   @ApiCreatedResponse()
   async registerTransfer(@Body() dto: RegisterTransferDto): Promise<void> {
-    const result = await this.registerTransferUseCase.handle({
+    const result = await this.registerTransferCommandHandler.handle({
       name: dto.name,
       amount: dto.amount,
       dueDate: new Date(dto.dueDate),
@@ -188,7 +188,7 @@ export class TransactionsController {
   @ApiBody({ type: EditExpenseDto })
   @ApiNoContentResponse()
   async editExpense(@Param('id') id: string, @Body() dto: EditExpenseDto): Promise<void> {
-    const result = await this.editTransactionUseCase.handle({
+    const result = await this.editTransactionCommandHandler.handle({
       id,
       type: TransactionType.EXPENSE,
       name: dto.name,
@@ -216,7 +216,7 @@ export class TransactionsController {
   @ApiBody({ type: EditIncomeDto })
   @ApiNoContentResponse()
   async editIncome(@Param('id') id: string, @Body() dto: EditIncomeDto): Promise<void> {
-    const result = await this.editTransactionUseCase.handle({
+    const result = await this.editTransactionCommandHandler.handle({
       id,
       type: TransactionType.INCOME,
       name: dto.name,

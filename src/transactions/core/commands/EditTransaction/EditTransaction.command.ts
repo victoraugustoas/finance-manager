@@ -1,3 +1,6 @@
+import { EffectivatedProps } from '@/shared/ValueObjects/Effectivated';
 import { TransactionProps } from '@/transactions/core/model/Transaction';
 
-export type EditTransactionCommand = TransactionProps & Required<Pick<TransactionProps, 'id'>>;
+export interface EditTransactionCommand extends TransactionProps, EffectivatedProps {
+  id: string;
+}

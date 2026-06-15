@@ -350,7 +350,7 @@ describe('TransactionsController', () => {
         amount: 49.9,
         dueDate: new Date('2026-01-15T12:00:00.000Z'),
         entryDate: new Date('2026-01-10T12:00:00.000Z'),
-        paymentDate: undefined,
+        effectivatedDate: undefined,
         effectivated: false,
         accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
         categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
@@ -366,7 +366,7 @@ describe('TransactionsController', () => {
       await controller.registerExpense(dto);
 
       expect(registerExpenseMock).toHaveBeenCalledWith(
-        expect.objectContaining({ paymentDate: new Date('2026-01-12T12:00:00.000Z') }),
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-12T12:00:00.000Z') }),
       );
     });
 
@@ -436,7 +436,7 @@ describe('TransactionsController', () => {
         amount: 3500,
         dueDate: new Date('2026-01-31T12:00:00.000Z'),
         entryDate: new Date('2026-01-01T12:00:00.000Z'),
-        receiptDate: undefined,
+        effectivatedDate: undefined,
         effectivated: false,
         accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
         categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
@@ -452,7 +452,7 @@ describe('TransactionsController', () => {
       await controller.registerIncome(dto);
 
       expect(registerIncomeMock).toHaveBeenCalledWith(
-        expect.objectContaining({ receiptDate: new Date('2026-01-05T12:00:00.000Z') }),
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-05T12:00:00.000Z') }),
       );
     });
 

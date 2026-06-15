@@ -285,38 +285,38 @@ const makeOutboxEvent = (payload: object) => ({
 describe('MyThingActionHandler', () => {
   const basePayload = { thingId: 'thing-1' };
 
-  let handler: jest.Mocked<MyHandler>;
+  let commandHandler: jest.Mocked<MyHandler>;
 
   beforeEach(() => {
-    handler = {
-      execute: jest.fn().mockResolvedValue(Result.ok(undefined)),
+    commandHandler = {
+      handle: jest.fn().mockResolvedValue(Result.ok(undefined)),
     } as unknown as jest.Mocked<MyHandler>;
   });
 
   it('should call the handler with the correct input', async () => {
-    const handler = new MyThingActionHandler(makePrisma(1), handler);
+    const handler = new MyThingActionHandler(makePrisma(1), commandHandler);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);
 
-    expect(useCase.execute).toHaveBeenCalledWith({ /* expected params */ });
+    expect(commandHandler.handle).toHaveBeenCalledWith({ /* expected params */ });
   });
 
   it('should skip processing when the event was already consumed (idempotency)', async () => {
-    const handler = new MyThingActionHandler(makePrisma(0), handler);
+    const handler = new MyThingActionHandler(makePrisma(0), commandHandler);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);
 
-    expect(useCase.execute).not.toHaveBeenCalled();
+    expect(commandHandler.handle).not.toHaveBeenCalled();
   });
 
   it('should expose the correct consumerName for the idempotency key', () => {
-    const handler = new MyThingActionHandler(makePrisma(1), handler);
+    const handler = new MyThingActionHandler(makePrisma(1), commandHandler);
 
     expect(handler.consumerName).toBe('MyThingActionHandler');
   });
 
   it('should restore the payload from OutboxEventData', () => {
-    const handler = new MyThingActionHandler(makePrisma(1), handler);
+    const handler = new MyThingActionHandler(makePrisma(1), commandHandler);
 
     const restored = handler.restore(makeOutboxEvent(basePayload) as any);
 

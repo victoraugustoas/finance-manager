@@ -26,7 +26,7 @@ export class RegisterIncomeHandler implements CommandHandler<RegisterIncomeComma
       dueDate: params.dueDate,
       entryDate: params.entryDate,
       effectivated: params.effectivated,
-      effectivatedDate: params.effectivated ? params.receiptDate : undefined,
+      effectivatedDate: params.effectivated ? params.effectivatedDate : undefined,
       accountId: params.accountId,
     });
 

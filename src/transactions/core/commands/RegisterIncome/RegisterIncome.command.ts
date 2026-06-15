@@ -1,12 +1,12 @@
-export type RegisterIncomeCommand = {
+import { EffectivatedProps } from '@/shared/ValueObjects/Effectivated';
+
+export interface RegisterIncomeCommand extends EffectivatedProps {
   name: string;
   amount: number;
   dueDate: Date;
   entryDate: Date;
-  receiptDate?: Date;
-  effectivated: boolean;
   accountId: string;
   categoryId: string;
   subCategoryId: string;
   notes?: string;
-};
+}
