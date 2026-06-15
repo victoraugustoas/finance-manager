@@ -29,7 +29,7 @@ register() / edit()    →    saveWithOutbox()           →    @OnEvent(EVENT_N
   addDomainEvent(e)           persists aggregate              consume(event)
                               + outbox rows                     restore() → payload
                               in one transaction                callDomain(payload)
-                                                                  → UseCase.execute()
+                                                                  → Handler.handle()
 ```
 
 Every domain event created in `core/events/` needs a matching consumer in `infra/controllers/events/`.
@@ -41,7 +41,7 @@ Every domain event created in `core/events/` needs a matching consumer in `infra
 | Artefact | Location | Purpose |
 |---|---|---|
 | **Event class** | `src/{context}/core/events/{Name}Event.ts` | Defines the event name and payload; dispatched by the aggregate |
-| **Event handler** | `src/{context}/infra/controllers/events/{Group}/{Name}Handler.ts` | Subscribes to the event and calls a use case |
+| **Event handler** | `src/{context}/infra/controllers/events/{Group}/{Name}Handler.ts` | Subscribes to the event and calls a command/query handler |
 
 ---
 
@@ -59,10 +59,10 @@ Every domain event created in `core/events/` needs a matching consumer in `infra
 ### Event handler
 1. Extend `EventConsumer<TPayload>` from `@/shared/events/infra/EventConsumer`.
 2. Decorate with `@Injectable()`.
-3. Constructor receives `PrismaService` (passed to `super`) + the use case(s) it drives.
+3. Constructor receives `PrismaService` (passed to `super`) + the command handler(s) it drives.
 4. Implement `get consumerName(): string` — **unique string** used as the idempotency key; use the class name.
 5. Implement `restore(event: OutboxEventData): TPayload` — delegates to `{EventClass}.fromOutbox(event)`.
-6. Implement `callDomain(payload: TPayload): Promise<Result<void>>` — calls the use case.
+6. Implement `callDomain(payload: TPayload): Promise<Result<void>>` — calls the command handler.
 7. Add `@OnEvent({EventClass}.EVENT_NAME) async handle(event: OutboxEventData)` — calls `this.consume(event)`.
 8. Register the handler as a provider in its NestJS module.
 
@@ -113,7 +113,7 @@ import { PrismaService } from '@/shared/infra/PrismaService';
 import { OutboxEventData } from '@/shared/events/OutboxEvent';
 import { EventConsumer } from '@/shared/events/infra/EventConsumer';
 import { Result } from '@/shared/base';
-import { MyUseCase } from '@/{context}/core/usecases/MyUseCase.usecase';
+import { MyHandler } from '@/{context}/core/commands/MyAction/MyAction.handler';
 import {
   MyThingActionEvent,
   MyThingActionPayload,
@@ -123,7 +123,7 @@ import {
 export class MyThingActionHandler extends EventConsumer<MyThingActionPayload> {
   constructor(
     prisma: PrismaService,
-    private readonly myUseCase: MyUseCase,
+    private readonly myHandler: MyHandler,
   ) {
     super(prisma);
   }
@@ -137,8 +137,8 @@ export class MyThingActionHandler extends EventConsumer<MyThingActionPayload> {
   }
 
   async callDomain(payload: MyThingActionPayload): Promise<Result<void>> {
-    return this.myUseCase.execute({
-      // map payload fields to use case params
+    return this.myHandler.handle({
+      // map payload fields to command/query input
     });
   }
 
@@ -238,7 +238,7 @@ export class TransactionRegisteredHandler extends EventConsumer<TransactionRegis
   }
 
   async callDomain(payload: TransactionRegisteredPayload): Promise<Result<void>> {
-    return this.updateAccountBalance.execute({
+    return this.updateAccountBalance.handle({
       updatedBy: 'NEW_TRANSACTION',
       accountId: payload.accountId,
       value: payload.amountInCents,
@@ -262,7 +262,7 @@ export class TransactionRegisteredHandler extends EventConsumer<TransactionRegis
 // src/{context}/infra/controllers/events/{Group}/MyThingActionHandler.spec.ts
 import { Result } from '@/shared/base';
 import { MyThingActionEvent } from '@/{context}/core/events/MyThingActionEvent';
-import { MyUseCase } from '@/{context}/core/usecases/MyUseCase.usecase';
+import { MyHandler } from '@/{context}/core/commands/MyAction/MyAction.handler';
 import { MyThingActionHandler } from './MyThingActionHandler';
 
 const makePrisma = (processedCount: number) =>
@@ -285,38 +285,38 @@ const makeOutboxEvent = (payload: object) => ({
 describe('MyThingActionHandler', () => {
   const basePayload = { thingId: 'thing-1' };
 
-  let useCase: jest.Mocked<MyUseCase>;
+  let commandHandler: jest.Mocked<MyHandler>;
 
   beforeEach(() => {
-    useCase = {
-      execute: jest.fn().mockResolvedValue(Result.ok(undefined)),
-    } as unknown as jest.Mocked<MyUseCase>;
+    commandHandler = {
+      handle: jest.fn().mockResolvedValue(Result.ok(undefined)),
+    } as unknown as jest.Mocked<MyHandler>;
   });
 
-  it('should call the use case with the correct params', async () => {
-    const handler = new MyThingActionHandler(makePrisma(1), useCase);
+  it('should call the handler with the correct input', async () => {
+    const handler = new MyThingActionHandler(makePrisma(1), commandHandler);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);
 
-    expect(useCase.execute).toHaveBeenCalledWith({ /* expected params */ });
+    expect(commandHandler.handle).toHaveBeenCalledWith({ /* expected params */ });
   });
 
   it('should skip processing when the event was already consumed (idempotency)', async () => {
-    const handler = new MyThingActionHandler(makePrisma(0), useCase);
+    const handler = new MyThingActionHandler(makePrisma(0), commandHandler);
 
     await handler.handle(makeOutboxEvent(basePayload) as any);
 
-    expect(useCase.execute).not.toHaveBeenCalled();
+    expect(commandHandler.handle).not.toHaveBeenCalled();
   });
 
   it('should expose the correct consumerName for the idempotency key', () => {
-    const handler = new MyThingActionHandler(makePrisma(1), useCase);
+    const handler = new MyThingActionHandler(makePrisma(1), commandHandler);
 
     expect(handler.consumerName).toBe('MyThingActionHandler');
   });
 
   it('should restore the payload from OutboxEventData', () => {
-    const handler = new MyThingActionHandler(makePrisma(1), useCase);
+    const handler = new MyThingActionHandler(makePrisma(1), commandHandler);
 
     const restored = handler.restore(makeOutboxEvent(basePayload) as any);
 

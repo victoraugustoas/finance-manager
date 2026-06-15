@@ -1,24 +1,24 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
-import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
-import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
-import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
-import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
-import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
-import { ListTransfersUseCase } from '@/transactions/core/usecases/ListTransfers.usecase';
-import { TransactionAccountQuery } from '../../core/provider/TransactionAccount.query';
-import { TransactionCategoryHierarchyQuery } from '../../core/provider/TransactionCategoryHierarchy.query';
-import { ListIncomeQuery } from '@/transactions/core/provider/ListIncome.query';
-import { ListExpenseQuery } from '@/transactions/core/provider/ListExpense.query';
-import { ListTransfersQuery } from '@/transactions/core/provider/ListTransfers.query';
-import { TransactionsRepository } from '@/transactions/core/provider/Transactions.repository';
-import { PrismaTransactionAccountAcl } from '@/transactions/infra/acl/account/PrismaTransactionAccountAcl';
-import { PrismaTransactionCategoryHierarchyAcl } from '@/transactions/infra/acl/category/PrismaTransactionCategoryHierarchyAcl';
-import { PrismaListIncomeQuery } from '@/transactions/infra/db/PrismaListIncome.query';
-import { PrismaListExpenseQuery } from '@/transactions/infra/db/PrismaListExpense.query';
-import { PrismaListTransfersQuery } from '@/transactions/infra/db/PrismaListTransfers.query';
-import { PrismaTransactionsRepository } from '@/transactions/infra/db/PrismaTransactions.repository';
+import { RegisterExpenseHandler } from '@/transactions/core/commands/RegisterExpense/RegisterExpense.handler';
+import { RegisterIncomeHandler } from '@/transactions/core/commands/RegisterIncome/RegisterIncome.handler';
+import { RegisterTransferHandler } from '@/transactions/core/commands/RegisterTransfer/RegisterTransfer.handler';
+import { EditTransactionHandler } from '@/transactions/core/commands/EditTransaction/EditTransaction.handler';
+import { ListIncomeHandler } from '@/transactions/core/queries/ListIncome/ListIncome.handler';
+import { ListExpenseHandler } from '@/transactions/core/queries/ListExpense/ListExpense.handler';
+import { ListTransfersHandler } from '@/transactions/core/queries/ListTransfers/ListTransfers.handler';
+import { TransactionAccountReader } from '../../core/ports/acl/TransactionAccount.reader';
+import { TransactionCategoryHierarchyReader } from '../../core/ports/acl/TransactionCategoryHierarchy.reader';
+import { ListIncomeReader } from '@/transactions/core/ports/readers/ListIncomeReader';
+import { ListExpenseReader } from '@/transactions/core/ports/readers/ListExpenseReader';
+import { ListTransfersReader } from '@/transactions/core/ports/readers/ListTransfersReader';
+import { TransactionsRepository } from '@/transactions/core/ports/repositories/Transactions.repository';
+import { PrismaTransactionAccountReader } from '@/transactions/infra/database/readers/PrismaTransactionAccountReader';
+import { PrismaTransactionCategoryHierarchyReader } from '@/transactions/infra/database/readers/PrismaTransactionCategoryHierarchyReader';
+import { PrismaListIncomeReader } from '@/transactions/infra/database/readers/PrismaListIncomeReader';
+import { PrismaListExpenseReader } from '@/transactions/infra/database/readers/PrismaListExpenseReader';
+import { PrismaListTransfersReader } from '@/transactions/infra/database/readers/PrismaListTransfersReader';
+import { PrismaTransactionsRepository } from '@/transactions/infra/database/repositories/PrismaTransactions.repository';
 import { TransactionsController } from '@/transactions/infra/controllers/Transactions.controller';
 
 @Module({
@@ -32,80 +32,92 @@ import { TransactionsController } from '@/transactions/infra/controllers/Transac
       inject: [PrismaService],
     },
     {
-      provide: TransactionAccountQuery,
-      useFactory: (prisma: PrismaService) => new PrismaTransactionAccountAcl(prisma),
+      provide: TransactionAccountReader,
+      useFactory: (prisma: PrismaService) => new PrismaTransactionAccountReader(prisma),
       inject: [PrismaService],
     },
     {
-      provide: TransactionCategoryHierarchyQuery,
-      useFactory: (prisma: PrismaService) => new PrismaTransactionCategoryHierarchyAcl(prisma),
+      provide: TransactionCategoryHierarchyReader,
+      useFactory: (prisma: PrismaService) => new PrismaTransactionCategoryHierarchyReader(prisma),
       inject: [PrismaService],
     },
     {
-      provide: ListIncomeQuery,
-      useFactory: (prisma: PrismaService) => new PrismaListIncomeQuery(prisma),
+      provide: ListIncomeReader,
+      useFactory: (prisma: PrismaService) => new PrismaListIncomeReader(prisma),
       inject: [PrismaService],
     },
     {
-      provide: ListExpenseQuery,
-      useFactory: (prisma: PrismaService) => new PrismaListExpenseQuery(prisma),
+      provide: ListExpenseReader,
+      useFactory: (prisma: PrismaService) => new PrismaListExpenseReader(prisma),
       inject: [PrismaService],
     },
     {
-      provide: ListTransfersQuery,
-      useFactory: (prisma: PrismaService) => new PrismaListTransfersQuery(prisma),
+      provide: ListTransfersReader,
+      useFactory: (prisma: PrismaService) => new PrismaListTransfersReader(prisma),
       inject: [PrismaService],
     },
     {
-      provide: RegisterExpenseUseCase,
+      provide: RegisterExpenseHandler,
       useFactory: (
         transactionsRepository: TransactionsRepository,
-        accounts: TransactionAccountQuery,
-        categoryHierarchy: TransactionCategoryHierarchyQuery,
-      ) => new RegisterExpenseUseCase(transactionsRepository, accounts, categoryHierarchy),
-      inject: [TransactionsRepository, TransactionAccountQuery, TransactionCategoryHierarchyQuery],
+        accounts: TransactionAccountReader,
+        categoryHierarchy: TransactionCategoryHierarchyReader,
+      ) => new RegisterExpenseHandler(transactionsRepository, accounts, categoryHierarchy),
+      inject: [
+        TransactionsRepository,
+        TransactionAccountReader,
+        TransactionCategoryHierarchyReader,
+      ],
     },
     {
-      provide: RegisterIncomeUseCase,
+      provide: RegisterIncomeHandler,
       useFactory: (
         transactionsRepository: TransactionsRepository,
-        accounts: TransactionAccountQuery,
-        categoryHierarchy: TransactionCategoryHierarchyQuery,
-      ) => new RegisterIncomeUseCase(transactionsRepository, accounts, categoryHierarchy),
-      inject: [TransactionsRepository, TransactionAccountQuery, TransactionCategoryHierarchyQuery],
+        accounts: TransactionAccountReader,
+        categoryHierarchy: TransactionCategoryHierarchyReader,
+      ) => new RegisterIncomeHandler(transactionsRepository, accounts, categoryHierarchy),
+      inject: [
+        TransactionsRepository,
+        TransactionAccountReader,
+        TransactionCategoryHierarchyReader,
+      ],
     },
     {
-      provide: RegisterTransferUseCase,
+      provide: RegisterTransferHandler,
       useFactory: (
         transactionsRepository: TransactionsRepository,
-        accounts: TransactionAccountQuery,
-      ) => new RegisterTransferUseCase(transactionsRepository, accounts),
-      inject: [TransactionsRepository, TransactionAccountQuery],
+        accounts: TransactionAccountReader,
+      ) => new RegisterTransferHandler(transactionsRepository, accounts),
+      inject: [TransactionsRepository, TransactionAccountReader],
     },
     {
-      provide: EditTransactionUseCase,
+      provide: EditTransactionHandler,
       useFactory: (
         transactionsRepository: TransactionsRepository,
-        accounts: TransactionAccountQuery,
-        categoryHierarchy: TransactionCategoryHierarchyQuery,
-      ) => new EditTransactionUseCase(transactionsRepository, accounts, categoryHierarchy),
-      inject: [TransactionsRepository, TransactionAccountQuery, TransactionCategoryHierarchyQuery],
+        accounts: TransactionAccountReader,
+        categoryHierarchy: TransactionCategoryHierarchyReader,
+      ) => new EditTransactionHandler(transactionsRepository, accounts, categoryHierarchy),
+      inject: [
+        TransactionsRepository,
+        TransactionAccountReader,
+        TransactionCategoryHierarchyReader,
+      ],
     },
     {
-      provide: ListIncomeUseCase,
-      useFactory: (listIncomeQuery: ListIncomeQuery) => new ListIncomeUseCase(listIncomeQuery),
-      inject: [ListIncomeQuery],
+      provide: ListIncomeHandler,
+      useFactory: (listIncomeQuery: ListIncomeReader) => new ListIncomeHandler(listIncomeQuery),
+      inject: [ListIncomeReader],
     },
     {
-      provide: ListExpenseUseCase,
-      useFactory: (listExpenseQuery: ListExpenseQuery) => new ListExpenseUseCase(listExpenseQuery),
-      inject: [ListExpenseQuery],
+      provide: ListExpenseHandler,
+      useFactory: (listExpenseQuery: ListExpenseReader) => new ListExpenseHandler(listExpenseQuery),
+      inject: [ListExpenseReader],
     },
     {
-      provide: ListTransfersUseCase,
-      useFactory: (listTransfersQuery: ListTransfersQuery) =>
-        new ListTransfersUseCase(listTransfersQuery),
-      inject: [ListTransfersQuery],
+      provide: ListTransfersHandler,
+      useFactory: (listTransfersQuery: ListTransfersReader) =>
+        new ListTransfersHandler(listTransfersQuery),
+      inject: [ListTransfersReader],
     },
   ],
 })

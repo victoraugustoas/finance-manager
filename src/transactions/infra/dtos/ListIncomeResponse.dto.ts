@@ -1,4 +1,4 @@
-import { ListIncomeQueryResult } from '@/transactions/core/provider/ListIncome.query';
+import { ListIncomeResult } from '@/transactions/core/queries/ListIncome/ListIncome.result';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ListIncomeItemResponseDto {
@@ -49,7 +49,7 @@ export class ListIncomeResponseDto {
   @ApiProperty({ type: [ListIncomeItemResponseDto] })
   incomes!: ListIncomeItemResponseDto[];
 
-  static fromDomain(incomes: ListIncomeQueryResult[]): ListIncomeResponseDto {
+  static fromDomain(incomes: ListIncomeResult[]): ListIncomeResponseDto {
     const dto = new ListIncomeResponseDto();
     dto.incomes = incomes.map((income) => {
       const item = new ListIncomeItemResponseDto();

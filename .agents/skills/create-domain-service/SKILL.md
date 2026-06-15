@@ -31,7 +31,7 @@ Do **not** use a Domain Service for:
 | **Stateful** | Coordinates mutations across multiple entities received as constructor arguments | `{Action}Service` | `.service.ts` |
 | **Stateless** | Pure computation on domain data; no side-effects | `{Noun}{Role}Service` (`ComposerService`, `CalculatorService`, `BuilderService`…) | `.service.ts` |
 
-> Both are **plain TypeScript classes**. No `@Injectable()`, no base class, no interfaces required. They are instantiated with `new` inside use cases — never registered in the NestJS DI container.
+> Both are **plain TypeScript classes**. No `@Injectable()`, no base class, no interfaces required. They are instantiated with `new` inside command/query handlers — never registered in the NestJS DI container.
 
 ---
 
@@ -73,10 +73,10 @@ export class MyActionService {
 }
 ```
 
-**How to use inside a use case:**
+**How to use inside a command/query handler:**
 
 ```typescript
-// inside MyUseCase.execute():
+// inside MyHandler.handle():
 const someAggregate = await this.someRepo.findById(params.someId);
 const anotherAggregate = await this.anotherRepo.findById(params.anotherId);
 
@@ -108,13 +108,13 @@ export class MyComposerService {
 }
 ```
 
-**How to use inside a use case:**
+**How to use inside a command/query handler:**
 
 ```typescript
-// as a use-case field (instantiated once):
+// as a handler field (instantiated once):
 private readonly myComposer = new MyComposerService();
 
-// inside execute():
+// inside handle():
 const result = this.myComposer.computeResult(rows);
 ```
 
@@ -144,7 +144,7 @@ export class ApplyTransferBetweenAccountsService {
 }
 ```
 
-The use case fetches both accounts, instantiates the service, calls `applyTransfer`, then saves both accounts. The service knows nothing about repositories.
+The command handler fetches both accounts, instantiates the service, calls `applyTransfer`, then saves both accounts. The service knows nothing about repositories.
 
 ---
 
@@ -173,7 +173,7 @@ export class BreakdownCategoriesComposerService {
 }
 ```
 
-The use case holds `private readonly composer = new BreakdownCategoriesComposerService()` as a field and calls `composer.applySixCategoryCap(rows)`.
+The query handler holds `private readonly composer = new BreakdownCategoriesComposerService()` as a field and calls `composer.applySixCategoryCap(rows)`.
 
 ---
 

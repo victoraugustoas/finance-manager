@@ -2,7 +2,7 @@
 name: write-unit-tests
 description: >-
   Writes or extends unit tests in TypeScript with Jest/ts-jest, aligned with
-  Clean Architecture (domain, use cases, infra). Use when the user asks for unit
+  Clean Architecture/CQRS (domain, command/query handlers, infra). Use when the user asks for unit
   tests, coverage for a class, stubs/mocks, or when creating `*.spec.ts` files
   in this repository.
 disable-model-invocation: true
@@ -85,13 +85,13 @@ What to assert on mocked dependencies:
   - failure: `expect(result.isFailure).toBe(true)` and `expect(result.errors[0].code).toBe(Errors.…)` (or the module’s equivalent).
 - Cover happy paths, edge cases (zero, equality, reversed order), and explicit domain validation errors.
 
-## Use cases
+## CQRS handlers
 
 - Every injected dependency (repositories, services, event buses, etc.) must be a `jest.fn()` mock or a minimal stub — never the real implementation.
-- Set the mock's return value to a controlled fake **before** calling `execute()`. This keeps the test deterministic and scoped to the use case's own logic.
+- Set the mock's return value to a controlled fake **before** calling `handle()`. This keeps the test deterministic and scoped to the handler's own logic.
 - When validation fails **before** I/O, collaborators must **not** be invoked (`expect(mock).not.toHaveBeenCalled()`).
-- When the use case delegates to another service, assert: (a) the delegate was called with the right arguments and (b) the use case returns/emits the expected output — not what the delegate does internally.
-- When the use case composes other services, assert DTO/output shape with `toEqual` on stable objects.
+- When the handler delegates to another service, assert: (a) the delegate was called with the right arguments and (b) the handler returns/emits the expected output — not what the delegate does internally.
+- When the handler composes other services, assert DTO/output shape with `toEqual` on stable objects.
 
 ## Infrastructure (e.g., Prisma repository)
 

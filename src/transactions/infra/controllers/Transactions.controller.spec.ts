@@ -5,16 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { TransactionsController } from '@/transactions/infra/controllers/Transactions.controller';
-import { RegisterExpenseUseCase } from '@/transactions/core/usecases/RegisterExpense.usecase';
-import { RegisterIncomeUseCase } from '@/transactions/core/usecases/RegisterIncome.usecase';
-import { RegisterTransferUseCase } from '@/transactions/core/usecases/RegisterTransfer.usecase';
-import { EditTransactionUseCase } from '@/transactions/core/usecases/EditTransaction.usecase';
-import { ListIncomeUseCase } from '@/transactions/core/usecases/ListIncome.usecase';
-import { ListExpenseUseCase } from '@/transactions/core/usecases/ListExpense.usecase';
-import { ListTransfersUseCase } from '@/transactions/core/usecases/ListTransfers.usecase';
-import { ListIncomeQueryResult } from '@/transactions/core/provider/ListIncome.query';
-import { ListExpenseQueryResult } from '@/transactions/core/provider/ListExpense.query';
-import { ListTransfersQueryResult } from '@/transactions/core/provider/ListTransfers.query';
+import { RegisterExpenseHandler } from '@/transactions/core/commands/RegisterExpense/RegisterExpense.handler';
+import { RegisterIncomeHandler } from '@/transactions/core/commands/RegisterIncome/RegisterIncome.handler';
+import { RegisterTransferHandler } from '@/transactions/core/commands/RegisterTransfer/RegisterTransfer.handler';
+import { EditTransactionHandler } from '@/transactions/core/commands/EditTransaction/EditTransaction.handler';
+import { ListIncomeHandler } from '@/transactions/core/queries/ListIncome/ListIncome.handler';
+import { ListExpenseHandler } from '@/transactions/core/queries/ListExpense/ListExpense.handler';
+import { ListTransfersHandler } from '@/transactions/core/queries/ListTransfers/ListTransfers.handler';
+import { ListIncomeResult } from '@/transactions/core/queries/ListIncome/ListIncome.result';
+import { ListExpenseResult } from '@/transactions/core/queries/ListExpense/ListExpense.result';
+import { ListTransfersResult } from '@/transactions/core/queries/ListTransfers/ListTransfers.result';
 import { RegisterExpenseDto } from '@/transactions/infra/dtos/RegisterExpense.dto';
 import { RegisterIncomeDto } from '@/transactions/infra/dtos/RegisterIncome.dto';
 import { RegisterTransferDto } from '@/transactions/infra/dtos/RegisterTransfer.dto';
@@ -73,13 +73,13 @@ describe('TransactionsController', () => {
     listExpenseMock = jest.fn();
     listTransfersMock = jest.fn();
     controller = new TransactionsController(
-      { execute: registerExpenseMock } as unknown as RegisterExpenseUseCase,
-      { execute: registerIncomeMock } as unknown as RegisterIncomeUseCase,
-      { execute: registerTransferMock } as unknown as RegisterTransferUseCase,
-      { execute: editTransactionMock } as unknown as EditTransactionUseCase,
-      { execute: listIncomeMock } as unknown as ListIncomeUseCase,
-      { execute: listExpenseMock } as unknown as ListExpenseUseCase,
-      { execute: listTransfersMock } as unknown as ListTransfersUseCase,
+      { handle: registerExpenseMock } as unknown as RegisterExpenseHandler,
+      { handle: registerIncomeMock } as unknown as RegisterIncomeHandler,
+      { handle: registerTransferMock } as unknown as RegisterTransferHandler,
+      { handle: editTransactionMock } as unknown as EditTransactionHandler,
+      { handle: listIncomeMock } as unknown as ListIncomeHandler,
+      { handle: listExpenseMock } as unknown as ListExpenseHandler,
+      { handle: listTransfersMock } as unknown as ListTransfersHandler,
     );
     loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
@@ -94,7 +94,7 @@ describe('TransactionsController', () => {
       endDate: '2026-01-31T23:59:59.999Z',
     };
 
-    const expense: ListExpenseQueryResult = {
+    const expense: ListExpenseResult = {
       id: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
       name: 'Groceries',
       amount: 49.9,
@@ -111,7 +111,7 @@ describe('TransactionsController', () => {
       accountName: 'Checking',
     };
 
-    it('should call ListExpenseUseCase.execute with parsed optional period', async () => {
+    it('should call ListExpenseHandler.handle with parsed optional period', async () => {
       listExpenseMock.mockResolvedValue(Result.ok([]));
 
       await controller.listExpenses(query);
@@ -123,7 +123,7 @@ describe('TransactionsController', () => {
       });
     });
 
-    it('should call ListExpenseUseCase.execute with undefined dates when period is omitted', async () => {
+    it('should call ListExpenseHandler.handle with undefined dates when period is omitted', async () => {
       listExpenseMock.mockResolvedValue(Result.ok([]));
 
       await controller.listExpenses({});
@@ -175,7 +175,7 @@ describe('TransactionsController', () => {
       endDate: '2026-01-31T23:59:59.999Z',
     };
 
-    const income: ListIncomeQueryResult = {
+    const income: ListIncomeResult = {
       id: 'eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee',
       name: 'Salary',
       amount: 3500,
@@ -192,7 +192,7 @@ describe('TransactionsController', () => {
       accountName: 'Checking',
     };
 
-    it('should call ListIncomeUseCase.execute with parsed optional period', async () => {
+    it('should call ListIncomeHandler.handle with parsed optional period', async () => {
       listIncomeMock.mockResolvedValue(Result.ok([]));
 
       await controller.listIncomes(query);
@@ -204,7 +204,7 @@ describe('TransactionsController', () => {
       });
     });
 
-    it('should call ListIncomeUseCase.execute with undefined dates when period is omitted', async () => {
+    it('should call ListIncomeHandler.handle with undefined dates when period is omitted', async () => {
       listIncomeMock.mockResolvedValue(Result.ok([]));
 
       await controller.listIncomes({});
@@ -256,7 +256,7 @@ describe('TransactionsController', () => {
       endDate: '2026-01-31T23:59:59.999Z',
     };
 
-    const transfer: ListTransfersQueryResult = {
+    const transfer: ListTransfersResult = {
       id: 'ffffffff-ffff-4fff-ffff-ffffffffffff',
       name: 'Savings transfer',
       amount: 150,
@@ -271,7 +271,7 @@ describe('TransactionsController', () => {
       accountDestinationName: 'Savings',
     };
 
-    it('should call ListTransfersUseCase.execute with parsed optional period', async () => {
+    it('should call ListTransfersHandler.handle with parsed optional period', async () => {
       listTransfersMock.mockResolvedValue(Result.ok([]));
 
       await controller.listTransfers(query);
@@ -283,7 +283,7 @@ describe('TransactionsController', () => {
       });
     });
 
-    it('should call ListTransfersUseCase.execute with undefined dates when period is omitted', async () => {
+    it('should call ListTransfersHandler.handle with undefined dates when period is omitted', async () => {
       listTransfersMock.mockResolvedValue(Result.ok([]));
 
       await controller.listTransfers({});
@@ -339,7 +339,7 @@ describe('TransactionsController', () => {
       subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
     };
 
-    it('should call RegisterExpenseUseCase.execute with dates parsed and optional fields mapped', async () => {
+    it('should call RegisterExpenseHandler.handle with dates parsed and optional fields mapped', async () => {
       registerExpenseMock.mockResolvedValue(Result.ok(makeExpense()));
 
       await controller.registerExpense(baseDto);
@@ -350,7 +350,7 @@ describe('TransactionsController', () => {
         amount: 49.9,
         dueDate: new Date('2026-01-15T12:00:00.000Z'),
         entryDate: new Date('2026-01-10T12:00:00.000Z'),
-        paymentDate: undefined,
+        effectivatedDate: undefined,
         effectivated: false,
         accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
         categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
@@ -366,7 +366,7 @@ describe('TransactionsController', () => {
       await controller.registerExpense(dto);
 
       expect(registerExpenseMock).toHaveBeenCalledWith(
-        expect.objectContaining({ paymentDate: new Date('2026-01-12T12:00:00.000Z') }),
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-12T12:00:00.000Z') }),
       );
     });
 
@@ -425,7 +425,7 @@ describe('TransactionsController', () => {
       subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
     };
 
-    it('should call RegisterIncomeUseCase.execute with dates parsed and optional fields mapped', async () => {
+    it('should call RegisterIncomeHandler.handle with dates parsed and optional fields mapped', async () => {
       registerIncomeMock.mockResolvedValue(Result.ok(makeIncome()));
 
       await controller.registerIncome(baseDto);
@@ -436,7 +436,7 @@ describe('TransactionsController', () => {
         amount: 3500,
         dueDate: new Date('2026-01-31T12:00:00.000Z'),
         entryDate: new Date('2026-01-01T12:00:00.000Z'),
-        receiptDate: undefined,
+        effectivatedDate: undefined,
         effectivated: false,
         accountId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
         categoryId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
@@ -452,7 +452,7 @@ describe('TransactionsController', () => {
       await controller.registerIncome(dto);
 
       expect(registerIncomeMock).toHaveBeenCalledWith(
-        expect.objectContaining({ receiptDate: new Date('2026-01-05T12:00:00.000Z') }),
+        expect.objectContaining({ effectivatedDate: new Date('2026-01-05T12:00:00.000Z') }),
       );
     });
 
@@ -510,7 +510,7 @@ describe('TransactionsController', () => {
       accountIdDestination: '22222222-2222-4222-2222-222222222222',
     };
 
-    it('should call RegisterTransferUseCase.execute with dates parsed and optional fields mapped', async () => {
+    it('should call RegisterTransferHandler.handle with dates parsed and optional fields mapped', async () => {
       registerTransferMock.mockResolvedValue(Result.ok(undefined));
 
       await controller.registerTransfer(baseDto);
@@ -588,7 +588,7 @@ describe('TransactionsController', () => {
       subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
     };
 
-    it('should call EditTransactionUseCase.execute with id, EXPENSE type, parsed dates and optional fields mapped', async () => {
+    it('should call EditTransactionHandler.handle with id, EXPENSE type, parsed dates and optional fields mapped', async () => {
       editTransactionMock.mockResolvedValue(Result.ok(undefined));
 
       await controller.editExpense(id, baseDto);
@@ -661,7 +661,7 @@ describe('TransactionsController', () => {
       subCategoryId: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
     };
 
-    it('should call EditTransactionUseCase.execute with id, INCOME type, parsed dates and optional fields mapped', async () => {
+    it('should call EditTransactionHandler.handle with id, INCOME type, parsed dates and optional fields mapped', async () => {
       editTransactionMock.mockResolvedValue(Result.ok(undefined));
 
       await controller.editIncome(id, baseDto);
