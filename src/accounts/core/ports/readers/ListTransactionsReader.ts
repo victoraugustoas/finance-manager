@@ -16,18 +16,18 @@ export type ListTransactionsToEndDateQueryProps = Omit<
 
 export type TransactionMovementType = 'INCOME' | 'EXPENSE' | 'TRANSFER_IN' | 'TRANSFER_OUT';
 
-export type ListTransactionsQueryResult = {
+export type ListTransactionsReaderResult = {
   amountInCents: number;
   movementType: TransactionMovementType;
   dueDate: Date;
 };
 
-export abstract class ListTransactionsQuery {
+export abstract class ListTransactionsReader {
   abstract listTransactions(
     props: ListTransactionsByAccountQueryProps,
-  ): Promise<Result<ListTransactionsQueryResult[]>>;
+  ): Promise<Result<ListTransactionsReaderResult[]>>;
 
   abstract listTransactionsToEndDate(
     props: ListTransactionsToEndDateQueryProps,
-  ): Promise<Result<ListTransactionsQueryResult[]>>;
+  ): Promise<Result<ListTransactionsReaderResult[]>>;
 }

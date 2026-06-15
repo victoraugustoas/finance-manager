@@ -1,7 +1,7 @@
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { PrismaListTransactionsQuery } from '@/accounts/infra/db/PrismaListTransactions.query';
+import { PrismaListTransactionsReader } from '@/accounts/infra/database/readers/PrismaListTransactionsReader';
 
 jest.mock(
   'generated/prisma/client',
@@ -22,10 +22,10 @@ const makePeriod = (): ReportingPeriod => {
   return result.value;
 };
 
-describe('PrismaListTransactionsQuery', () => {
+describe('PrismaListTransactionsReader', () => {
   let transactionFindMany: jest.Mock;
   let transferFindMany: jest.Mock;
-  let query: PrismaListTransactionsQuery;
+  let query: PrismaListTransactionsReader;
 
   beforeEach(() => {
     transactionFindMany = jest.fn().mockResolvedValue([]);
@@ -34,7 +34,7 @@ describe('PrismaListTransactionsQuery', () => {
       transaction: { findMany: transactionFindMany },
       transfer: { findMany: transferFindMany },
     } as unknown as PrismaService;
-    query = new PrismaListTransactionsQuery(prisma);
+    query = new PrismaListTransactionsReader(prisma);
   });
 
   describe('transaction mapping', () => {
@@ -190,7 +190,7 @@ describe('PrismaListTransactionsQuery', () => {
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
-      expect(result.errors[0].cls).toBe('PrismaListTransactionsQuery');
+      expect(result.errors[0].cls).toBe('PrismaListTransactionsReader');
     });
 
     it('should return PRISMA_QUERY_ERROR when transfer query throws', async () => {

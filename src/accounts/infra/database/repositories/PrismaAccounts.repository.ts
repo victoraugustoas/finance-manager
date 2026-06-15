@@ -1,5 +1,5 @@
 import { Account } from '@/accounts/core/model/Account';
-import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
+import { AccountsRepository } from '@/accounts/core/ports/repositories/Accounts.repository';
 import { Result } from '@/shared/base';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { Errors } from '@/shared/base/Errors';

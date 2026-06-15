@@ -1,5 +1,5 @@
 import { Result } from '@/shared/base';
-import { Account } from '../model/Account';
+import { Account } from '@/accounts/core/model/Account';
 
 export abstract class AccountsRepository {
   abstract save(account: Account): Promise<Result<void>>;

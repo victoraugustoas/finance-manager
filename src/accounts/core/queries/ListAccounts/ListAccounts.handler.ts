@@ -1,29 +1,22 @@
 import { Account } from '@/accounts/core/model/Account';
-import { AccountsRepository } from '@/accounts/core/provider/accounts.repository';
-import { Result, UseCase } from '@/shared/base';
-import { ListTransactionsQuery } from '@/accounts/core/provider/ListTransactions.query';
-import { Money } from '@/shared/ValueObjects';
+import { AccountsRepository } from '@/accounts/core/ports/repositories/Accounts.repository';
+import { QueryHandler, Result } from '@/shared/base';
+import { ListTransactionsReader } from '@/accounts/core/ports/readers/ListTransactionsReader';
 import { AccountBalanceCalculatorService } from '@/accounts/core/service/AccountBalanceCalculator.service';
 import { endOfDay } from 'date-fns';
 
-export type ListAccountsParams = {
-  endDate?: Date;
-};
+import { ListAccountsQuery } from './ListAccounts.query';
+import { ListAccountsResult } from './ListAccounts.result';
 
-export type ListedAccount = {
-  account: Account;
-  balance: Money;
-};
-
-export class ListAccountsUseCase implements UseCase<ListAccountsParams, ListedAccount[]> {
+export class ListAccountsHandler implements QueryHandler<ListAccountsQuery | undefined, ListAccountsResult[]> {
   private readonly accountBalanceCalculator = new AccountBalanceCalculatorService();
 
   constructor(
     private readonly accountsRepository: AccountsRepository,
-    private readonly listTransactionsQuery: ListTransactionsQuery,
+    private readonly listTransactionsReader: ListTransactionsReader,
   ) {}
 
-  async execute(params: ListAccountsParams = {}): Promise<Result<ListedAccount[]>> {
+  async handle(query: ListAccountsQuery = {}): Promise<Result<ListAccountsResult[]>> {
     const accounts = await this.accountsRepository.findAll();
     if (accounts.isFailure) {
       return accounts.asFail();
@@ -32,13 +25,13 @@ export class ListAccountsUseCase implements UseCase<ListAccountsParams, ListedAc
     const listedAccounts = await Promise.all(
       accounts.value.map(async (account) => {
         const transactions =
-          params.endDate !== undefined
-            ? await this.listTransactionsQuery.listTransactionsToEndDate({
+          query.endDate !== undefined
+            ? await this.listTransactionsReader.listTransactionsToEndDate({
                 accountId: account.id,
                 effectivated: true,
-                endDate: endOfDay(params.endDate),
+                endDate: endOfDay(query.endDate),
               })
-            : await this.listTransactionsQuery.listTransactions({
+            : await this.listTransactionsReader.listTransactions({
                 accountId: account.id,
                 effectivated: true,
               });

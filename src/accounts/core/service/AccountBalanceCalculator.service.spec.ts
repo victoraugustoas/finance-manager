@@ -1,5 +1,5 @@
 import { Account } from '@/accounts/core/model/Account';
-import { ListTransactionsQueryResult } from '@/accounts/core/provider/ListTransactions.query';
+import { ListTransactionsReaderResult } from '@/accounts/core/ports/readers/ListTransactionsReader';
 import { AccountBalanceCalculatorService } from './AccountBalanceCalculator.service';
 
 const makeAccount = (openingBalance = 25): Account =>
@@ -10,8 +10,8 @@ const makeAccount = (openingBalance = 25): Account =>
 
 const makeTransaction = (
   amountInCents: number,
-  movementType: ListTransactionsQueryResult['movementType'],
-): ListTransactionsQueryResult => ({
+  movementType: ListTransactionsReaderResult['movementType'],
+): ListTransactionsReaderResult => ({
   amountInCents,
   movementType,
   dueDate: new Date('2026-05-15T12:00:00.000Z'),
