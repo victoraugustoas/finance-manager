@@ -3,7 +3,7 @@ import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
 import { Prisma } from 'generated/prisma/client';
 import { Money } from '@/shared/ValueObjects';
-import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
+import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
 import {
   BreakdownCategoriesReader,
   BreakdownCategoriesReadParams,

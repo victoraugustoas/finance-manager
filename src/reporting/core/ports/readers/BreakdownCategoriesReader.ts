@@ -1,5 +1,5 @@
 import { Result } from '@/shared/base';
-import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
+import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { CategoryType } from '@/shared/enums/CategoryType';
 

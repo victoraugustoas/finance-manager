@@ -1,7 +1,7 @@
+import { PrismaListTransactionsReader } from '@/reporting/infra/database/readers/PrismaListTransactionsReader';
 import { ReportingPeriod } from '@/shared/ValueObjects';
 import { Errors } from '@/shared/base/Errors';
 import { PrismaService } from '@/shared/infra/PrismaService';
-import { PrismaListTransactionsReader } from '@/accounts/infra/database/readers/PrismaListTransactionsReader';
 
 jest.mock(
   'generated/prisma/client',

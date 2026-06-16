@@ -1,8 +1,8 @@
-import { Account } from '@/accounts/core/model/Account';
+import { ListAccountsReaderResult } from '@/reporting/core/ports/readers/ListAccountsReader';
 import { Money } from '@/shared/ValueObjects';
 
 export type ListAccountsResult = {
-  account: Account;
+  account: ListAccountsReaderResult;
   balance: Money;
   estimatedBalance: Money;
 };

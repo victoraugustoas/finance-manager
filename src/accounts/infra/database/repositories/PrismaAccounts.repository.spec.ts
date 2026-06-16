@@ -18,14 +18,12 @@ const makeAccount = (): Account => {
 describe('PrismaAccountsRepository', () => {
   let upsert: jest.Mock;
   let findUnique: jest.Mock;
-  let findMany: jest.Mock;
   let prisma: PrismaService;
   let repository: PrismaAccountsRepository;
 
   beforeEach(() => {
     upsert = jest.fn().mockResolvedValue(undefined);
     findUnique = jest.fn();
-    findMany = jest.fn();
 
     const tx = {
       account: { upsert },
@@ -34,7 +32,7 @@ describe('PrismaAccountsRepository', () => {
 
     prisma = {
       $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
-      account: { findUnique, findMany },
+      account: { findUnique },
     } as unknown as PrismaService;
 
     repository = new PrismaAccountsRepository(prisma);
@@ -120,51 +118,6 @@ describe('PrismaAccountsRepository', () => {
       findUnique.mockRejectedValue(new Error('Connection lost'));
 
       const result = await repository.findById(accountId);
-
-      expect(result.isFailure).toBe(true);
-      expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
-    });
-  });
-
-  describe('findAll()', () => {
-    it('should return all reconstructed accounts', async () => {
-      findMany.mockResolvedValue([
-        {
-          id: accountId,
-          name: 'Checking',
-          openingBalance: 2500,
-        },
-        {
-          id: '22222222-2222-2222-2222-222222222222',
-          name: 'Savings',
-          openingBalance: 15000,
-        },
-      ]);
-
-      const result = await repository.findAll();
-
-      expect(result.isSuccess).toBe(true);
-      expect(result.value).toHaveLength(2);
-      expect(result.value[0].id).toBe(accountId);
-      expect(result.value[0].name).toBe('Checking');
-      expect(result.value[0].openingBalance.amountInCents).toBe(2500);
-      expect(result.value[1].id).toBe('22222222-2222-2222-2222-222222222222');
-      expect(result.value[1].name).toBe('Savings');
-      expect(result.value[1].openingBalance.amountInCents).toBe(15000);
-    });
-
-    it('should call findMany without filters', async () => {
-      findMany.mockResolvedValue([]);
-
-      await repository.findAll();
-
-      expect(findMany).toHaveBeenCalledWith();
-    });
-
-    it('should return PRISMA_QUERY_ERROR when findMany throws', async () => {
-      findMany.mockRejectedValue(new Error('Connection lost'));
-
-      const result = await repository.findAll();
 
       expect(result.isFailure).toBe(true);
       expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);

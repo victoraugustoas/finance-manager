@@ -1,12 +1,12 @@
-import { Account } from '@/accounts/core/model/Account';
-import { ListTransactionsReaderResult } from '@/accounts/core/ports/readers/ListTransactionsReader';
+import { ListTransactionsReaderResult } from '@/reporting/core/ports/readers/ListTransactionsReader';
+import { Money } from '@/shared/ValueObjects';
 import { AccountBalanceCalculatorService } from './AccountBalanceCalculator.service';
 
-const makeAccount = (openingBalance = 25): Account =>
-  Account.new({
-    name: 'Checking',
-    openingBalance,
-  });
+const makeAccount = (openingBalance = 25) => ({
+  id: 'account-1',
+  name: 'Checking',
+  openingBalance: Money.new(openingBalance),
+});
 
 const makeTransaction = (
   amountInCents: number,

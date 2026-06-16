@@ -1,7 +1,7 @@
-import { AccountsRepository } from '@/accounts/core/ports/repositories/Accounts.repository';
+import { ListTransactionsReader } from '@/reporting/core/ports/readers/ListTransactionsReader';
+import { ListAccountsReader } from '@/reporting/core/ports/readers/ListAccountsReader';
+import { AccountBalanceCalculatorService } from '@/reporting/core/service/AccountBalanceCalculator/AccountBalanceCalculator.service';
 import { QueryHandler, Result } from '@/shared/base';
-import { ListTransactionsReader } from '@/accounts/core/ports/readers/ListTransactionsReader';
-import { AccountBalanceCalculatorService } from '@/accounts/core/service/AccountBalanceCalculator.service';
 import { endOfDay } from 'date-fns';
 
 import { ListAccountsQuery } from './ListAccounts.query';
@@ -11,13 +11,13 @@ export class ListAccountsHandler implements QueryHandler<ListAccountsQuery, List
   private readonly accountBalanceCalculator = new AccountBalanceCalculatorService();
 
   constructor(
-    private readonly accountsRepository: AccountsRepository,
+    private readonly listAccountsReader: ListAccountsReader,
     private readonly listTransactionsReader: ListTransactionsReader,
   ) {}
 
   async handle(query: ListAccountsQuery): Promise<Result<ListAccountsResult[]>> {
     const endDate = endOfDay(query.endDate);
-    const accounts = await this.accountsRepository.findAll();
+    const accounts = await this.listAccountsReader.read();
     if (accounts.isFailure) {
       return accounts.asFail();
     }

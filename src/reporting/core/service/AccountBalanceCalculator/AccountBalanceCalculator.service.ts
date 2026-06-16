@@ -1,9 +1,12 @@
-import { Account } from '@/accounts/core/model/Account';
-import { ListTransactionsReaderResult } from '@/accounts/core/ports/readers/ListTransactionsReader';
+import { ListTransactionsReaderResult } from '@/reporting/core/ports/readers/ListTransactionsReader';
+import { ListAccountsReaderResult } from '@/reporting/core/ports/readers/ListAccountsReader';
 import { Money } from '@/shared/ValueObjects';
 
 export class AccountBalanceCalculatorService {
-  calculate(account: Account, transactions: ListTransactionsReaderResult[]): Money {
+  calculate(
+    account: ListAccountsReaderResult,
+    transactions: ListTransactionsReaderResult[],
+  ): Money {
     return transactions.reduce((balance, transaction) => {
       const amount = Money.fromCents(transaction.amountInCents).value;
       return transaction.movementType === 'INCOME' || transaction.movementType === 'TRANSFER_IN'

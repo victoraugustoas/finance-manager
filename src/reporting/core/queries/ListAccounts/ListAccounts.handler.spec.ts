@@ -1,21 +1,19 @@
-import { AccountsRepository } from '@/accounts/core/ports/repositories/Accounts.repository';
-import { ListAccountsHandler } from '@/accounts/core/queries/ListAccounts/ListAccounts.handler';
-import { Account } from '@/accounts/core/model/Account';
+import { ListTransactionsReader } from '@/reporting/core/ports/readers/ListTransactionsReader';
+import { ListAccountsHandler } from '@/reporting/core/queries/ListAccounts/ListAccounts.handler';
+import { ListAccountsReader } from '@/reporting/core/ports/readers/ListAccountsReader';
+import { AccountBalanceCalculatorService } from '@/reporting/core/service/AccountBalanceCalculator/AccountBalanceCalculator.service';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
-import { ListTransactionsReader } from '@/accounts/core/ports/readers/ListTransactionsReader';
-import { AccountBalanceCalculatorService } from '@/accounts/core/service/AccountBalanceCalculator.service';
 import { Money } from '@/shared/ValueObjects';
 import { endOfDay } from 'date-fns';
 
-jest.mock('@/accounts/core/service/AccountBalanceCalculator.service');
+jest.mock('@/reporting/core/service/AccountBalanceCalculator/AccountBalanceCalculator.service');
 
-const makeAccount = (id: string, name: string): Account =>
-  Account.new({
-    id,
-    name,
-    openingBalance: 25,
-  });
+const makeAccount = (id: string, name: string) => ({
+  id,
+  name,
+  openingBalance: Money.new(25),
+});
 
 describe('ListAccountsHandler', () => {
   let calculateMock: jest.Mock;
@@ -50,9 +48,9 @@ describe('ListAccountsHandler', () => {
       ...savingsEffectivatedTransactions,
       { amountInCents: 1000, movementType: 'EXPENSE' as const, dueDate: new Date() },
     ];
-    const accountsRepository = {
-      findAll: jest.fn().mockResolvedValue(Result.ok(accounts)),
-    } as unknown as AccountsRepository;
+    const listAccountsReader = {
+      read: jest.fn().mockResolvedValue(Result.ok(accounts)),
+    } as unknown as ListAccountsReader;
     const listTransactionsReader = {
       listTransactions: jest.fn(),
       listTransactionsToEndDate: jest
@@ -68,7 +66,7 @@ describe('ListAccountsHandler', () => {
       .mockReturnValueOnce(Money.create(60).value)
       .mockReturnValueOnce(Money.create(50).value);
 
-    const handler = new ListAccountsHandler(accountsRepository, listTransactionsReader);
+    const handler = new ListAccountsHandler(listAccountsReader, listTransactionsReader);
 
     const result = await handler.handle({ endDate });
     const expectedEndDate = endOfDay(endDate);
@@ -80,7 +78,7 @@ describe('ListAccountsHandler', () => {
     expect(result.value[1].account).toBe(accounts[1]);
     expect(result.value[1].balance.amountInCents).toBe(6000);
     expect(result.value[1].estimatedBalance.amountInCents).toBe(5000);
-    expect(accountsRepository.findAll).toHaveBeenCalledTimes(1);
+    expect(listAccountsReader.read).toHaveBeenCalledTimes(1);
     expect(listTransactionsReader.listTransactions).not.toHaveBeenCalled();
     expect(listTransactionsReader.listTransactionsToEndDate).toHaveBeenCalledTimes(4);
     expect(listTransactionsReader.listTransactionsToEndDate).toHaveBeenNthCalledWith(1, {
@@ -125,9 +123,9 @@ describe('ListAccountsHandler', () => {
       ...savingsEffectivatedTransactions,
       { amountInCents: 500, movementType: 'EXPENSE' as const, dueDate: new Date() },
     ];
-    const accountsRepository = {
-      findAll: jest.fn().mockResolvedValue(Result.ok(accounts)),
-    } as unknown as AccountsRepository;
+    const listAccountsReader = {
+      read: jest.fn().mockResolvedValue(Result.ok(accounts)),
+    } as unknown as ListAccountsReader;
     const listTransactionsReader = {
       listTransactions: jest.fn(),
       listTransactionsToEndDate: jest
@@ -143,7 +141,7 @@ describe('ListAccountsHandler', () => {
       .mockReturnValueOnce(Money.create(10).value)
       .mockReturnValueOnce(Money.create(5).value);
 
-    const handler = new ListAccountsHandler(accountsRepository, listTransactionsReader);
+    const handler = new ListAccountsHandler(listAccountsReader, listTransactionsReader);
 
     const result = await handler.handle({ endDate });
 
@@ -178,36 +176,36 @@ describe('ListAccountsHandler', () => {
     expect(calculateMock).toHaveBeenNthCalledWith(4, accounts[1], savingsAllTransactions);
   });
 
-  it('should propagate repository failures', async () => {
-    const accountsRepository = {
-      findAll: jest.fn().mockResolvedValue(
-        Result.fail<Account[]>({
+  it('should propagate account reader failures', async () => {
+    const listAccountsReader = {
+      read: jest.fn().mockResolvedValue(
+        Result.fail({
           code: Errors.PRISMA_QUERY_ERROR,
           cls: 'test',
         }),
       ),
-    } as unknown as AccountsRepository;
+    } as unknown as ListAccountsReader;
     const listTransactionsReader = {
       listTransactions: jest.fn(),
       listTransactionsToEndDate: jest.fn(),
     } as unknown as ListTransactionsReader;
 
-    const handler = new ListAccountsHandler(accountsRepository, listTransactionsReader);
+    const handler = new ListAccountsHandler(listAccountsReader, listTransactionsReader);
 
     const result = await handler.handle({ endDate: new Date('2026-01-10T12:00:00.000Z') });
 
     expect(result.isFailure).toBe(true);
     expect(result.errors[0].code).toBe(Errors.PRISMA_QUERY_ERROR);
-    expect(accountsRepository.findAll).toHaveBeenCalledTimes(1);
+    expect(listAccountsReader.read).toHaveBeenCalledTimes(1);
     expect(listTransactionsReader.listTransactions).not.toHaveBeenCalled();
     expect(listTransactionsReader.listTransactionsToEndDate).not.toHaveBeenCalled();
   });
 
   it('should propagate transaction query failures', async () => {
     const accounts = [makeAccount('account-1', 'Checking')];
-    const accountsRepository = {
-      findAll: jest.fn().mockResolvedValue(Result.ok(accounts)),
-    } as unknown as AccountsRepository;
+    const listAccountsReader = {
+      read: jest.fn().mockResolvedValue(Result.ok(accounts)),
+    } as unknown as ListAccountsReader;
     const listTransactionsReader = {
       listTransactions: jest.fn(),
       listTransactionsToEndDate: jest.fn().mockResolvedValue(
@@ -218,7 +216,7 @@ describe('ListAccountsHandler', () => {
       ),
     } as unknown as ListTransactionsReader;
 
-    const handler = new ListAccountsHandler(accountsRepository, listTransactionsReader);
+    const handler = new ListAccountsHandler(listAccountsReader, listTransactionsReader);
 
     const result = await handler.handle({ endDate: new Date('2026-01-10T12:00:00.000Z') });
 

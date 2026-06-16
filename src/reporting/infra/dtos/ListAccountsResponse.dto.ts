@@ -1,4 +1,4 @@
-import { ListAccountsResult } from '@/accounts/core/queries/ListAccounts/ListAccounts.result';
+import { ListAccountsResult } from '@/reporting/core/queries/ListAccounts/ListAccounts.result';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ListAccountsItemResponseDto {

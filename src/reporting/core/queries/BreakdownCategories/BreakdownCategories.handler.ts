@@ -3,7 +3,7 @@ import { BreakdownCategoriesReader } from '@/reporting/core/ports/readers/Breakd
 import { BreakdownCategoriesQuery } from './BreakdownCategories.query';
 import { BreakdownCategoriesResult } from './BreakdownCategories.result';
 import { ReportingPeriod } from '@/shared/ValueObjects';
-import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer';
+import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
 
 export class BreakdownCategoriesHandler implements QueryHandler<
   BreakdownCategoriesQuery,

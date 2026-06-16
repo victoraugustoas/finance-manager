@@ -1,5 +1,5 @@
 import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories.dto';
-import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer';
+import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
 import { ApiProperty } from '@nestjs/swagger';
 
 /** Row in the breakdown: monetary total as a decimal (same convention as command DTOs). */

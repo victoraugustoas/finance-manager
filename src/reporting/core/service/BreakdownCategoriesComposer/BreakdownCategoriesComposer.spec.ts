@@ -1,4 +1,4 @@
-import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer';
+import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
 import { Money } from '@/shared/ValueObjects';
 
 describe('BreakdownCategoriesComposer', () => {

@@ -6,7 +6,7 @@ import {
   ListTransactionsReader,
   ListTransactionsReaderResult,
   ListTransactionsToEndDateQueryProps,
-} from '@/accounts/core/ports/readers/ListTransactionsReader';
+} from '@/reporting/core/ports/readers/ListTransactionsReader';
 import { TransactionType } from 'generated/prisma/client';
 
 export class PrismaListTransactionsReader implements ListTransactionsReader {

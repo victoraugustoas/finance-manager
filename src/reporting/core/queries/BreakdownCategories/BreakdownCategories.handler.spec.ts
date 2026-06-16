@@ -1,6 +1,6 @@
 import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories.dto';
-import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer';
-import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer';
+import type { CategoryBreakdownRow } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
+import { BreakdownCategoriesComposer } from '@/reporting/core/service/BreakdownCategoriesComposer/BreakdownCategoriesComposer';
 import {
   BreakdownCategoriesReader,
   BreakdownCategoriesReadParams,
@@ -148,9 +148,7 @@ describe('BreakdownCategoriesHandler', () => {
         type: CategoryType.INCOME,
       });
 
-      expect(readMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: CategoryType.INCOME }),
-      );
+      expect(readMock).toHaveBeenCalledWith(expect.objectContaining({ type: CategoryType.INCOME }));
     });
 
     it('should propagate query failure without calling the composer', async () => {

@@ -101,8 +101,7 @@ Typical `infra/`: `controllers/`, `database/`, `dtos/`, and `module/`.
 
 | Context          | Extra paths (beyond the common layout) |
 | ---------------- | -------------------------------------- |
-| **accounts**     | `core/service/` — domain services (e.g. `AccountBalanceCalculatorService`) |
-| **reporting**    | `core/dto/`, `core/service/` |
+| **reporting**    | `core/dto/`, `core/service/` — read-side composers/calculators (e.g. `AccountBalanceCalculatorService`) |
 | **transactions** | `core/commands/`, `core/queries/`, `core/ports/` — explicit CQRS layout; `infra/database/readers/` — read-side Prisma readers; `infra/database/repositories/` — write-side Prisma repositories |
 
 Other project roots: `http/` holds sample **REST Client** requests (one `.http` file per bounded context with HTTP:
@@ -123,7 +122,7 @@ Contexts organize application operations as CQRS commands and queries in domain 
 | **Account**       | Lifecycle of financial accounts |
 | **Transaction**   | Expenses, incomes, and transfers |
 | **Category**      | Expense and income categories |
-| **Reporting**     | Aggregates for analysis (e.g. `GET /reporting/categories/breakdown` returns `{ "categories": [...] }` with at most six rows; overflow is aggregated under `Others` per domain rules) |
+| **Reporting**     | Aggregates for analysis (e.g. `GET /reporting/accounts` returns account balances; `GET /reporting/categories/breakdown` returns `{ "categories": [...] }` with at most six rows; overflow is aggregated under `Others` per domain rules) |
 | **Notifications** | Reactive context driven by events (to be reflected under `src/` when modeled) |
 
 The `src/shared` tree holds domain primitives under `shared/base` (`Result`, `UseCase`, `CommandHandler`, `QueryHandler`, `ValueObject`, `Entity`, `AggregateRoot`, etc.) and reusable value objects under `shared/ValueObjects`.
