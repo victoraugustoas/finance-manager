@@ -35,9 +35,9 @@ export class AccountsController {
     type: ListAccountsResponseDto,
   })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async list(@Query() query: ListAccountsQueryDto = {}): Promise<ListAccountsResponseDto> {
+  async list(@Query() query: ListAccountsQueryDto): Promise<ListAccountsResponseDto> {
     const result = await this.listAccountsQueryHandler.handle({
-      endDate: query.endDate !== undefined ? new Date(query.endDate) : undefined,
+      endDate: new Date(query.endDate),
     });
     if (result.isFailure) {
       this.logger.error(`Error during list accounts: ${JSON.stringify(result.errors)}`);

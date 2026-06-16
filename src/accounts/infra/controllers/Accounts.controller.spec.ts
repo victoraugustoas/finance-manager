@@ -27,15 +27,6 @@ describe('AccountsController', () => {
   });
 
   describe('list()', () => {
-    it('should call ListAccountsHandler.execute without endDate when query is empty', async () => {
-      listHandleMock.mockResolvedValue(Result.ok([]));
-
-      await controller.list();
-
-      expect(listHandleMock).toHaveBeenCalledTimes(1);
-      expect(listHandleMock).toHaveBeenCalledWith({ endDate: undefined });
-    });
-
     it('should call ListAccountsHandler.execute with parsed endDate', async () => {
       listHandleMock.mockResolvedValue(Result.ok([]));
 
@@ -60,12 +51,20 @@ describe('AccountsController', () => {
       });
       listHandleMock.mockResolvedValue(
         Result.ok([
-          { account: checking, balance: Money.create(95).value },
-          { account: savings, balance: Money.create(175).value },
+          {
+            account: checking,
+            balance: Money.create(95).value,
+            estimatedBalance: Money.create(110).value,
+          },
+          {
+            account: savings,
+            balance: Money.create(175).value,
+            estimatedBalance: Money.create(190).value,
+          },
         ]),
       );
 
-      const response = await controller.list();
+      const response = await controller.list({ endDate: '2026-01-31T23:59:59.999Z' });
 
       expect(response.accounts).toEqual([
         {
@@ -73,12 +72,14 @@ describe('AccountsController', () => {
           name: 'Checking',
           openingBalance: 25,
           balance: 95,
+          estimatedBalance: 110,
         },
         {
           id: savings.id,
           name: 'Savings',
           openingBalance: 150,
           balance: 175,
+          estimatedBalance: 190,
         },
       ]);
     });
@@ -87,7 +88,9 @@ describe('AccountsController', () => {
       const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
       listHandleMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
 
-      await expect(controller.list()).rejects.toThrow(InternalServerErrorException);
+      await expect(controller.list({ endDate: '2026-01-31T23:59:59.999Z' })).rejects.toThrow(
+        InternalServerErrorException,
+      );
 
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during list accounts');

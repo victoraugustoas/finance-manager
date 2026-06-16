@@ -1,3 +1,3 @@
 export type ListAccountsQuery = {
-  endDate?: Date;
+  endDate: Date;
 };

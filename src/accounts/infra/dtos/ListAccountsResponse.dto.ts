@@ -13,6 +13,13 @@ export class ListAccountsItemResponseDto {
 
   @ApiProperty({ example: 201, description: 'Calculated account balance as a decimal amount' })
   balance!: number;
+
+  @ApiProperty({
+    example: 245.75,
+    description:
+      'Estimated account balance as a decimal amount, including pending and effectivated transactions up to the end date',
+  })
+  estimatedBalance!: number;
 }
 
 export class ListAccountsResponseDto {
@@ -21,12 +28,13 @@ export class ListAccountsResponseDto {
 
   static fromDomain(accounts: ListAccountsResult[]): ListAccountsResponseDto {
     const dto = new ListAccountsResponseDto();
-    dto.accounts = accounts.map(({ account, balance }) => {
+    dto.accounts = accounts.map(({ account, balance, estimatedBalance }) => {
       const item = new ListAccountsItemResponseDto();
       item.id = account.id;
       item.name = account.name;
       item.openingBalance = account.openingBalance.amount;
       item.balance = balance.amount;
+      item.estimatedBalance = estimatedBalance.amount;
       return item;
     });
     return dto;

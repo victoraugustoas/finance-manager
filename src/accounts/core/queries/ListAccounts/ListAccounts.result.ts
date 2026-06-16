@@ -4,4 +4,5 @@ import { Money } from '@/shared/ValueObjects';
 export type ListAccountsResult = {
   account: Account;
   balance: Money;
+  estimatedBalance: Money;
 };
