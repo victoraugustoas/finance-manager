@@ -1,4 +1,3 @@
-import { ListTransactionsReader } from '@/reporting/core/ports/readers/ListTransactionsReader';
 import { ListAccountsReader } from '@/reporting/core/ports/readers/ListAccountsReader';
 import { AccountBalanceCalculatorService } from '@/reporting/core/service/AccountBalanceCalculator/AccountBalanceCalculator.service';
 import { QueryHandler, Result } from '@/shared/base';
@@ -8,11 +7,9 @@ import { ListAccountsQuery } from './ListAccounts.query';
 import { ListAccountsResult } from './ListAccounts.result';
 
 export class ListAccountsHandler implements QueryHandler<ListAccountsQuery, ListAccountsResult[]> {
-  private readonly accountBalanceCalculator = new AccountBalanceCalculatorService();
-
   constructor(
     private readonly listAccountsReader: ListAccountsReader,
-    private readonly listTransactionsReader: ListTransactionsReader,
+    private readonly accountBalanceCalculator: AccountBalanceCalculatorService,
   ) {}
 
   async handle(query: ListAccountsQuery): Promise<Result<ListAccountsResult[]>> {
@@ -24,26 +21,16 @@ export class ListAccountsHandler implements QueryHandler<ListAccountsQuery, List
 
     const listedAccounts = await Promise.all(
       accounts.value.map(async (account) => {
-        const [transactionsEffectivated, allTransactions] = await Promise.all([
-          this.listTransactionsReader.listTransactionsToEndDate({
-            accountId: account.id,
-            effectivated: true,
-            endDate,
-          }),
-          this.listTransactionsReader.listTransactionsToEndDate({
-            accountId: account.id,
-            endDate,
-          }),
-        ]);
-
-        const combinedResults = Result.combine([transactionsEffectivated, allTransactions]);
-        if (combinedResults.isFailure) return combinedResults.asFail();
-
-        return Result.ok({
-          account,
-          balance: this.accountBalanceCalculator.calculate(account, transactionsEffectivated.value),
-          estimatedBalance: this.accountBalanceCalculator.calculate(account, allTransactions.value),
+        const balance = await this.accountBalanceCalculator.calculate({
+          accountId: account.id,
+          endDate,
         });
+
+        if (balance.isFailure) {
+          return balance.asFail();
+        }
+
+        return Result.ok({ account, ...balance.value });
       }),
     );
 

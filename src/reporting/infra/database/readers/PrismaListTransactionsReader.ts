@@ -7,6 +7,7 @@ import {
   ListTransactionsReaderResult,
   ListTransactionsToEndDateQueryProps,
 } from '@/reporting/core/ports/readers/ListTransactionsReader';
+import { Money } from '@/shared/ValueObjects';
 import { TransactionType } from 'generated/prisma/client';
 
 export class PrismaListTransactionsReader implements ListTransactionsReader {
@@ -26,7 +27,20 @@ export class PrismaListTransactionsReader implements ListTransactionsReader {
             ...(effectivated !== undefined ? { effectivated } : {}),
             ...(dueDate ? { dueDate } : {}),
           },
-          select: { amount: true, type: true, dueDate: true },
+          select: {
+            id: true,
+            name: true,
+            amount: true,
+            notes: true,
+            dueDate: true,
+            entryDate: true,
+            effectivated: true,
+            effectivatedDate: true,
+            type: true,
+            account: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true } },
+            subCategory: { select: { id: true, name: true } },
+          },
         }),
         this.prisma.transfer.findMany({
           where: {
@@ -34,22 +48,51 @@ export class PrismaListTransactionsReader implements ListTransactionsReader {
             ...(effectivated !== undefined ? { effectivated } : {}),
             ...(dueDate ? { dueDate } : {}),
           },
-          select: { amount: true, accountIdOrigin: true, dueDate: true },
+          select: {
+            id: true,
+            name: true,
+            amount: true,
+            notes: true,
+            dueDate: true,
+            entryDate: true,
+            effectivated: true,
+            effectivatedDate: true,
+            accountIdOrigin: true,
+            accountOrigin: { select: { id: true, name: true } },
+            accountDestination: { select: { id: true, name: true } },
+          },
         }),
       ]);
 
       const results: ListTransactionsReaderResult[] = [
         ...rawTransactions.map((t) => ({
-          amountInCents: t.amount,
+          id: t.id,
           movementType:
             t.type === TransactionType.INCOME ? ('INCOME' as const) : ('EXPENSE' as const),
+          name: t.name,
+          amount: Money.fromCents(t.amount).value,
           dueDate: t.dueDate,
+          entryDate: t.entryDate,
+          effectivated: t.effectivated,
+          effectivatedDate: t.effectivatedDate,
+          notes: t.notes,
+          account: t.account,
+          category: t.category,
+          subCategory: t.subCategory,
         })),
         ...rawTransfers.map((t) => ({
-          amountInCents: t.amount,
+          id: t.id,
           movementType:
             t.accountIdOrigin === accountId ? ('TRANSFER_OUT' as const) : ('TRANSFER_IN' as const),
+          name: t.name,
+          amount: Money.fromCents(t.amount).value,
           dueDate: t.dueDate,
+          entryDate: t.entryDate,
+          effectivated: t.effectivated,
+          effectivatedDate: t.effectivatedDate,
+          notes: t.notes,
+          originAccount: t.accountOrigin,
+          destinationAccount: t.accountDestination,
         })),
       ];
 
@@ -76,7 +119,20 @@ export class PrismaListTransactionsReader implements ListTransactionsReader {
             ...(effectivated !== undefined ? { effectivated } : {}),
             dueDate: { lte: endDate },
           },
-          select: { amount: true, type: true, dueDate: true },
+          select: {
+            id: true,
+            name: true,
+            amount: true,
+            notes: true,
+            dueDate: true,
+            entryDate: true,
+            effectivated: true,
+            effectivatedDate: true,
+            type: true,
+            account: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true } },
+            subCategory: { select: { id: true, name: true } },
+          },
         }),
         this.prisma.transfer.findMany({
           where: {
@@ -84,22 +140,51 @@ export class PrismaListTransactionsReader implements ListTransactionsReader {
             ...(effectivated !== undefined ? { effectivated } : {}),
             dueDate: { lte: endDate },
           },
-          select: { amount: true, accountIdOrigin: true, dueDate: true },
+          select: {
+            id: true,
+            name: true,
+            amount: true,
+            notes: true,
+            dueDate: true,
+            entryDate: true,
+            effectivated: true,
+            effectivatedDate: true,
+            accountIdOrigin: true,
+            accountOrigin: { select: { id: true, name: true } },
+            accountDestination: { select: { id: true, name: true } },
+          },
         }),
       ]);
 
       const results: ListTransactionsReaderResult[] = [
         ...rawTransactions.map((t) => ({
-          amountInCents: t.amount,
+          id: t.id,
           movementType:
             t.type === TransactionType.INCOME ? ('INCOME' as const) : ('EXPENSE' as const),
+          name: t.name,
+          amount: Money.fromCents(t.amount).value,
           dueDate: t.dueDate,
+          entryDate: t.entryDate,
+          effectivated: t.effectivated,
+          effectivatedDate: t.effectivatedDate,
+          notes: t.notes,
+          account: t.account,
+          category: t.category,
+          subCategory: t.subCategory,
         })),
         ...rawTransfers.map((t) => ({
-          amountInCents: t.amount,
+          id: t.id,
           movementType:
             t.accountIdOrigin === accountId ? ('TRANSFER_OUT' as const) : ('TRANSFER_IN' as const),
+          name: t.name,
+          amount: Money.fromCents(t.amount).value,
           dueDate: t.dueDate,
+          entryDate: t.entryDate,
+          effectivated: t.effectivated,
+          effectivatedDate: t.effectivatedDate,
+          notes: t.notes,
+          originAccount: t.accountOrigin,
+          destinationAccount: t.accountDestination,
         })),
       ];
 

@@ -1,5 +1,5 @@
 import { Result } from '@/shared/base';
-import { ReportingPeriod } from '@/shared/ValueObjects';
+import { Money, ReportingPeriod } from '@/shared/ValueObjects';
 
 export type ListTransactionsByAccountQueryProps = {
   accountId: string;
@@ -17,9 +17,35 @@ export type ListTransactionsToEndDateQueryProps = Omit<
 export type TransactionMovementType = 'INCOME' | 'EXPENSE' | 'TRANSFER_IN' | 'TRANSFER_OUT';
 
 export type ListTransactionsReaderResult = {
-  amountInCents: number;
+  id: string;
   movementType: TransactionMovementType;
+  name: string;
+  amount: Money;
   dueDate: Date;
+  entryDate: Date;
+  effectivated: boolean;
+  effectivatedDate?: Date | null;
+  notes?: string | null;
+  account?: {
+    id: string;
+    name: string;
+  };
+  originAccount?: {
+    id: string;
+    name: string;
+  };
+  destinationAccount?: {
+    id: string;
+    name: string;
+  };
+  category?: {
+    id: string;
+    name: string;
+  };
+  subCategory?: {
+    id: string;
+    name: string;
+  };
 };
 
 export abstract class ListTransactionsReader {
