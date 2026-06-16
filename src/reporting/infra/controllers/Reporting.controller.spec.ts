@@ -2,6 +2,7 @@ import { BadRequestException, InternalServerErrorException, Logger } from '@nest
 import { BreakdownCategoriesDTO } from '@/reporting/core/dto/BreakdownCategories.dto';
 import { BreakdownCategoriesHandler } from '@/reporting/core/queries/BreakdownCategories/BreakdownCategories.handler';
 import { ListAccountsHandler } from '@/reporting/core/queries/ListAccounts/ListAccounts.handler';
+import { StatementHandler } from '@/reporting/core/queries/Statement/Statement.handler';
 import { BreakdownCategoriesQueryDto } from '@/reporting/infra/dtos/BreakdownCategoriesQuery.dto';
 import { Errors } from '@/shared/base/Errors';
 import { Result } from '@/shared/base/Result';
@@ -13,10 +14,12 @@ describe('ReportingController', () => {
   let controller: ReportingController;
   let breakdownHandleMock: jest.Mock;
   let listAccountsHandleMock: jest.Mock;
+  let statementHandleMock: jest.Mock;
 
   beforeEach(() => {
     breakdownHandleMock = jest.fn();
     listAccountsHandleMock = jest.fn();
+    statementHandleMock = jest.fn();
     controller = new ReportingController(
       {
         handle: breakdownHandleMock,
@@ -24,6 +27,9 @@ describe('ReportingController', () => {
       {
         handle: listAccountsHandleMock,
       } as unknown as ListAccountsHandler,
+      {
+        handle: statementHandleMock,
+      } as unknown as StatementHandler,
     );
   });
 
@@ -186,6 +192,102 @@ describe('ReportingController', () => {
       );
 
       await expect(controller.breakdownCategories(query)).rejects.toThrow(BadRequestException);
+
+      loggerErrorSpy.mockRestore();
+    });
+  });
+
+  describe('statement()', () => {
+    it('should call StatementHandler.handle with parsed dates and optional account', async () => {
+      statementHandleMock.mockResolvedValue(
+        Result.ok({
+          startDate: new Date('2026-06-01T00:00:00.000Z'),
+          endDate: new Date('2026-06-30T23:59:59.999Z'),
+          accountId: '11111111-1111-4111-8111-111111111111',
+          initialBalance: Money.new(10),
+          finalBalance: Money.new(6),
+          days: [],
+        }),
+      );
+
+      await controller.statement({
+        startDate: '2026-06-01T00:00:00.000Z',
+        endDate: '2026-06-30T23:59:59.999Z',
+        accountId: '11111111-1111-4111-8111-111111111111',
+      });
+
+      expect(statementHandleMock).toHaveBeenCalledTimes(1);
+      expect(statementHandleMock).toHaveBeenCalledWith({
+        startDate: new Date('2026-06-01T00:00:00.000Z'),
+        endDate: new Date('2026-06-30T23:59:59.999Z'),
+        accountId: '11111111-1111-4111-8111-111111111111',
+      });
+    });
+
+    it('should return StatementResponseDto mapped from the query result', async () => {
+      statementHandleMock.mockResolvedValue(
+        Result.ok({
+          startDate: new Date('2026-06-01T00:00:00.000Z'),
+          endDate: new Date('2026-06-30T23:59:59.999Z'),
+          initialBalance: Money.new(10),
+          finalBalance: Money.new(6),
+          days: [
+            {
+              date: new Date('2026-06-03T00:00:00.000Z'),
+              balance: Money.new(6),
+              entries: [
+                {
+                  id: 'expense-1',
+                  movementType: 'EXPENSE',
+                  name: 'Groceries',
+                  amount: Money.new(4),
+                  dueDate: new Date('2026-06-03T12:00:00.000Z'),
+                  entryDate: new Date('2026-06-01T12:00:00.000Z'),
+                  effectivated: true,
+                  effectivatedDate: new Date('2026-06-03T12:00:00.000Z'),
+                  notes: null,
+                  account: { id: 'account-1', name: 'Checking' },
+                  balanceImpact: { direction: 'OUT', amount: Money.new(-4) },
+                  includedInBalance: true,
+                },
+              ],
+            },
+          ],
+        }),
+      );
+
+      const response = await controller.statement({
+        startDate: '2026-06-01T00:00:00.000Z',
+        endDate: '2026-06-30T23:59:59.999Z',
+      });
+
+      expect(response.initialBalance).toBe(10);
+      expect(response.finalBalance).toBe(6);
+      expect(response.days[0].balance).toBe(6);
+      expect(response.days[0].entries[0]).toEqual(
+        expect.objectContaining({
+          id: 'expense-1',
+          movementType: 'EXPENSE',
+          amount: 4,
+          balanceImpact: { direction: 'OUT', amount: -4 },
+          includedInBalance: true,
+        }),
+      );
+    });
+
+    it('should log and throw InternalServerErrorException when statement query fails', async () => {
+      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+      statementHandleMock.mockResolvedValue(Result.fail({ code: Errors.PRISMA_QUERY_ERROR }));
+
+      await expect(
+        controller.statement({
+          startDate: '2026-06-01T00:00:00.000Z',
+          endDate: '2026-06-30T23:59:59.999Z',
+        }),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(String(loggerErrorSpy.mock.calls[0]?.[0])).toContain('Error during statement');
 
       loggerErrorSpy.mockRestore();
     });

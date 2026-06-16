@@ -1,9 +1,12 @@
 import { BreakdownCategoriesHandler } from '@/reporting/core/queries/BreakdownCategories/BreakdownCategories.handler';
 import { ListAccountsHandler } from '@/reporting/core/queries/ListAccounts/ListAccounts.handler';
+import { StatementHandler } from '@/reporting/core/queries/Statement/Statement.handler';
 import { BreakdownCategoriesQueryDto } from '@/reporting/infra/dtos/BreakdownCategoriesQuery.dto';
 import { BreakdownCategoriesResponseDto } from '@/reporting/infra/dtos/BreakdownCategoriesResponse.dto';
 import { ListAccountsQueryDto } from '@/reporting/infra/dtos/ListAccountsQuery.dto';
 import { ListAccountsResponseDto } from '@/reporting/infra/dtos/ListAccountsResponse.dto';
+import { StatementQueryDto } from '@/reporting/infra/dtos/StatementQuery.dto';
+import { StatementResponseDto } from '@/reporting/infra/dtos/StatementResponse.dto';
 import { MapResultErrorToHttpException } from '@/shared/infra/MapResultErrorToHttpException';
 import { Controller, Get, Logger, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -15,6 +18,7 @@ export class ReportingController {
   constructor(
     private readonly breakdownCategoriesQueryHandler: BreakdownCategoriesHandler,
     private readonly listAccountsQueryHandler: ListAccountsHandler,
+    private readonly statementQueryHandler: StatementHandler,
   ) {}
 
   @Get('accounts')
@@ -56,5 +60,23 @@ export class ReportingController {
     }
 
     return BreakdownCategoriesResponseDto.fromDomain(result.value);
+  }
+
+  @Get('statement')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @ApiOkResponse({ type: StatementResponseDto })
+  async statement(@Query() query: StatementQueryDto): Promise<StatementResponseDto> {
+    const result = await this.statementQueryHandler.handle({
+      startDate: new Date(query.startDate),
+      endDate: new Date(query.endDate),
+      accountId: query.accountId,
+    });
+
+    if (result.isFailure) {
+      this.logger.error(`Error during statement: ${JSON.stringify(result.errors)}`);
+      MapResultErrorToHttpException.throwException(result);
+    }
+
+    return StatementResponseDto.fromDomain(result.value);
   }
 }

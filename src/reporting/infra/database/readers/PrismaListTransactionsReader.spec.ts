@@ -12,6 +12,102 @@ jest.mock(
 const ACCOUNT_ID = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
 const OTHER_ACCOUNT_ID = 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
 const dueDate = new Date('2026-05-15T12:00:00.000Z');
+const entryDate = new Date('2026-05-01T12:00:00.000Z');
+const effectivatedDate = new Date('2026-05-16T12:00:00.000Z');
+const account = { id: ACCOUNT_ID, name: 'Checking' };
+const originAccount = { id: ACCOUNT_ID, name: 'Checking' };
+const destinationAccount = { id: OTHER_ACCOUNT_ID, name: 'Savings' };
+const category = { id: 'category-1', name: 'Salary' };
+const subCategory = { id: 'subcategory-1', name: 'Monthly' };
+
+type RawTransaction = {
+  id: string;
+  name: string;
+  amount: number;
+  notes: string | null;
+  dueDate: Date;
+  entryDate: Date;
+  effectivated: boolean;
+  effectivatedDate: Date | null;
+  type: 'INCOME' | 'EXPENSE';
+  account: typeof account;
+  category: typeof category;
+  subCategory: typeof subCategory;
+};
+
+type RawTransfer = {
+  id: string;
+  name: string;
+  amount: number;
+  notes: string | null;
+  dueDate: Date;
+  entryDate: Date;
+  effectivated: boolean;
+  effectivatedDate: Date | null;
+  accountIdOrigin: string;
+  accountOrigin: typeof originAccount;
+  accountDestination: typeof destinationAccount;
+};
+
+const transactionSelect = {
+  id: true,
+  name: true,
+  amount: true,
+  notes: true,
+  dueDate: true,
+  entryDate: true,
+  effectivated: true,
+  effectivatedDate: true,
+  type: true,
+  account: { select: { id: true, name: true } },
+  category: { select: { id: true, name: true } },
+  subCategory: { select: { id: true, name: true } },
+};
+
+const transferSelect = {
+  id: true,
+  name: true,
+  amount: true,
+  notes: true,
+  dueDate: true,
+  entryDate: true,
+  effectivated: true,
+  effectivatedDate: true,
+  accountIdOrigin: true,
+  accountOrigin: { select: { id: true, name: true } },
+  accountDestination: { select: { id: true, name: true } },
+};
+
+const makeRawTransaction = (props: Partial<RawTransaction> = {}): RawTransaction => ({
+  id: 'transaction-1',
+  name: 'Salary',
+  amount: 10000,
+  notes: null,
+  dueDate,
+  entryDate,
+  effectivated: true,
+  effectivatedDate,
+  type: 'INCOME',
+  account,
+  category,
+  subCategory,
+  ...props,
+});
+
+const makeRawTransfer = (props: Partial<RawTransfer> = {}): RawTransfer => ({
+  id: 'transfer-1',
+  name: 'Transfer to savings',
+  amount: 3000,
+  notes: null,
+  dueDate,
+  entryDate,
+  effectivated: true,
+  effectivatedDate,
+  accountIdOrigin: ACCOUNT_ID,
+  accountOrigin: originAccount,
+  accountDestination: destinationAccount,
+  ...props,
+});
 
 const makePeriod = (): ReportingPeriod => {
   const result = ReportingPeriod.create({
@@ -39,7 +135,7 @@ describe('PrismaListTransactionsReader', () => {
 
   describe('transaction mapping', () => {
     it('should map an INCOME transaction to movementType INCOME', async () => {
-      transactionFindMany.mockResolvedValue([{ amount: 10000, type: 'INCOME', dueDate }]);
+      transactionFindMany.mockResolvedValue([makeRawTransaction({ amount: 10000 })]);
 
       const result = await query.listTransactions({
         accountId: ACCOUNT_ID,
@@ -47,11 +143,26 @@ describe('PrismaListTransactionsReader', () => {
       });
 
       expect(result.isSuccess).toBe(true);
-      expect(result.value).toEqual([{ amountInCents: 10000, movementType: 'INCOME', dueDate }]);
+      expect(result.value[0]).toMatchObject({
+        id: 'transaction-1',
+        movementType: 'INCOME',
+        name: 'Salary',
+        dueDate,
+        entryDate,
+        effectivated: true,
+        effectivatedDate,
+        notes: null,
+        account,
+        category,
+        subCategory,
+      });
+      expect(result.value[0].amount.amountInCents).toBe(10000);
     });
 
     it('should map an EXPENSE transaction to movementType EXPENSE', async () => {
-      transactionFindMany.mockResolvedValue([{ amount: 5000, type: 'EXPENSE', dueDate }]);
+      transactionFindMany.mockResolvedValue([
+        makeRawTransaction({ amount: 5000, type: 'EXPENSE' }),
+      ]);
 
       const result = await query.listTransactions({
         accountId: ACCOUNT_ID,
@@ -59,13 +170,14 @@ describe('PrismaListTransactionsReader', () => {
       });
 
       expect(result.isSuccess).toBe(true);
-      expect(result.value).toEqual([{ amountInCents: 5000, movementType: 'EXPENSE', dueDate }]);
+      expect(result.value[0].movementType).toBe('EXPENSE');
+      expect(result.value[0].amount.amountInCents).toBe(5000);
     });
   });
 
   describe('transfer mapping', () => {
     it('should map a transfer where the account is the origin to TRANSFER_OUT', async () => {
-      transferFindMany.mockResolvedValue([{ amount: 3000, accountIdOrigin: ACCOUNT_ID, dueDate }]);
+      transferFindMany.mockResolvedValue([makeRawTransfer({ amount: 3000 })]);
 
       const result = await query.listTransactions({
         accountId: ACCOUNT_ID,
@@ -73,14 +185,24 @@ describe('PrismaListTransactionsReader', () => {
       });
 
       expect(result.isSuccess).toBe(true);
-      expect(result.value).toEqual([
-        { amountInCents: 3000, movementType: 'TRANSFER_OUT', dueDate },
-      ]);
+      expect(result.value[0]).toMatchObject({
+        id: 'transfer-1',
+        movementType: 'TRANSFER_OUT',
+        name: 'Transfer to savings',
+        dueDate,
+        entryDate,
+        effectivated: true,
+        effectivatedDate,
+        notes: null,
+        originAccount,
+        destinationAccount,
+      });
+      expect(result.value[0].amount.amountInCents).toBe(3000);
     });
 
     it('should map a transfer where the account is the destination to TRANSFER_IN', async () => {
       transferFindMany.mockResolvedValue([
-        { amount: 7000, accountIdOrigin: OTHER_ACCOUNT_ID, dueDate },
+        makeRawTransfer({ amount: 7000, accountIdOrigin: OTHER_ACCOUNT_ID }),
       ]);
 
       const result = await query.listTransactions({
@@ -89,7 +211,8 @@ describe('PrismaListTransactionsReader', () => {
       });
 
       expect(result.isSuccess).toBe(true);
-      expect(result.value).toEqual([{ amountInCents: 7000, movementType: 'TRANSFER_IN', dueDate }]);
+      expect(result.value[0].movementType).toBe('TRANSFER_IN');
+      expect(result.value[0].amount.amountInCents).toBe(7000);
     });
   });
 
@@ -105,7 +228,7 @@ describe('PrismaListTransactionsReader', () => {
           effectivated: true,
           dueDate: { gte: period.startDate, lte: period.endDate },
         },
-        select: { amount: true, type: true, dueDate: true },
+        select: transactionSelect,
       });
       expect(transferFindMany).toHaveBeenCalledWith({
         where: {
@@ -113,7 +236,7 @@ describe('PrismaListTransactionsReader', () => {
           effectivated: true,
           dueDate: { gte: period.startDate, lte: period.endDate },
         },
-        select: { amount: true, accountIdOrigin: true, dueDate: true },
+        select: transferSelect,
       });
     });
 
@@ -124,13 +247,13 @@ describe('PrismaListTransactionsReader', () => {
         where: {
           accountId: ACCOUNT_ID,
         },
-        select: { amount: true, type: true, dueDate: true },
+        select: transactionSelect,
       });
       expect(transferFindMany).toHaveBeenCalledWith({
         where: {
           OR: [{ accountIdOrigin: ACCOUNT_ID }, { accountIdDestination: ACCOUNT_ID }],
         },
-        select: { amount: true, accountIdOrigin: true, dueDate: true },
+        select: transferSelect,
       });
     });
 
@@ -149,7 +272,7 @@ describe('PrismaListTransactionsReader', () => {
           effectivated: true,
           dueDate: { lte: endDate },
         },
-        select: { amount: true, type: true, dueDate: true },
+        select: transactionSelect,
       });
       expect(transferFindMany).toHaveBeenCalledWith({
         where: {
@@ -157,14 +280,14 @@ describe('PrismaListTransactionsReader', () => {
           effectivated: true,
           dueDate: { lte: endDate },
         },
-        select: { amount: true, accountIdOrigin: true, dueDate: true },
+        select: transferSelect,
       });
     });
 
     it('should run both queries in parallel and combine results', async () => {
-      transactionFindMany.mockResolvedValue([{ amount: 1000, type: 'INCOME', dueDate }]);
+      transactionFindMany.mockResolvedValue([makeRawTransaction({ amount: 1000 })]);
       transferFindMany.mockResolvedValue([
-        { amount: 2000, accountIdOrigin: OTHER_ACCOUNT_ID, dueDate },
+        makeRawTransfer({ amount: 2000, accountIdOrigin: OTHER_ACCOUNT_ID }),
       ]);
 
       const result = await query.listTransactions({
