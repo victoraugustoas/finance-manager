@@ -9,6 +9,9 @@ import { ListAccountsReader } from '@/reporting/core/ports/readers/ListAccountsR
 import { PrismaListAccountsReader } from '@/reporting/infra/database/readers/PrismaListAccountsReader';
 import { ListTransactionsReader } from '@/reporting/core/ports/readers/ListTransactionsReader';
 import { PrismaListTransactionsReader } from '@/reporting/infra/database/readers/PrismaListTransactionsReader';
+import { StatementReader } from '@/reporting/core/ports/readers/StatementReader';
+import { PrismaStatementReader } from '@/reporting/infra/database/readers/PrismaStatementReader';
+import { StatementHandler } from '@/reporting/core/queries/Statement/Statement.handler';
 
 @Module({
   imports: [],
@@ -31,6 +34,11 @@ import { PrismaListTransactionsReader } from '@/reporting/infra/database/readers
       inject: [PrismaService],
     },
     {
+      provide: StatementReader,
+      useFactory: (prisma: PrismaService) => new PrismaStatementReader(prisma),
+      inject: [PrismaService],
+    },
+    {
       provide: BreakdownCategoriesHandler,
       useFactory: (reader: BreakdownCategoriesReader) => new BreakdownCategoriesHandler(reader),
       inject: [BreakdownCategoriesReader],
@@ -42,6 +50,11 @@ import { PrismaListTransactionsReader } from '@/reporting/infra/database/readers
         transactionsReader: ListTransactionsReader,
       ) => new ListAccountsHandler(accountsReader, transactionsReader),
       inject: [ListAccountsReader, ListTransactionsReader],
+    },
+    {
+      provide: StatementHandler,
+      useFactory: (reader: StatementReader) => new StatementHandler(reader),
+      inject: [StatementReader],
     },
   ],
 })
