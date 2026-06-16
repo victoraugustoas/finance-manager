@@ -49,12 +49,11 @@ const handlers: Provider[] = [
   },
   {
     provide: ListAccountsHandler,
-    useFactory: (accountsReader: ListAccountsReader, transactionsReader: ListTransactionsReader) =>
-      new ListAccountsHandler(
-        accountsReader,
-        new AccountBalanceCalculatorService(accountsReader, transactionsReader),
-      ),
-    inject: [ListAccountsReader, ListTransactionsReader],
+    useFactory: (
+      accountsReader: ListAccountsReader,
+      accountBalanceCalculator: AccountBalanceCalculatorService,
+    ) => new ListAccountsHandler(accountsReader, accountBalanceCalculator),
+    inject: [ListAccountsReader, AccountBalanceCalculatorService],
   },
   {
     provide: StatementHandler,

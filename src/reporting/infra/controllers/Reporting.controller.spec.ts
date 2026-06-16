@@ -238,7 +238,7 @@ describe('ReportingController', () => {
               entries: [
                 {
                   id: 'expense-1',
-                  kind: 'EXPENSE',
+                  movementType: 'EXPENSE',
                   name: 'Groceries',
                   amount: Money.new(4),
                   dueDate: new Date('2026-06-03T12:00:00.000Z'),
@@ -267,7 +267,7 @@ describe('ReportingController', () => {
       expect(response.days[0].entries[0]).toEqual(
         expect.objectContaining({
           id: 'expense-1',
-          kind: 'EXPENSE',
+          movementType: 'EXPENSE',
           amount: 4,
           balanceImpact: { direction: 'OUT', amount: -4 },
           includedInBalance: true,

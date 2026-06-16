@@ -1,76 +1,136 @@
-import {
-  StatementReader,
-  StatementReaderMovement,
-} from '@/reporting/core/ports/readers/StatementReader';
 import { QueryHandler, Result } from '@/shared/base';
-import { ReportingPeriod, Money } from '@/shared/ValueObjects';
-import { endOfDay, isAfter, isBefore, isSameDay, startOfDay } from 'date-fns';
-
+import { Errors } from '@/shared/base/Errors';
+import { Money, ReportingPeriod } from '@/shared/ValueObjects';
+import { isBefore, isSameDay, startOfDay } from 'date-fns';
 import { StatementQuery } from './Statement.query';
-import { StatementDayResult, StatementEntryResult, StatementResult } from './Statement.result';
+import {
+  StatementDayResult,
+  StatementEntryMovementType,
+  StatementEntryResult,
+  StatementResult,
+} from './Statement.result';
+import {
+  ListTransactionsReader,
+  ListTransactionsReaderResult,
+} from '@/reporting/core/ports/readers/ListTransactionsReader';
+import { ListAccountsReader } from '@/reporting/core/ports/readers/ListAccountsReader';
+import { AccountBalanceCalculatorService } from '@/reporting/core/service/AccountBalanceCalculator/AccountBalanceCalculator.service';
 
 export class StatementHandler implements QueryHandler<StatementQuery, StatementResult> {
-  constructor(private readonly statementReader: StatementReader) {}
+  constructor(
+    private readonly listTransactionsReader: ListTransactionsReader,
+    private readonly listAccountsReader: ListAccountsReader,
+    private readonly accountBalanceCalculatorService: AccountBalanceCalculatorService,
+  ) {}
 
   async handle(query: StatementQuery): Promise<Result<StatementResult>> {
     const period = ReportingPeriod.create({
-      startDate: startOfDay(query.startDate),
-      endDate: endOfDay(query.endDate),
+      startDate: query.startDate,
+      endDate: query.endDate,
     });
     if (period.isFailure) {
       return period.asFail();
     }
 
-    const readerResult = await this.statementReader.read({
-      accountId: query.accountId,
-      endDate: period.value.endDate,
+    const accounts = await this.listAccountsReader.read();
+    if (accounts.isFailure) return accounts.asFail();
+
+    const selectedAccounts = accounts.value.filter((account) => {
+      if (query.accountId) {
+        return query.accountId === account.id;
+      }
+      return true;
     });
-    if (readerResult.isFailure) {
-      return readerResult.asFail();
+
+    if (query.accountId && selectedAccounts.length === 0) {
+      return Result.fail({
+        code: Errors.REFERENCE_ACCOUNT_NOT_FOUND,
+        cls: this.constructor.name,
+        data: { accountId: query.accountId },
+      });
     }
 
+    const balanceResults = await Promise.all(
+      selectedAccounts.map(async (account) => {
+        const balance = await this.accountBalanceCalculatorService.calculate({
+          accountId: account.id,
+          endDate: period.value.endDate,
+        });
+        if (balance.isFailure) {
+          return balance.asFail();
+        }
+        return Result.ok(balance.value.balance);
+      }),
+    );
+
+    const balance = Result.combine(balanceResults);
+    if (balance.isFailure) return balance.asFail();
+
     const today = startOfDay(new Date());
-    const startDate = startOfDay(period.value.startDate);
-    const endDate = endOfDay(period.value.endDate);
-    let runningBalance = readerResult.value.accounts.reduce(
-      (balance, account) => balance.add(account.openingBalance),
+    const startDate = period.value.startDate;
+
+    let runningBalance = balanceResults.reduce(
+      (balance, accountBalance) => balance.add(accountBalance.value),
       Money.fromCents(0).value,
     );
 
-    const movements = [...readerResult.value.movements].sort((left, right) => {
-      const dueDateComparison = left.dueDate.getTime() - right.dueDate.getTime();
-      if (dueDateComparison !== 0) return dueDateComparison;
-      return left.name.localeCompare(right.name, 'pt-BR');
-    });
+    const movementResults = await Promise.all(
+      selectedAccounts.map((account) =>
+        this.listTransactionsReader.listTransactions({
+          period: period.value,
+          accountId: account.id,
+        }),
+      ),
+    );
+
+    const movement = Result.combine(movementResults);
+    if (movement.isFailure) return movement.asFail();
+
+    const movements = movementResults
+      .flatMap((result) => result.value)
+      .sort((left, right) => {
+        const dueDateComparison = left.dueDate.getTime() - right.dueDate.getTime();
+        if (dueDateComparison !== 0) return dueDateComparison;
+        return left.name.localeCompare(right.name, 'pt-BR');
+      });
 
     for (const movement of movements) {
       const movementDay = startOfDay(movement.dueDate);
       if (!isBefore(movementDay, startDate)) continue;
 
       if (movement.effectivated || !isBefore(movementDay, today)) {
-        runningBalance = runningBalance.add(movement.balanceImpactAmount);
+        runningBalance = this.accountBalanceCalculatorService.accountBalanceCalculator(
+          runningBalance,
+          movement,
+        );
       }
     }
 
     const initialBalance = runningBalance;
-    const movementsInPeriod = movements.filter((movement) => {
-      const movementDay = startOfDay(movement.dueDate);
-      return !isBefore(movementDay, startDate) && !isAfter(movementDay, endDate);
-    });
-    const movementsByDay = this.groupMovementsByDay(movementsInPeriod);
+    const movementsByDay = this.groupTransactionsByDay(movements);
+    const statementEntriesByDay = this.groupTransactionsByDay(
+      this.deduplicateTransfersForStatementEntries(movements),
+    );
     const days: StatementDayResult[] = [];
 
-    for (const [dateKey, dayMovements] of movementsByDay) {
+    for (const [dateKey, dayMovements] of statementEntriesByDay) {
       const day = startOfDay(new Date(`${dateKey}T00:00:00.000Z`));
+      const balanceMovements = movementsByDay.get(dateKey) ?? [];
+      for (const movement of balanceMovements) {
+        if (this.shouldIncludeInBalance(movement, day, today)) {
+          runningBalance = this.accountBalanceCalculatorService.accountBalanceCalculator(
+            runningBalance,
+            movement,
+          );
+        }
+      }
+
       const entries: StatementEntryResult[] = dayMovements.map((movement) => {
         const includedInBalance = this.shouldIncludeInBalance(movement, day, today);
-        if (includedInBalance) {
-          runningBalance = runningBalance.add(movement.balanceImpactAmount);
-        }
 
         return {
           id: movement.id,
-          kind: movement.kind,
+          movementType: this.toStatementEntryMovementType(movement),
           name: movement.name,
           amount: movement.amount,
           dueDate: movement.dueDate,
@@ -84,8 +144,8 @@ export class StatementHandler implements QueryHandler<StatementQuery, StatementR
           category: movement.category,
           subCategory: movement.subCategory,
           balanceImpact: {
-            direction: this.toBalanceImpactDirection(movement.balanceImpactAmount),
-            amount: movement.balanceImpactAmount,
+            direction: this.toBalanceImpactDirection(movement),
+            amount: movement.amount,
           },
           includedInBalance,
         };
@@ -108,20 +168,56 @@ export class StatementHandler implements QueryHandler<StatementQuery, StatementR
     });
   }
 
-  private groupMovementsByDay(
-    movements: StatementReaderMovement[],
-  ): Map<string, StatementReaderMovement[]> {
-    return movements.reduce((groups, movement) => {
-      const key = movement.dueDate.toISOString().slice(0, 10);
+  private groupTransactionsByDay(
+    transactions: ListTransactionsReaderResult[],
+  ): Map<string, ListTransactionsReaderResult[]> {
+    return transactions.reduce((groups, transaction) => {
+      const key = transaction.dueDate.toISOString().slice(0, 10);
       const current = groups.get(key) ?? [];
-      current.push(movement);
+      current.push(transaction);
       groups.set(key, current);
       return groups;
-    }, new Map<string, StatementReaderMovement[]>());
+    }, new Map<string, ListTransactionsReaderResult[]>());
+  }
+
+  private deduplicateTransfersForStatementEntries(
+    movements: ListTransactionsReaderResult[],
+  ): ListTransactionsReaderResult[] {
+    const transferIds = new Set<string>();
+
+    return movements.filter((movement) => {
+      if (!this.isTransfer(movement)) {
+        return true;
+      }
+
+      if (transferIds.has(movement.id)) {
+        return false;
+      }
+
+      transferIds.add(movement.id);
+      return true;
+    });
+  }
+
+  private toStatementEntryMovementType(
+    movement: ListTransactionsReaderResult,
+  ): StatementEntryMovementType {
+    switch (movement.movementType) {
+      case 'INCOME':
+        return 'INCOME';
+      case 'EXPENSE':
+        return 'EXPENSE';
+      default:
+        return 'TRANSFER';
+    }
+  }
+
+  private isTransfer(movement: ListTransactionsReaderResult): boolean {
+    return movement.movementType === 'TRANSFER_IN' || movement.movementType === 'TRANSFER_OUT';
   }
 
   private shouldIncludeInBalance(
-    movement: StatementReaderMovement,
+    movement: ListTransactionsReaderResult,
     day: Date,
     today: Date,
   ): boolean {
@@ -136,9 +232,16 @@ export class StatementHandler implements QueryHandler<StatementQuery, StatementR
     return true;
   }
 
-  private toBalanceImpactDirection(amount: Money): 'IN' | 'OUT' | 'NEUTRAL' {
-    if (amount.amountInCents > 0) return 'IN';
-    if (amount.amountInCents < 0) return 'OUT';
-    return 'NEUTRAL';
+  private toBalanceImpactDirection(
+    transaction: ListTransactionsReaderResult,
+  ): 'IN' | 'OUT' | 'NEUTRAL' {
+    switch (transaction.movementType) {
+      case 'EXPENSE':
+        return 'OUT';
+      case 'INCOME':
+        return 'IN';
+      default:
+        return 'NEUTRAL';
+    }
   }
 }

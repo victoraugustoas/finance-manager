@@ -1,11 +1,11 @@
 import { Money } from '@/shared/ValueObjects';
 
-export type StatementEntryKind = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type StatementBalanceImpactDirection = 'IN' | 'OUT' | 'NEUTRAL';
+export type StatementEntryMovementType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 
 export type StatementEntryResult = {
   id: string;
-  kind: StatementEntryKind;
+  movementType: StatementEntryMovementType;
   name: string;
   amount: Money;
   dueDate: Date;

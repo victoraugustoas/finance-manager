@@ -34,7 +34,7 @@ class StatementEntryResponseDto {
   id!: string;
 
   @ApiProperty({ enum: ['INCOME', 'EXPENSE', 'TRANSFER'] })
-  kind!: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+  movementType!: StatementEntryResult['movementType'];
 
   @ApiProperty({ example: 'Groceries' })
   name!: string;
@@ -84,7 +84,7 @@ class StatementEntryResponseDto {
   static fromDomain(entry: StatementEntryResult): StatementEntryResponseDto {
     const dto = new StatementEntryResponseDto();
     dto.id = entry.id;
-    dto.kind = entry.kind;
+    dto.movementType = entry.movementType;
     dto.name = entry.name;
     dto.amount = entry.amount.amount;
     dto.dueDate = entry.dueDate.toISOString();
