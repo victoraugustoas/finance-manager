@@ -48,36 +48,30 @@ jobs:
           BASE=${{ github.event.pull_request.base.sha }}
           HEAD=${{ github.event.pull_request.head.sha }}
 
-          # Diff package.json between base and head directly via git.
-          # This is more robust than comparing parsed objects because it
-          # captures ANY change in the file (deps, packageManager, engines,
-          # scripts, resolutions, pnpm.overrides, etc.) and works even when
-          # the base SHA was force-pushed away.
-          DIFF_OUT=$(git diff --no-color --unified=0 "$BASE"...$HEAD -- package.json || true)
+          # Capture both files for change detection. Renovate commonly
+          # bumps only the lockfile (when the range in package.json
+          # already accepts the new version), so we must inspect the
+          # lockfile diff as well as the manifest diff.
+          git show $BASE:package.json     > /tmp/package.base.json 2>/dev/null || echo '{}' > /tmp/package.base.json
+          git show $BASE:pnpm-lock.yaml   > /tmp/lockfile.base.yaml 2>/dev/null || echo ''   > /tmp/lockfile.base.yaml
+          cp ./package.json     /tmp/package.head.json
+          cp ./pnpm-lock.yaml   /tmp/lockfile.head.yaml
 
-          if [ -z "$DIFF_OUT" ]; then
-            echo "No changes in package.json between $BASE and $HEAD"
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          git show $BASE:package.json > /tmp/package.base.json 2>/dev/null || echo '{}' > /tmp/package.base.json
-
-          # Build the structured changes JSON from base + head. Cover both
-          # the standard dependency sections AND root-level fields that
-          # package managers also touch (packageManager, engines).
           node - <<'EOF'
           const fs = require('fs');
-          const base = JSON.parse(fs.readFileSync('/tmp/package.base.json', 'utf8'));
-          const head = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+          const basePkg   = JSON.parse(fs.readFileSync('/tmp/package.base.json', 'utf8'));
+          const headPkg   = JSON.parse(fs.readFileSync('/tmp/package.head.json', 'utf8'));
+          const baseLock  = fs.readFileSync('/tmp/lockfile.base.yaml',  'utf8');
+          const headLock  = fs.readFileSync('/tmp/lockfile.head.yaml',  'utf8');
 
           const changes = [];
 
-          // 1) Standard dependency sections
-          const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
-          for (const section of sections) {
-            const b = base[section] || {};
-            const h = head[section] || {};
+          // ---- 1) Direct changes in package.json -----------------------------
+          const depSections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+          for (const section of depSections) {
+            const b = basePkg[section] || {};
+            const h = headPkg[section] || {};
             for (const pkg of Object.keys(h)) {
               if (b[pkg] && h[pkg] !== b[pkg]) {
                 changes.push({
@@ -101,11 +95,10 @@ jobs:
             }
           }
 
-          // 2) Root-level fields that change in dependency upgrades
-          //    (e.g. Renovate bumping the pnpm version bumps packageManager).
+          // Root-level fields (packageManager, engines, pnpm.overrides, etc.)
           for (const field of ['packageManager', 'engines']) {
-            const b = base[field];
-            const h = head[field];
+            const b = basePkg[field];
+            const h = headPkg[field];
             if ((b || null) !== (h || null) && (b || h)) {
               changes.push({
                 pkg: field,
@@ -117,6 +110,88 @@ jobs:
             }
           }
 
+          // ---- 2) Lockfile-only changes (resolved-version bumps) -------------
+          // Parse `importers:` block: each entry has a `specifier` (range
+          // from package.json) and a `version` (resolved by pnpm, possibly
+          // with peer-dep suffix like `11.4.5(peer@1.0.0)(peer2@2.0.0)`).
+          // We compare the bare version (before the first `(`) between
+          // base and head to detect resolved-version bumps that are not
+          // accompanied by a specifier change in package.json.
+          const stripPeerSuffix = (v) => {
+            if (!v) return v;
+            const i = v.indexOf('(');
+            return i === -1 ? v : v.slice(0, i);
+          };
+
+          // Track which direct deps have already been recorded from
+          // package.json (so we don't double-count them).
+          const recordedDirect = new Set(
+            changes
+              .filter((c) => depSections.includes(c.section))
+              .map((c) => `${c.section}::${c.pkg}`)
+          );
+
+          // Match by specifier first, then by name. The specifier
+          // appears on the line right after the package name, and the
+          // version on the line after that.
+          function parseImporters(yamlText) {
+            const lines = yamlText.split('\n');
+            const out = new Map(); // key = "section::name" -> {specifier, version}
+            let inImporters = false;
+            let currentSection = null;
+            let currentName = null;
+            for (const line of lines) {
+              if (/^importers:/.test(line)) { inImporters = true; continue; }
+              if (inImporters && /^[a-zA-Z]/.test(line) && !line.startsWith('  ')) break;
+              if (!inImporters) continue;
+
+              // 2-space indent = importer name (e.g. "  .:"); 4-space = section; 6-space = dep name
+              const secMatch   = line.match(/^    ([a-zA-Z][a-zA-Z0-9_-]*):\s*$/);
+              const nameMatch  = line.match(/^      '?(@?[a-z0-9][^']*)'?:$/);
+              const specMatch  = line.match(/^        specifier:\s*(.+?)\s*$/);
+              const verMatch   = line.match(/^        version:\s*(.+?)\s*$/);
+
+              if (secMatch) { currentSection = secMatch[1]; currentName = null; continue; }
+              if (nameMatch) { currentName = nameMatch[1].replace(/\\'/g, "'"); continue; }
+              if (currentSection && currentName && specMatch) {
+                out.set(`${currentSection}::${currentName}`, { specifier: specMatch[1] });
+              }
+              if (currentSection && currentName && verMatch) {
+                const key = `${currentSection}::${currentName}`;
+                const prev = out.get(key) || {};
+                prev.version = verMatch[1];
+                out.set(key, prev);
+              }
+            }
+            return out;
+          }
+
+          const baseImp = parseImporters(baseLock);
+          const headImp = parseImporters(headLock);
+
+          // Only treat a change as a "lockfile bump" if the bare resolved
+          // version differs and the change isn't already recorded from
+          // package.json. The specifier is informational only.
+          for (const [key, headInfo] of headImp) {
+            const baseInfo = baseImp.get(key);
+            if (!baseInfo || !baseInfo.version || !headInfo.version) continue;
+            if (recordedDirect.has(key)) continue;
+
+            const baseVer = stripPeerSuffix(baseInfo.version);
+            const headVer = stripPeerSuffix(headInfo.version);
+            if (baseVer === headVer) continue;
+
+            const [section, pkg] = key.split('::');
+            changes.push({
+              pkg,
+              from: baseVer,
+              to:   headVer,
+              section,
+              kind: 'lockfile-bump',
+              specifier: headInfo.specifier || null,
+            });
+          }
+
           if (changes.length === 0) {
             console.log('NO_CHANGES');
             process.exit(0);
@@ -124,7 +199,7 @@ jobs:
 
           fs.writeFileSync('/tmp/dep_changes.json', JSON.stringify(changes, null, 2));
           console.log('CHANGES_FOUND');
-          changes.forEach(c => console.log(`  ${c.pkg}: ${c.from || '(new)'} -> ${c.to || '(removed)'} (${c.section})`));
+          changes.forEach(c => console.log(`  ${c.pkg}: ${c.from || '(new)'} -> ${c.to || '(removed)'} (${c.section}, ${c.kind})`));
           EOF
 
           if [ ! -f /tmp/dep_changes.json ]; then
