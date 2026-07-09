@@ -34,7 +34,7 @@ export class PrismaBreakdownCategoriesReader implements BreakdownCategoriesReade
           c."type"::text = ${params.type}
           AND t."entryDate" >= ${params.period.startDate}
           AND t."entryDate" <= ${params.period.endDate}
-          AND t."effectivated" = ${params.effectivated}
+          ${params.effectivated ? Prisma.sql`AND t."effectivated" = true` : Prisma.empty}
           ${categoriesFilter}
         GROUP BY c."id", c."name"
         ORDER BY SUM(t."amount") DESC
