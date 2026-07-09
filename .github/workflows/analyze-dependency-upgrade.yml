@@ -1,0 +1,225 @@
+name: Dependency Upgrade Analysis
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: dep-upgrade-analysis-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  analyze:
+    name: Analyze dependency upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Extract changed packages from PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          git show $BASE:package.json > /tmp/package.base.json 2>/dev/null || echo '{}' > /tmp/package.base.json
+
+          node - <<'EOF'
+          const fs = require('fs');
+          const base = JSON.parse(fs.readFileSync('/tmp/package.base.json', 'utf8'));
+          const head = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+          const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+          const changes = [];
+
+          for (const section of sections) {
+            const b = base[section] || {};
+            const h = head[section] || {};
+            for (const pkg of Object.keys(h)) {
+              if (b[pkg] && h[pkg] !== b[pkg]) {
+                changes.push({
+                  pkg,
+                  from: String(b[pkg]).replace(/^[\^~]/, ''),
+                  to: String(h[pkg]).replace(/^[\^~]/, ''),
+                  section,
+                  kind: 'changed',
+                });
+              } else if (!b[pkg] && h[pkg]) {
+                changes.push({
+                  pkg,
+                  from: null,
+                  to: String(h[pkg]).replace(/^[\^~]/, ''),
+                  section,
+                  kind: 'added',
+                });
+              }
+            }
+            for (const pkg of Object.keys(b)) {
+              if (!h[pkg] && b[pkg]) {
+                changes.push({
+                  pkg,
+                  from: String(b[pkg]).replace(/^[\^~]/, ''),
+                  to: null,
+                  section,
+                  kind: 'removed',
+                });
+              }
+            }
+          }
+
+          if (changes.length === 0) {
+            console.log('NO_CHANGES');
+            process.exit(0);
+          }
+
+          fs.writeFileSync('/tmp/dep_changes.json', JSON.stringify(changes, null, 2));
+          console.log('CHANGES_FOUND');
+          changes.forEach(c => console.log(`  ${c.pkg}: ${c.from || '(new)'} -> ${c.to || '(removed)'} (${c.section})`));
+          EOF
+
+          if [ ! -f /tmp/dep_changes.json ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "changes_json<<EOF"
+              cat /tmp/dep_changes.json
+              echo
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip if no dependency changes
+        if: steps.diff.outputs.has_changes != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '**Dependency Upgrade Analysis**: no dependency changes detected in `package.json` for this PR.',
+            });
+
+      - name: Write prompt for OpenCode
+        if: steps.diff.outputs.has_changes == 'true'
+        id: prompt
+        run: |
+          cat > /tmp/opencode_prompt.txt <<'EOF'
+          A pull request changed the project's `package.json`. Your job is to
+          produce a structured impact report for the changed dependencies.
+
+          PR context (injected by the workflow):
+          - PR number: ${{ github.event.pull_request.number }}
+          - PR title: ${{ github.event.pull_request.title }}
+          - PR URL:   ${{ github.event.pull_request.html_url }}
+          - Repository: ${{ github.repository }}
+
+          Detected dependency changes (JSON array of {pkg, from, to, section, kind}):
+
+          ```json
+          ${{ steps.diff.outputs.changes_json }}
+          ```
+
+          Follow the `analyze-dependency-upgrade` skill exactly:
+
+          1. For each entry in the JSON array, treat it as a single direct
+             dependency upgrade. If `from` is null, it is a new package
+             (no breaking-change/deprecation analysis, only new addition).
+             If `to` is null, it was removed.
+          2. Read `package.json`, `pnpm-lock.yaml`, `.nvmrc`, and any relevant
+             config files (`.prettierrc`, `eslint.config.mjs`, `prisma/schema.prisma`,
+             `tsconfig.json`) on the current branch.
+          3. Use webfetch to fetch the upstream changelog / release notes for
+             the package. Try GitHub releases, CHANGELOG.md, npm, and the
+             vendor docs/blog in that order. Do not invent URLs.
+          4. Extract breaking changes, deprecations, performance notes, new APIs,
+             and migration notes for the range from -> to.
+          5. Grep `src/`, `prisma/`, `test/`, `scripts/` for imports and symbol
+             usage of the package, and cross-reference with the changelog.
+             Record all matches with `file:line` references.
+          6. Build the final Markdown report following the exact structure
+             described in the `analyze-dependency-upgrade` skill (the
+             PR-comment variant with the `<!-- dependency-upgrade-analysis -->`
+             marker at the top, the `Overall risk assessment` table, and the
+             per-package sections).
+          7. Post the report as a PR comment using `gh pr comment` and the
+             HTML marker `<!-- dependency-upgrade-analysis -->` so that
+             subsequent runs can update the same comment in place.
+
+          Post the comment via the GitHub CLI:
+
+          ```bash
+          REPORT=/tmp/dep_report.md
+          {
+            echo '<!-- dependency-upgrade-analysis -->'
+            echo
+            cat "$REPORT"
+          } > /tmp/comment_body.md
+
+          EXISTING=$(gh api \
+            repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            --paginate \
+            --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-analysis -->")) | .id' \
+            | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            gh api \
+              repos/${{ github.repository }}/issues/comments/${EXISTING} \
+              -X PATCH -f body=@/tmp/comment_body.md
+            echo "Updated existing comment #${EXISTING}"
+          else
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body-file /tmp/comment_body.md \
+              --repo ${{ github.repository }}
+            echo "Created new comment"
+          fi
+          ```
+
+          Use the `gh` CLI which is pre-installed on the GitHub Actions runner.
+          Authentication is provided by the `GITHUB_TOKEN` secret.
+
+          Constraints:
+          - Do not commit any file to the repository.
+          - The final report lives only as a PR comment.
+          - The first line of the comment must be `<!-- dependency-upgrade-analysis -->`.
+          - Do not invent URLs or fabricate findings.
+          - Match the project's voice: concise, direct, English, no emojis.
+          EOF
+          echo "prompt_file=/tmp/opencode_prompt.txt" >> "$GITHUB_OUTPUT"
+
+      - name: Run OpenCode dependency analysis
+        if: steps.diff.outputs.has_changes == 'true'
+        uses: anomalyco/opencode/github@latest
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: minimax/MiniMax-M3
+          use_github_token: true
+          prompt: |
+            ${{ steps.prompt.outputs.prompt_file }}
