@@ -155,7 +155,8 @@ jobs:
         run: |
           cat > /tmp/opencode_prompt.txt <<'EOF'
           A pull request changed the project's `package.json`. Your job is to
-          produce a structured impact report for the changed dependencies.
+          produce a structured impact report for the changed dependencies and
+          write it as a single Markdown file.
 
           PR context (injected by the workflow):
           - PR number: ${{ github.event.pull_request.number }}
@@ -189,61 +190,124 @@ jobs:
           6. Build the final Markdown report following the exact structure
              described in the `analyze-dependency-upgrade` skill (the
              PR-comment variant with the `<!-- dependency-upgrade-analysis -->`
-             marker at the top, the `Overall risk assessment` table, and the
-             per-package sections).
-          7. Post the report as a PR comment using `gh pr comment` and the
-             HTML marker `<!-- dependency-upgrade-analysis -->` so that
-             subsequent runs can update the same comment in place.
+             marker as the very first line, the `Overall risk assessment`
+             table, and the per-package sections).
 
-          Post the comment via the GitHub CLI:
-
-          ```bash
-          REPORT=/tmp/dep_report.md
-          {
-            echo '<!-- dependency-upgrade-analysis -->'
-            echo
-            cat "$REPORT"
-          } > /tmp/comment_body.md
-
-          EXISTING=$(gh api \
-            repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-            --paginate \
-            --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-analysis -->")) | .id' \
-            | head -1)
-
-          if [ -n "$EXISTING" ]; then
-            gh api \
-              repos/${{ github.repository }}/issues/comments/${EXISTING} \
-              -X PATCH -f body=@/tmp/comment_body.md
-            echo "Updated existing comment #${EXISTING}"
-          else
-            gh pr comment ${{ github.event.pull_request.number }} \
-              --body-file /tmp/comment_body.md \
-              --repo ${{ github.repository }}
-            echo "Created new comment"
-          fi
-          ```
-
-          Use the `gh` CLI which is pre-installed on the GitHub Actions runner.
-          Authentication is provided by the `GITHUB_TOKEN` secret.
+          Output:
+          - Use the `write` tool to save the report to `/tmp/dep_report.md`
+             so the workflow can post it as a PR comment.
+          - ALSO print the report in your final response (for the run log).
+          - Do NOT attempt to post the comment yourself. The next workflow
+             step handles posting via the `gh` CLI.
+          - Do NOT commit any file to the repository.
 
           Constraints:
-          - Do not commit any file to the repository.
-          - The final report lives only as a PR comment.
-          - The first line of the comment must be `<!-- dependency-upgrade-analysis -->`.
+          - The first line of the report must be `<!-- dependency-upgrade-analysis -->`.
           - Do not invent URLs or fabricate findings.
           - Match the project's voice: concise, direct, English, no emojis.
           EOF
           echo "prompt_file=/tmp/opencode_prompt.txt" >> "$GITHUB_OUTPUT"
 
+      - name: Install opencode CLI
+        if: steps.diff.outputs.has_changes == 'true'
+        id: install
+        shell: bash
+        run: |
+          # Skip if already cached on the runner image
+          if [ -x "$HOME/.opencode/bin/opencode" ]; then
+            echo "opencode already installed at $HOME/.opencode/bin/opencode"
+            echo "version=$( "$HOME/.opencode/bin/opencode" --version 2>/dev/null || echo cached )" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+          echo "version=$( "$HOME/.opencode/bin/opencode" --version 2>/dev/null || echo installed )" >> "$GITHUB_OUTPUT"
+
       - name: Run OpenCode dependency analysis
         if: steps.diff.outputs.has_changes == 'true'
-        uses: anomalyco/opencode/github@latest
+        id: analysis
+        shell: bash
         env:
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: minimax/MiniMax-M3
-          use_github_token: true
-          prompt: |
-            ${{ steps.prompt.outputs.prompt_file }}
+        run: |
+          set -euo pipefail
+          # Ensure opencode is on PATH for this step (the GITHUB_PATH export
+          # from a previous step is not visible in this fresh shell).
+          export PATH="$HOME/.opencode/bin:$PATH"
+
+          # Run opencode in non-interactive mode. We do NOT use
+          # `opencode github run` because that subcommand asserts the
+          # PR author has write permissions on the repo, which fails
+          # for PRs opened by external bots (Renovate, Dependabot).
+          # The agent writes the report to /tmp/dep_report.md via the
+          # `write` tool (instructed in the prompt); we then post the
+          # comment from the next step using `gh`.
+          #
+          # `--auto` auto-approves non-explicitly-denied tool calls so the
+          # agent can use read/grep/webfetch/write without being blocked
+          # by interactive permission prompts in a non-TTY environment.
+          # `--format json` is suppressed: we use the default text stream
+          # and rely on the agent's `write` tool to produce the file.
+          opencode run \
+            --model minimax/MiniMax-M3 \
+            --file /tmp/opencode_prompt.txt \
+            --auto \
+            > /tmp/opencode_stdout.log 2>&1 || {
+              echo "::error::opencode run failed. Last 100 lines of output:"
+              tail -n 100 /tmp/opencode_stdout.log
+              exit 1
+            }
+
+          if [ ! -s /tmp/dep_report.md ]; then
+            echo "::error::opencode did not write /tmp/dep_report.md"
+            echo "Last 100 lines of opencode output:"
+            tail -n 100 /tmp/opencode_stdout.log
+            exit 1
+          fi
+          echo "Report size: $(wc -c < /tmp/dep_report.md) bytes"
+          echo "First line of report: $(head -n 1 /tmp/dep_report.md)"
+
+      - name: Post or update PR comment
+        if: steps.diff.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          {
+            echo '<!-- dependency-upgrade-analysis -->'
+            echo
+            cat /tmp/dep_report.md
+          } > /tmp/comment_body.md
+
+          echo "Comment body size: $(wc -c < /tmp/comment_body.md) bytes"
+
+          # Find existing comment from this workflow (by marker at the very
+          # start of the body). Paginate in case the PR has many comments.
+          EXISTING=$(gh api \
+            "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            --paginate \
+            --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-analysis -->")) | .id' \
+            | head -1 || true)
+
+          if [ -n "${EXISTING:-}" ]; then
+            # Build a JSON payload with the comment body. Use jq to avoid
+            # quoting issues; --input tells gh api to read the body from
+            # a file with the correct Content-Type.
+            jq -Rs --arg b "$(cat /tmp/comment_body.md)" '{body: $b}' \
+              /dev/null > /tmp/comment_payload.json
+            gh api \
+              "repos/${REPO}/issues/comments/${EXISTING}" \
+              -X PATCH \
+              --input /tmp/comment_payload.json
+            echo "Updated existing comment #${EXISTING}"
+          else
+            gh pr comment "$PR_NUMBER" \
+              --body-file /tmp/comment_body.md \
+              --repo "$REPO"
+            echo "Created new comment"
+          fi
