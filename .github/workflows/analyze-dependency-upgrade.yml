@@ -46,48 +46,72 @@ jobs:
           BASE=${{ github.event.pull_request.base.sha }}
           HEAD=${{ github.event.pull_request.head.sha }}
 
+          # Diff package.json between base and head directly via git.
+          # This is more robust than comparing parsed objects because it
+          # captures ANY change in the file (deps, packageManager, engines,
+          # scripts, resolutions, pnpm.overrides, etc.) and works even when
+          # the base SHA was force-pushed away.
+          DIFF_OUT=$(git diff --no-color --unified=0 "$BASE"...$HEAD -- package.json || true)
+
+          if [ -z "$DIFF_OUT" ]; then
+            echo "No changes in package.json between $BASE and $HEAD"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           git show $BASE:package.json > /tmp/package.base.json 2>/dev/null || echo '{}' > /tmp/package.base.json
 
+          # Build the structured changes JSON from base + head. Cover both
+          # the standard dependency sections AND root-level fields that
+          # package managers also touch (packageManager, engines).
           node - <<'EOF'
           const fs = require('fs');
           const base = JSON.parse(fs.readFileSync('/tmp/package.base.json', 'utf8'));
           const head = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
-          const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
           const changes = [];
 
+          // 1) Standard dependency sections
+          const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
           for (const section of sections) {
             const b = base[section] || {};
             const h = head[section] || {};
             for (const pkg of Object.keys(h)) {
               if (b[pkg] && h[pkg] !== b[pkg]) {
                 changes.push({
-                  pkg,
-                  from: String(b[pkg]).replace(/^[\^~]/, ''),
-                  to: String(h[pkg]).replace(/^[\^~]/, ''),
-                  section,
-                  kind: 'changed',
+                  pkg, from: String(b[pkg]).replace(/^[\^~]/, ''),
+                  to: String(h[pkg]).replace(/^[\^~]/, ''), section, kind: 'changed',
                 });
               } else if (!b[pkg] && h[pkg]) {
                 changes.push({
-                  pkg,
-                  from: null,
-                  to: String(h[pkg]).replace(/^[\^~]/, ''),
-                  section,
-                  kind: 'added',
+                  pkg, from: null,
+                  to: String(h[pkg]).replace(/^[\^~]/, ''), section, kind: 'added',
                 });
               }
             }
             for (const pkg of Object.keys(b)) {
               if (!h[pkg] && b[pkg]) {
                 changes.push({
-                  pkg,
-                  from: String(b[pkg]).replace(/^[\^~]/, ''),
-                  to: null,
-                  section,
-                  kind: 'removed',
+                  pkg, from: String(b[pkg]).replace(/^[\^~]/, ''),
+                  to: null, section, kind: 'removed',
                 });
               }
+            }
+          }
+
+          // 2) Root-level fields that change in dependency upgrades
+          //    (e.g. Renovate bumping the pnpm version bumps packageManager).
+          for (const field of ['packageManager', 'engines']) {
+            const b = base[field];
+            const h = head[field];
+            if ((b || null) !== (h || null) && (b || h)) {
+              changes.push({
+                pkg: field,
+                from: b == null ? null : String(b),
+                to:   h == null ? null : String(h),
+                section: 'root',
+                kind: b == null ? 'added' : (h == null ? 'removed' : 'changed'),
+              });
             }
           }
 
