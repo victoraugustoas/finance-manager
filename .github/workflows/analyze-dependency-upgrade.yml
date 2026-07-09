@@ -215,7 +215,7 @@ jobs:
 
       - name: Skip if no dependency changes
         if: steps.diff.outputs.has_changes != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.createComment({
