@@ -32,34 +32,59 @@ jobs:
           persist-credentials: false
 
       - name: Check if analysis already ran for this revision
-        id: daily-cache
-        uses: actions/cache@v6
+        id: already-analyzed
+        uses: actions/github-script@v9
         with:
-          path: /tmp/dep-analysis-marker
-          key: dep-analysis-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          script: |
+            const headSha = context.payload.pull_request.head.sha;
+            const shaMarker = `<!-- dependency-upgrade-analysis:${headSha} -->`;
+            const prNumber = context.issue.number;
 
-      - name: Create cache marker
-        if: steps.daily-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /tmp/dep-analysis-marker
-          echo "${{ github.event.pull_request.head.sha }}" > /tmp/dep-analysis-marker/last-analyzed-sha
+            let page = 1;
+            let found = false;
+            while (true) {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                per_page: 100,
+                page,
+              });
+              if (comments.length === 0) break;
 
-      - name: Skip — already analyzed this revision
-        if: steps.daily-cache.outputs.cache-hit == 'true'
-        run: echo "Analysis already ran for SHA ${{ github.event.pull_request.head.sha }}. Skipping."
+              for (const comment of comments) {
+                if (comment.body.startsWith(shaMarker)) {
+                  found = true;
+                  break;
+                }
+              }
+              if (found || comments.length < 100) break;
+              page++;
+            }
+
+            core.setOutput('skip', String(found));
+            if (found) {
+              core.info(`Analysis already posted for SHA ${headSha}. Skipping.`);
+            } else {
+              core.info(`No analysis found for SHA ${headSha}. Proceeding.`);
+            }
+
+      - name: Skip — already analyzed
+        if: steps.already-analyzed.outputs.skip == 'true'
+        run: echo "Analysis already ran for this commit. Skipping."
 
       - name: Install pnpm
-        if: steps.daily-cache.outputs.cache-hit != 'true'
+        if: steps.already-analyzed.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        if: steps.daily-cache.outputs.cache-hit != 'true'
+        if: steps.already-analyzed.outputs.skip != 'true'
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
 
       - name: Extract changed packages from PR diff
-        if: steps.daily-cache.outputs.cache-hit != 'true'
+        if: steps.already-analyzed.outputs.skip != 'true'
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -234,7 +259,7 @@ jobs:
           fi
 
       - name: Skip if no dependency changes
-        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes != 'true'
+        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes != 'true'
         uses: actions/github-script@v9
         with:
           script: |
@@ -246,7 +271,7 @@ jobs:
             });
 
       - name: Write prompt for OpenCode
-        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
         id: prompt
         run: |
           cat > /tmp/opencode_prompt.txt <<'EOF'
@@ -307,7 +332,7 @@ jobs:
           echo "prompt_file=/tmp/opencode_prompt.txt" >> "$GITHUB_OUTPUT"
 
       - name: Install opencode CLI
-        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
         id: install
         shell: bash
         run: |
@@ -322,7 +347,7 @@ jobs:
           echo "version=$( "$HOME/.opencode/bin/opencode" --version 2>/dev/null || echo installed )" >> "$GITHUB_OUTPUT"
 
       - name: Run OpenCode dependency analysis
-        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
         id: analysis
         shell: bash
         env:
@@ -369,7 +394,7 @@ jobs:
           echo "First line of report: $(head -n 1 /tmp/dep_report.md)"
 
       - name: Post or update PR comment
-        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -377,21 +402,22 @@ jobs:
           set -euo pipefail
           REPO="${{ github.repository }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
           {
-            echo '<!-- dependency-upgrade-analysis -->'
+            echo "<!-- dependency-upgrade-analysis:${HEAD_SHA} -->"
             echo
             cat /tmp/dep_report.md
           } > /tmp/comment_body.md
 
           echo "Comment body size: $(wc -c < /tmp/comment_body.md) bytes"
 
-          # Find existing comment from this workflow (by marker at the very
-          # start of the body). Paginate in case the PR has many comments.
+          # Find existing comment from this workflow (by generic marker prefix
+          # so we can update any prior analysis comment regardless of SHA).
           EXISTING=$(gh api \
             "repos/${REPO}/issues/${PR_NUMBER}/comments" \
             --paginate \
-            --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-analysis -->")) | .id' \
+            --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-analysis")) | .id' \
             | head -1 || true)
 
           if [ -n "${EXISTING:-}" ]; then
@@ -413,7 +439,7 @@ jobs:
           fi
 
       - name: Auto-merge if all packages are low-risk Proceed
-        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
