@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", "mergeConfidence:all-badges"],
   "rebaseWhen": "behind-base-branch",
   "minimumReleaseAge": "14 days"
 }
