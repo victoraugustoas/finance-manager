@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
   pull-requests: write
   issues: write
@@ -31,15 +31,35 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Check if analysis already ran for this revision
+        id: daily-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/dep-analysis-marker
+          key: dep-analysis-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+
+      - name: Create cache marker
+        if: steps.daily-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/dep-analysis-marker
+          echo "${{ github.event.pull_request.head.sha }}" > /tmp/dep-analysis-marker/last-analyzed-sha
+
+      - name: Skip — already analyzed this revision
+        if: steps.daily-cache.outputs.cache-hit == 'true'
+        run: echo "Analysis already ran for SHA ${{ github.event.pull_request.head.sha }}. Skipping."
+
       - name: Install pnpm
+        if: steps.daily-cache.outputs.cache-hit != 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
+        if: steps.daily-cache.outputs.cache-hit != 'true'
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
 
       - name: Extract changed packages from PR diff
+        if: steps.daily-cache.outputs.cache-hit != 'true'
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -214,7 +234,7 @@ jobs:
           fi
 
       - name: Skip if no dependency changes
-        if: steps.diff.outputs.has_changes != 'true'
+        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes != 'true'
         uses: actions/github-script@v9
         with:
           script: |
@@ -226,7 +246,7 @@ jobs:
             });
 
       - name: Write prompt for OpenCode
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
         id: prompt
         run: |
           cat > /tmp/opencode_prompt.txt <<'EOF'
@@ -287,7 +307,7 @@ jobs:
           echo "prompt_file=/tmp/opencode_prompt.txt" >> "$GITHUB_OUTPUT"
 
       - name: Install opencode CLI
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
         id: install
         shell: bash
         run: |
@@ -302,7 +322,7 @@ jobs:
           echo "version=$( "$HOME/.opencode/bin/opencode" --version 2>/dev/null || echo installed )" >> "$GITHUB_OUTPUT"
 
       - name: Run OpenCode dependency analysis
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
         id: analysis
         shell: bash
         env:
@@ -349,7 +369,7 @@ jobs:
           echo "First line of report: $(head -n 1 /tmp/dep_report.md)"
 
       - name: Post or update PR comment
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -390,4 +410,47 @@ jobs:
               --body-file /tmp/comment_body.md \
               --repo "$REPO"
             echo "Created new comment"
+          fi
+
+      - name: Auto-merge if all packages are low-risk Proceed
+        if: steps.daily-cache.outputs.cache-hit != 'true' && steps.diff.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          RISK_TABLE=$(sed -n '/^## Overall risk assessment/,/^---$/p' /tmp/dep_report.md \
+            | grep '^|' | tail -n +3)
+
+          if [ -z "$RISK_TABLE" ]; then
+            echo "Could not extract risk assessment table. Skipping auto-merge."
+            exit 0
+          fi
+
+          ALL_PROCEED=true
+          while IFS='|' read -r _ _ _ _ risk action _; do
+            risk=$(echo "$risk" | xargs)
+            action=$(echo "$action" | xargs)
+            if [ "$risk" != "Low" ] || [ "$action" != "Proceed" ]; then
+              ALL_PROCEED=false
+              break
+            fi
+          done <<< "$RISK_TABLE"
+
+          if [ "$ALL_PROCEED" = "true" ]; then
+            echo "All packages are Low risk / Proceed. Auto-approving and merging."
+            gh pr review "$PR_NUMBER" \
+              --approve \
+              --body "Auto-approved: all dependency upgrades assessed as Low risk / Proceed." \
+              --repo "$REPO"
+            gh pr merge "$PR_NUMBER" \
+              --squash \
+              --delete-branch \
+              --repo "$REPO"
+            echo "PR #${PR_NUMBER} merged and branch deleted."
+          else
+            echo "Manual review required — not all packages are Low / Proceed."
           fi
