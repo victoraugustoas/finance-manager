@@ -418,7 +418,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
           REPO="${{ github.repository }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
 
@@ -441,16 +440,29 @@ jobs:
           done <<< "$RISK_TABLE"
 
           if [ "$ALL_PROCEED" = "true" ]; then
-            echo "All packages are Low risk / Proceed. Auto-approving and merging."
-            gh pr review "$PR_NUMBER" \
-              --approve \
-              --body "Auto-approved: all dependency upgrades assessed as Low risk / Proceed." \
+            echo "All packages are Low risk / Proceed. Attempting merge."
+
+            # GITHUB_TOKEN cannot approve PRs (GitHub restriction to
+            # prevent self-approval loops). Post a comment documenting
+            # the assessment instead.
+            gh pr comment "$PR_NUMBER" \
+              --body "Auto-analysis: all dependency upgrades assessed as Low risk / Proceed. Attempting merge." \
               --repo "$REPO"
-            gh pr merge "$PR_NUMBER" \
+
+            # Attempt merge — may fail if branch protection requires
+            # approvals that GITHUB_TOKEN cannot provide. In that case,
+            # leave a comment explaining the situation.
+            if gh pr merge "$PR_NUMBER" \
               --squash \
               --delete-branch \
-              --repo "$REPO"
-            echo "PR #${PR_NUMBER} merged and branch deleted."
+              --repo "$REPO"; then
+              echo "PR #${PR_NUMBER} merged and branch deleted."
+            else
+              echo "::warning::Auto-merge failed — branch protection may require manual approval."
+              gh pr comment "$PR_NUMBER" \
+                --body "**Auto-analysis passed** but merge failed. Branch protection likely requires manual approval." \
+                --repo "$REPO" || true
+            fi
           else
             echo "Manual review required — not all packages are Low / Proceed."
           fi
