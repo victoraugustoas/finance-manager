@@ -329,6 +329,7 @@ jobs:
           # agent can use read/grep/webfetch/write without being blocked
           # by interactive permission prompts in a non-TTY environment.
           opencode run \
+            --model opencode/big-pickle \
             --file /tmp/opencode_prompt.txt \
             --auto \
             "Read the attached prompt file and follow its instructions to produce a dependency upgrade analysis report. Write the report to /tmp/dep_report.md using the write tool." \
