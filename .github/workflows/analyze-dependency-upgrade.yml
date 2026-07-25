@@ -306,7 +306,6 @@ jobs:
         id: analysis
         shell: bash
         env:
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
@@ -330,7 +329,6 @@ jobs:
           # agent can use read/grep/webfetch/write without being blocked
           # by interactive permission prompts in a non-TTY environment.
           opencode run \
-            --model minimax-coding-plan/MiniMax-M3 \
             --file /tmp/opencode_prompt.txt \
             --auto \
             "Read the attached prompt file and follow its instructions to produce a dependency upgrade analysis report. Write the report to /tmp/dep_report.md using the write tool." \
