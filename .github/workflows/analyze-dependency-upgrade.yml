@@ -33,7 +33,7 @@ jobs:
 
       - name: Check if analysis already ran for this revision
         id: daily-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /tmp/dep-analysis-marker
           key: dep-analysis-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
