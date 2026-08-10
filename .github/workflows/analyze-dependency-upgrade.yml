@@ -444,8 +444,41 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           REPO="${{ github.repository }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          RUN_ID="${GITHUB_RUN_ID:-}"
+
+          # Keep a single decision comment per PR, keyed by a marker that
+          # never collides with the analysis report comment (which starts with
+          # the "dependency-upgrade-analysis" prefix and is managed by the
+          # "Post or update PR comment" step). Updating in place avoids
+          # spamming the same comment on every workflow run.
+          post_or_update_decision() {
+            local body_file="$1"
+            local existing
+            existing=$(gh api \
+              "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+              --paginate \
+              --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-decision -->")) | .id' \
+              | head -1 || true)
+
+            if [ -n "${existing}" ]; then
+              jq -Rs --arg b "$(cat "$body_file")" '{body: $b}' \
+                /dev/null > /tmp/am_payload.json
+              gh api \
+                "repos/${REPO}/issues/comments/${existing}" \
+                -X PATCH \
+                --input /tmp/am_payload.json > /dev/null
+              echo "Updated decision comment #${existing}"
+            else
+              gh pr comment "$PR_NUMBER" \
+                --body-file "$body_file" \
+                --repo "$REPO" > /dev/null
+              echo "Created decision comment"
+            fi
+          }
 
           RISK_TABLE=$(sed -n '/^## Overall risk assessment/,/^---$/p' /tmp/dep_report.md \
             | grep '^|' | tail -n +3)
@@ -465,66 +498,111 @@ jobs:
             fi
           done <<< "$RISK_TABLE"
 
-          if [ "$ALL_PROCEED" = "true" ]; then
-            echo "All packages are Low risk / Proceed. Checking CI status..."
+          if [ "$ALL_PROCEED" != "true" ]; then
+            echo "Manual review required — not all packages are Low / Proceed."
+            exit 0
+          fi
 
-            HEAD_SHA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid --jq '.headRefOid')
+          echo "All packages are Low risk / Proceed. Checking CI status..."
 
-            CHECKS=$(gh api \
-              "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
-              --jq '.check_runs | map({name: .name, status: .status, conclusion: .conclusion})')
+          # Ignore this workflow's own check runs when evaluating CI status.
+          # GitHub Actions check runs carry the workflow run id in their
+          # `external_id`, and this workflow's check is still in_progress while
+          # this step runs. Counting it made this step defer the merge (and
+          # re-post the same comment) on every run.
+          CHECKS=$(gh api \
+            "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
+            --jq "[.check_runs[] | select((.external_id | tostring) != \"${RUN_ID}\") | {name: .name, status: .status, conclusion: .conclusion}]")
 
-            echo "Check runs for ${HEAD_SHA}:"
-            echo "$CHECKS" | jq -r '.[] | "  \(.name): \(.status) (\(.conclusion // "pending"))"'
+          echo "Check runs for ${HEAD_SHA} (excluding current workflow run ${RUN_ID}):"
+          echo "$CHECKS" | jq -r '.[] | "  \(.name): \(.status) (\(.conclusion // "pending"))"'
 
-            ALL_CHECKS_PASSED=true
-            while IFS= read -r line; do
-              status=$(echo "$line" | jq -r '.status')
-              conclusion=$(echo "$line" | jq -r '.conclusion // "pending"')
-              name=$(echo "$line" | jq -r '.name')
-              if [ "$status" != "completed" ]; then
-                echo "Check '${name}' is still ${status}"
-                ALL_CHECKS_PASSED=false
-                break
-              fi
-              if [ "$conclusion" != "success" ] && [ "$conclusion" != "neutral" ] && [ "$conclusion" != "skipped" ]; then
-                echo "Check '${name}' concluded: ${conclusion}"
-                ALL_CHECKS_PASSED=false
-                break
-              fi
-            done < <(echo "$CHECKS" | jq -c '.[]')
+          ALL_CHECKS_PASSED=true
+          while IFS= read -r line; do
+            status=$(echo "$line" | jq -r '.status')
+            conclusion=$(echo "$line" | jq -r '.conclusion // "pending"')
+            name=$(echo "$line" | jq -r '.name')
+            if [ "$status" != "completed" ]; then
+              echo "Check '${name}' is still ${status}"
+              ALL_CHECKS_PASSED=false
+              break
+            fi
+            if [ "$conclusion" != "success" ] && [ "$conclusion" != "neutral" ] && [ "$conclusion" != "skipped" ]; then
+              echo "Check '${name}' concluded: ${conclusion}"
+              ALL_CHECKS_PASSED=false
+              break
+            fi
+          done < <(echo "$CHECKS" | jq -c '.[]')
 
-            if [ "$ALL_CHECKS_PASSED" != "true" ]; then
-              echo "::warning::Not all CI checks passed. Skipping auto-merge."
-              gh pr comment "$PR_NUMBER" \
-                --body "**Auto-analysis passed** (all Low risk / Proceed) but CI checks are not all passing. Merge deferred until checks pass." \
-                --repo "$REPO" || true
+          if [ "$ALL_CHECKS_PASSED" != "true" ]; then
+            echo "::warning::Not all CI checks passed. Deferring auto-merge."
+
+            # Other CI checks are still running. Enable GitHub's native
+            # auto-merge instead of only commenting, so GitHub merges once the
+            # required checks pass — including this workflow's own check, which
+            # completes when this run ends — without needing a re-run.
+            if gh pr merge "$PR_NUMBER" \
+              --squash \
+              --delete-branch \
+              --auto \
+              --repo "$REPO"; then
+              echo "Auto-merge enabled for PR #${PR_NUMBER}; GitHub will merge once CI passes."
+              cat > /tmp/am_decision.md <<'EOF'
+          <!-- dependency-upgrade-decision -->
+          **Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. CI checks still running — auto-merge enabled, merging once they pass.
+          EOF
+              post_or_update_decision /tmp/am_decision.md || true
               exit 0
             fi
 
-            echo "All CI checks passed. Attempting merge."
+            echo "::warning::Native auto-merge unavailable (may be disabled in repository settings)."
 
-            # GITHUB_TOKEN cannot approve PRs (GitHub restriction to
-            # prevent self-approval loops). Post a comment documenting
-            # the assessment instead.
-            gh pr comment "$PR_NUMBER" \
-              --body "Auto-analysis: all dependency upgrades assessed as Low risk / Proceed. All CI checks passed. Merging." \
-              --repo "$REPO"
-
-            # Attempt merge — may fail if branch protection requires
-            # approvals that GITHUB_TOKEN cannot provide. In that case,
-            # leave a comment explaining the situation.
             if gh pr merge "$PR_NUMBER" \
               --squash \
               --delete-branch \
               --repo "$REPO"; then
               echo "PR #${PR_NUMBER} merged and branch deleted."
+              cat > /tmp/am_decision.md <<'EOF'
+          <!-- dependency-upgrade-decision -->
+          **Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. Merged.
+          EOF
             else
-              echo "::warning::Auto-merge failed — branch protection may require manual approval."
-              gh pr comment "$PR_NUMBER" \
-                --body "**Auto-analysis passed** but merge failed. Branch protection likely requires manual approval." \
-                --repo "$REPO" || true
+              echo "::warning::Merge deferred until CI checks pass."
+              cat > /tmp/am_decision.md <<'EOF'
+          <!-- dependency-upgrade-decision -->
+          **Auto-analysis passed** (all Low risk / Proceed) but CI checks are not all passing. Merge deferred until checks pass.
+          EOF
             fi
+            post_or_update_decision /tmp/am_decision.md || true
+            exit 0
+          fi
+
+          echo "All CI checks passed. Attempting merge."
+
+          # Prefer native auto-merge so GitHub waits for this workflow's own
+          # check (still in_progress here) before merging; fall back to a
+          # direct merge if auto-merge is disabled in repository settings.
+          if gh pr merge "$PR_NUMBER" \
+            --squash \
+            --delete-branch \
+            --auto \
+            --repo "$REPO" 2>/dev/null; then
+            echo "PR #${PR_NUMBER} auto-merge requested."
+            cat > /tmp/am_decision.md <<'EOF'
+          <!-- dependency-upgrade-decision -->
+          **Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. All CI checks passed. Merging.
+          EOF
+            post_or_update_decision /tmp/am_decision.md || true
+          elif gh pr merge "$PR_NUMBER" \
+            --squash \
+            --delete-branch \
+            --repo "$REPO"; then
+            echo "PR #${PR_NUMBER} merged and branch deleted."
           else
-            echo "Manual review required — not all packages are Low / Proceed."
+            echo "::warning::Auto-merge failed — branch protection may require manual approval."
+            cat > /tmp/am_decision.md <<'EOF'
+          <!-- dependency-upgrade-decision -->
+          **Auto-analysis passed** but merge failed. Branch protection likely requires manual approval.
+          EOF
+            post_or_update_decision /tmp/am_decision.md || true
           fi
