@@ -31,235 +31,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check if analysis already ran for this revision
-        id: already-analyzed
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const headSha = context.payload.pull_request.head.sha;
-            const shaMarker = `<!-- dependency-upgrade-analysis:${headSha} -->`;
-            const prNumber = context.issue.number;
-
-            let page = 1;
-            let found = false;
-            while (true) {
-              const { data: comments } = await github.rest.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                per_page: 100,
-                page,
-              });
-              if (comments.length === 0) break;
-
-              for (const comment of comments) {
-                if (comment.body.startsWith(shaMarker)) {
-                  found = true;
-                  break;
-                }
-              }
-              if (found || comments.length < 100) break;
-              page++;
-            }
-
-            core.setOutput('skip', String(found));
-            if (found) {
-              core.info(`Analysis already posted for SHA ${headSha}. Skipping.`);
-            } else {
-              core.info(`No analysis found for SHA ${headSha}. Proceeding.`);
-            }
-
-      - name: Skip — already analyzed
-        if: steps.already-analyzed.outputs.skip == 'true'
-        run: echo "Analysis already ran for this commit. Skipping."
-
       - name: Install pnpm
-        if: steps.already-analyzed.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        if: steps.already-analyzed.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
 
       - name: Extract changed packages from PR diff
-        if: steps.already-analyzed.outputs.skip != 'true'
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          HEAD=${{ github.event.pull_request.head.sha }}
-
-          # Capture both files for change detection. Renovate commonly
-          # bumps only the lockfile (when the range in package.json
-          # already accepts the new version), so we must inspect the
-          # lockfile diff as well as the manifest diff.
-          git show $BASE:package.json     > /tmp/package.base.json 2>/dev/null || echo '{}' > /tmp/package.base.json
-          git show $BASE:pnpm-lock.yaml   > /tmp/lockfile.base.yaml 2>/dev/null || echo ''   > /tmp/lockfile.base.yaml
-          cp ./package.json     /tmp/package.head.json
-          cp ./pnpm-lock.yaml   /tmp/lockfile.head.yaml
-
-          node - <<'EOF'
-          const fs = require('fs');
-
-          const basePkg   = JSON.parse(fs.readFileSync('/tmp/package.base.json', 'utf8'));
-          const headPkg   = JSON.parse(fs.readFileSync('/tmp/package.head.json', 'utf8'));
-          const baseLock  = fs.readFileSync('/tmp/lockfile.base.yaml',  'utf8');
-          const headLock  = fs.readFileSync('/tmp/lockfile.head.yaml',  'utf8');
-
-          const changes = [];
-
-          // ---- 1) Direct changes in package.json -----------------------------
-          const depSections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
-          for (const section of depSections) {
-            const b = basePkg[section] || {};
-            const h = headPkg[section] || {};
-            for (const pkg of Object.keys(h)) {
-              if (b[pkg] && h[pkg] !== b[pkg]) {
-                changes.push({
-                  pkg, from: String(b[pkg]).replace(/^[\^~]/, ''),
-                  to: String(h[pkg]).replace(/^[\^~]/, ''), section, kind: 'changed',
-                });
-              } else if (!b[pkg] && h[pkg]) {
-                changes.push({
-                  pkg, from: null,
-                  to: String(h[pkg]).replace(/^[\^~]/, ''), section, kind: 'added',
-                });
-              }
-            }
-            for (const pkg of Object.keys(b)) {
-              if (!h[pkg] && b[pkg]) {
-                changes.push({
-                  pkg, from: String(b[pkg]).replace(/^[\^~]/, ''),
-                  to: null, section, kind: 'removed',
-                });
-              }
-            }
-          }
-
-          // Root-level fields (packageManager, engines, pnpm.overrides, etc.)
-          for (const field of ['packageManager', 'engines']) {
-            const b = basePkg[field];
-            const h = headPkg[field];
-            if ((b || null) !== (h || null) && (b || h)) {
-              changes.push({
-                pkg: field,
-                from: b == null ? null : String(b),
-                to:   h == null ? null : String(h),
-                section: 'root',
-                kind: b == null ? 'added' : (h == null ? 'removed' : 'changed'),
-              });
-            }
-          }
-
-          // ---- 2) Lockfile-only changes (resolved-version bumps) -------------
-          // Parse `importers:` block: each entry has a `specifier` (range
-          // from package.json) and a `version` (resolved by pnpm, possibly
-          // with peer-dep suffix like `11.4.5(peer@1.0.0)(peer2@2.0.0)`).
-          // We compare the bare version (before the first `(`) between
-          // base and head to detect resolved-version bumps that are not
-          // accompanied by a specifier change in package.json.
-          const stripPeerSuffix = (v) => {
-            if (!v) return v;
-            const i = v.indexOf('(');
-            return i === -1 ? v : v.slice(0, i);
-          };
-
-          // Track which direct deps have already been recorded from
-          // package.json (so we don't double-count them).
-          const recordedDirect = new Set(
-            changes
-              .filter((c) => depSections.includes(c.section))
-              .map((c) => `${c.section}::${c.pkg}`)
-          );
-
-          // Match by specifier first, then by name. The specifier
-          // appears on the line right after the package name, and the
-          // version on the line after that.
-          function parseImporters(yamlText) {
-            const lines = yamlText.split('\n');
-            const out = new Map(); // key = "section::name" -> {specifier, version}
-            let inImporters = false;
-            let currentSection = null;
-            let currentName = null;
-            for (const line of lines) {
-              if (/^importers:/.test(line)) { inImporters = true; continue; }
-              if (inImporters && /^[a-zA-Z]/.test(line) && !line.startsWith('  ')) break;
-              if (!inImporters) continue;
-
-              // 2-space indent = importer name (e.g. "  .:"); 4-space = section; 6-space = dep name
-              const secMatch   = line.match(/^    ([a-zA-Z][a-zA-Z0-9_-]*):\s*$/);
-              const nameMatch  = line.match(/^      '?(@?[a-z0-9][^']*)'?:$/);
-              const specMatch  = line.match(/^        specifier:\s*(.+?)\s*$/);
-              const verMatch   = line.match(/^        version:\s*(.+?)\s*$/);
-
-              if (secMatch) { currentSection = secMatch[1]; currentName = null; continue; }
-              if (nameMatch) { currentName = nameMatch[1].replace(/\\'/g, "'"); continue; }
-              if (currentSection && currentName && specMatch) {
-                out.set(`${currentSection}::${currentName}`, { specifier: specMatch[1] });
-              }
-              if (currentSection && currentName && verMatch) {
-                const key = `${currentSection}::${currentName}`;
-                const prev = out.get(key) || {};
-                prev.version = verMatch[1];
-                out.set(key, prev);
-              }
-            }
-            return out;
-          }
-
-          const baseImp = parseImporters(baseLock);
-          const headImp = parseImporters(headLock);
-
-          // Only treat a change as a "lockfile bump" if the bare resolved
-          // version differs and the change isn't already recorded from
-          // package.json. The specifier is informational only.
-          for (const [key, headInfo] of headImp) {
-            const baseInfo = baseImp.get(key);
-            if (!baseInfo || !baseInfo.version || !headInfo.version) continue;
-            if (recordedDirect.has(key)) continue;
-
-            const baseVer = stripPeerSuffix(baseInfo.version);
-            const headVer = stripPeerSuffix(headInfo.version);
-            if (baseVer === headVer) continue;
-
-            const [section, pkg] = key.split('::');
-            changes.push({
-              pkg,
-              from: baseVer,
-              to:   headVer,
-              section,
-              kind: 'lockfile-bump',
-              specifier: headInfo.specifier || null,
-            });
-          }
-
-          if (changes.length === 0) {
-            console.log('NO_CHANGES');
-            process.exit(0);
-          }
-
-          fs.writeFileSync('/tmp/dep_changes.json', JSON.stringify(changes, null, 2));
-          console.log('CHANGES_FOUND');
-          changes.forEach(c => console.log(`  ${c.pkg}: ${c.from || '(new)'} -> ${c.to || '(removed)'} (${c.section}, ${c.kind})`));
-          EOF
-
-          if [ ! -f /tmp/dep_changes.json ]; then
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            {
-              echo "changes_json<<EOF"
-              cat /tmp/dep_changes.json
-              echo
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          fi
+          ./scripts/extract-changed-packages.sh \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}"
 
       - name: Skip if no dependency changes
-        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes != 'true'
+        if: steps.diff.outputs.has_changes == 'false'
         uses: actions/github-script@v9
         with:
           script: |
@@ -271,7 +61,7 @@ jobs:
             });
 
       - name: Write prompt for OpenCode
-        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true'
         id: prompt
         run: |
           cat > /tmp/opencode_prompt.txt <<'EOF'
@@ -332,7 +122,7 @@ jobs:
           echo "prompt_file=/tmp/opencode_prompt.txt" >> "$GITHUB_OUTPUT"
 
       - name: Install opencode CLI
-        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true'
         id: install
         shell: bash
         run: |
@@ -347,7 +137,7 @@ jobs:
           echo "version=$( "$HOME/.opencode/bin/opencode" --version 2>/dev/null || echo installed )" >> "$GITHUB_OUTPUT"
 
       - name: Run OpenCode dependency analysis
-        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true'
         id: analysis
         shell: bash
         env:
@@ -394,7 +184,7 @@ jobs:
           echo "First line of report: $(head -n 1 /tmp/dep_report.md)"
 
       - name: Post or update PR comment
-        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -439,7 +229,7 @@ jobs:
           fi
 
       - name: Auto-merge if all packages are low-risk Proceed
-        if: steps.already-analyzed.outputs.skip != 'true' && steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
