@@ -10,6 +10,9 @@ interface PnpmListResult {
   devDependencies?: Record<string, PnpmDependencyItem>;
   peerDependencies?: Record<string, PnpmDependencyItem>;
   optionalDependencies?: Record<string, PnpmDependencyItem>;
+}
+
+interface PackageJson {
   packageManager?: string;
   engines?: Record<string, string> | string;
   [key: string]: unknown;
@@ -28,6 +31,13 @@ const basePkgList: PnpmListResult =
   (JSON.parse(fs.readFileSync('/tmp/base_list.json', 'utf8')) as PnpmListResult[])[0] || {};
 const headPkgList: PnpmListResult =
   (JSON.parse(fs.readFileSync('/tmp/head_list.json', 'utf8')) as PnpmListResult[])[0] || {};
+
+const basePkg: PackageJson = fs.existsSync('/tmp/base_dir/package.json')
+  ? JSON.parse(fs.readFileSync('/tmp/base_dir/package.json', 'utf8'))
+  : {};
+const headPkg: PackageJson = fs.existsSync('/tmp/head_dir/package.json')
+  ? JSON.parse(fs.readFileSync('/tmp/head_dir/package.json', 'utf8'))
+  : {};
 
 const changes: DependencyChange[] = [];
 
@@ -82,13 +92,13 @@ for (const section of depSections) {
 }
 
 for (const field of ['packageManager', 'engines'] as const) {
-  const b = basePkgList[field];
-  const h = headPkgList[field];
+  const b = basePkg[field];
+  const h = headPkg[field];
   if ((b || null) !== (h || null) && (b || h)) {
     changes.push({
       pkg: field,
-      from: b == null ? null : String(b),
-      to: h == null ? null : String(h),
+      from: b == null ? null : typeof b === 'object' ? JSON.stringify(b) : String(b),
+      to: h == null ? null : typeof h === 'object' ? JSON.stringify(h) : String(h),
       section: 'root',
       kind: b == null ? 'added' : h == null ? 'removed' : 'changed',
     });

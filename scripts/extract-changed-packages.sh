@@ -16,8 +16,10 @@ git show "$BASE:pnpm-lock.yaml"   > /tmp/base_dir/pnpm-lock.yaml 2>/dev/null || 
 git show "$HEAD:package.json"     > /tmp/head_dir/package.json 2>/dev/null || cp ./package.json /tmp/head_dir/package.json
 git show "$HEAD:pnpm-lock.yaml"   > /tmp/head_dir/pnpm-lock.yaml 2>/dev/null || cp ./pnpm-lock.yaml /tmp/head_dir/pnpm-lock.yaml
 
-pnpm list --json --lockfile-only --dir /tmp/base_dir > /tmp/base_list.json 2>/dev/null || echo '[{}]' > /tmp/base_list.json
-pnpm list --json --lockfile-only --dir /tmp/head_dir > /tmp/head_list.json 2>/dev/null || echo '[{}]' > /tmp/head_list.json
+# COREPACK_ENABLE_STRICT=0 and --config.pm-on-fail=ignore bypass Corepack version check errors
+# when comparing packageManager field changes across base and head directories.
+COREPACK_ENABLE_STRICT=0 pnpm list --json --lockfile-only --config.pm-on-fail=ignore --dir /tmp/base_dir > /tmp/base_list.json 2>/dev/null || echo '[{}]' > /tmp/base_list.json
+COREPACK_ENABLE_STRICT=0 pnpm list --json --lockfile-only --config.pm-on-fail=ignore --dir /tmp/head_dir > /tmp/head_list.json 2>/dev/null || echo '[{}]' > /tmp/head_list.json
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pnpm exec ts-node "$SCRIPT_DIR/extract-changed-packages.ts"
