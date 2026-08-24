@@ -3,11 +3,9 @@ set -euo pipefail
 
 REPO="${1:-${REPO:-}}"
 PR_NUMBER="${2:-${PR_NUMBER:-}}"
-HEAD_SHA="${3:-${HEAD_SHA:-}}"
-RUN_ID="${4:-${RUN_ID:-${GITHUB_RUN_ID:-}}}"
 
-if [ -z "$REPO" ] || [ -z "$PR_NUMBER" ] || [ -z "$HEAD_SHA" ]; then
-  echo "Usage: auto-merge.sh <REPO> <PR_NUMBER> <HEAD_SHA> [RUN_ID]"
+if [ -z "$REPO" ] || [ -z "$PR_NUMBER" ]; then
+  echo "Usage: auto-merge.sh <REPO> <PR_NUMBER>"
   exit 1
 fi
 
@@ -43,94 +41,24 @@ if [ "$CAN_AUTO_MERGE" != "true" ]; then
   exit 0
 fi
 
-echo "All packages are Low risk / Proceed. Checking CI status..."
-
-CHECKS=$(gh api \
-  "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
-  --jq "[.check_runs[] | select((.external_id | tostring) != \"${RUN_ID}\") | {name: .name, status: .status, conclusion: .conclusion}]")
-
-echo "Check runs for ${HEAD_SHA} (excluding current workflow run ${RUN_ID}):"
-echo "$CHECKS" | jq -r '.[] | "  \(.name): \(.status) (\(.conclusion // "pending"))"'
-
-ALL_CHECKS_PASSED=true
-while IFS= read -r line; do
-  status=$(echo "$line" | jq -r '.status')
-  conclusion=$(echo "$line" | jq -r '.conclusion // "pending"')
-  name=$(echo "$line" | jq -r '.name')
-  if [ "$status" != "completed" ]; then
-    echo "Check '${name}' is still ${status}"
-    ALL_CHECKS_PASSED=false
-    break
-  fi
-  if [ "$conclusion" != "success" ] && [ "$conclusion" != "neutral" ] && [ "$conclusion" != "skipped" ]; then
-    echo "Check '${name}' concluded: ${conclusion}"
-    ALL_CHECKS_PASSED=false
-    break
-  fi
-done < <(echo "$CHECKS" | jq -c '.[]')
-
-if [ "$ALL_CHECKS_PASSED" != "true" ]; then
-  echo "::warning::Not all CI checks passed. Deferring auto-merge."
-
-  if gh pr merge "$PR_NUMBER" \
-    --squash \
-    --delete-branch \
-    --auto \
-    --repo "$REPO"; then
-    echo "Auto-merge enabled for PR #${PR_NUMBER}; GitHub will merge once CI passes."
-    cat > /tmp/am_decision.md <<'EOF'
-<!-- dependency-upgrade-decision -->
-**Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. CI checks still running — auto-merge enabled, merging once they pass.
-EOF
-    post_or_update_decision /tmp/am_decision.md || true
-    exit 0
-  fi
-
-  echo "::warning::Native auto-merge unavailable (may be disabled in repository settings)."
-
-  if gh pr merge "$PR_NUMBER" \
-    --squash \
-    --delete-branch \
-    --repo "$REPO"; then
-    echo "PR #${PR_NUMBER} merged and branch deleted."
-    cat > /tmp/am_decision.md <<'EOF'
-<!-- dependency-upgrade-decision -->
-**Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. Merged.
-EOF
-  else
-    echo "::warning::Merge deferred until CI checks pass."
-    cat > /tmp/am_decision.md <<'EOF'
-<!-- dependency-upgrade-decision -->
-**Auto-analysis passed** (all Low risk / Proceed) but CI checks are not all passing. Merge deferred until checks pass.
-EOF
-  fi
-  post_or_update_decision /tmp/am_decision.md || true
-  exit 0
-fi
-
-echo "All CI checks passed. Attempting merge."
+echo "All packages are Low risk / Proceed. Enabling native auto-merge..."
 
 if gh pr merge "$PR_NUMBER" \
   --squash \
   --delete-branch \
   --auto \
   --repo "$REPO" 2>/dev/null; then
-  echo "PR #${PR_NUMBER} auto-merge requested."
+  echo "Auto-merge enabled for PR #${PR_NUMBER}; GitHub will merge once CI checks pass."
   cat > /tmp/am_decision.md <<'EOF'
 <!-- dependency-upgrade-decision -->
-**Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. All CI checks passed. Merging.
+**Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. Auto-merge enabled; GitHub will merge once CI checks pass.
 EOF
   post_or_update_decision /tmp/am_decision.md || true
-elif gh pr merge "$PR_NUMBER" \
-  --squash \
-  --delete-branch \
-  --repo "$REPO"; then
-  echo "PR #${PR_NUMBER} merged and branch deleted."
 else
-  echo "::warning::Auto-merge failed — branch protection may require manual approval."
+  echo "::warning::Auto-merge failed — branch protection or repo settings may require manual approval."
   cat > /tmp/am_decision.md <<'EOF'
 <!-- dependency-upgrade-decision -->
-**Auto-analysis passed** but merge failed. Branch protection likely requires manual approval.
+**Auto-analysis passed** (all Low risk / Proceed) but native auto-merge could not be enabled. Manual review/merge required.
 EOF
   post_or_update_decision /tmp/am_decision.md || true
 fi
