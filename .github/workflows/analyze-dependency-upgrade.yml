@@ -65,59 +65,24 @@ jobs:
         id: prompt
         run: |
           cat > /tmp/opencode_prompt.txt <<'EOF'
-          A pull request changed the project's `package.json`. Your job is to
-          produce a structured impact report for the changed dependencies and
-          write it as a single Markdown file.
+          Execute the `analyze-dependency-upgrade` skill for the following PR dependency changes.
 
-          PR context (injected by the workflow):
+          PR Context:
           - PR number: ${{ github.event.pull_request.number }}
           - PR title: ${{ github.event.pull_request.title }}
           - PR URL:   ${{ github.event.pull_request.html_url }}
           - Repository: ${{ github.repository }}
 
-          Detected dependency changes (JSON array of {pkg, from, to, section, kind}):
-
+          Detected dependency changes:
           ```json
           ${{ steps.diff.outputs.changes_json }}
           ```
 
-          Follow the `analyze-dependency-upgrade` skill exactly:
-
-          1. For each entry in the JSON array, treat it as a single direct
-             dependency upgrade. If `from` is null, it is a new package
-             (no breaking-change/deprecation analysis, only new addition).
-             If `to` is null, it was removed.
-          2. Read `package.json`, `pnpm-lock.yaml`, `.nvmrc`, and any relevant
-             config files (`.prettierrc`, `eslint.config.mjs`, `prisma/schema.prisma`,
-             `tsconfig.json`) on the current branch.
-          3. Use webfetch to fetch the upstream changelog / release notes for
-             the package. Try GitHub releases, CHANGELOG.md, npm, and the
-             vendor docs/blog in that order. Do not invent URLs.
-          4. Extract breaking changes, deprecations, performance notes, new APIs,
-             and migration notes for the range from -> to.
-          5. Grep `src/`, `prisma/`, `test/`, `scripts/` for imports and symbol
-             usage of the package, and cross-reference with the changelog.
-             Record all matches with `file:line` references.
-          6. Build the final Markdown report following the exact structure
-             described in the `analyze-dependency-upgrade` skill (the
-             PR-comment variant with the `Overall risk assessment` table
-             and the per-package sections).
-
-          Output:
-          - Use the `write` tool to save the report to `/tmp/dep_report.md`
-             so the workflow can post it as a PR comment.
-          - ALSO print the report in your final response (for the run log).
-          - Do NOT add a `<!-- dependency-upgrade-analysis -->` HTML marker
-             yourself. The next workflow step prepends it deterministically
-             before posting the comment. If you include it, the marker will
-             be duplicated in the final comment.
-          - Do NOT attempt to post the comment yourself. The next workflow
-             step handles posting via the `gh` CLI.
-          - Do NOT commit any file to the repository.
-
-          Constraints:
-          - Do not invent URLs or fabricate findings.
-          - Match the project's voice: concise, direct, English, no emojis.
+          Output & Constraints:
+          - Save the final Markdown report to `/tmp/dep_report.md` using the `write` tool.
+          - Save the JSON summary to `/tmp/dep_report.json` with `{ "canAutoMerge": boolean, "packages": [{ "pkg": string, "risk": "Low"|"Medium"|"High", "action": "Proceed"|"Caution"|"Hold" }] }`. Set `canAutoMerge` to `true` if and only if all packages have risk "Low" and action "Proceed".
+          - Print the report in your final response.
+          - Do NOT include the HTML comment marker, post the PR comment, or commit any files.
           EOF
           echo "prompt_file=/tmp/opencode_prompt.txt" >> "$GITHUB_OUTPUT"
 
@@ -234,165 +199,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          REPO="${{ github.repository }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          RUN_ID="${GITHUB_RUN_ID:-}"
-
-          # Keep a single decision comment per PR, keyed by a marker that
-          # never collides with the analysis report comment (which starts with
-          # the "dependency-upgrade-analysis" prefix and is managed by the
-          # "Post or update PR comment" step). Updating in place avoids
-          # spamming the same comment on every workflow run.
-          post_or_update_decision() {
-            local body_file="$1"
-            local existing
-            existing=$(gh api \
-              "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-              --paginate \
-              --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-decision -->")) | .id' \
-              | head -1 || true)
-
-            if [ -n "${existing}" ]; then
-              jq -Rs --arg b "$(cat "$body_file")" '{body: $b}' \
-                /dev/null > /tmp/am_payload.json
-              gh api \
-                "repos/${REPO}/issues/comments/${existing}" \
-                -X PATCH \
-                --input /tmp/am_payload.json > /dev/null
-              echo "Updated decision comment #${existing}"
-            else
-              gh pr comment "$PR_NUMBER" \
-                --body-file "$body_file" \
-                --repo "$REPO" > /dev/null
-              echo "Created decision comment"
-            fi
-          }
-
-          RISK_TABLE=$(sed -n '/^## Overall risk assessment/,/^---$/p' /tmp/dep_report.md \
-            | grep '^|' | tail -n +3)
-
-          if [ -z "$RISK_TABLE" ]; then
-            echo "Could not extract risk assessment table. Skipping auto-merge."
-            exit 0
-          fi
-
-          ALL_PROCEED=true
-          while IFS='|' read -r _ _ _ _ risk action _; do
-            risk=$(echo "$risk" | xargs)
-            action=$(echo "$action" | xargs)
-            if [ "$risk" != "Low" ] || [ "$action" != "Proceed" ]; then
-              ALL_PROCEED=false
-              break
-            fi
-          done <<< "$RISK_TABLE"
-
-          if [ "$ALL_PROCEED" != "true" ]; then
-            echo "Manual review required — not all packages are Low / Proceed."
-            exit 0
-          fi
-
-          echo "All packages are Low risk / Proceed. Checking CI status..."
-
-          # Ignore this workflow's own check runs when evaluating CI status.
-          # GitHub Actions check runs carry the workflow run id in their
-          # `external_id`, and this workflow's check is still in_progress while
-          # this step runs. Counting it made this step defer the merge (and
-          # re-post the same comment) on every run.
-          CHECKS=$(gh api \
-            "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
-            --jq "[.check_runs[] | select((.external_id | tostring) != \"${RUN_ID}\") | {name: .name, status: .status, conclusion: .conclusion}]")
-
-          echo "Check runs for ${HEAD_SHA} (excluding current workflow run ${RUN_ID}):"
-          echo "$CHECKS" | jq -r '.[] | "  \(.name): \(.status) (\(.conclusion // "pending"))"'
-
-          ALL_CHECKS_PASSED=true
-          while IFS= read -r line; do
-            status=$(echo "$line" | jq -r '.status')
-            conclusion=$(echo "$line" | jq -r '.conclusion // "pending"')
-            name=$(echo "$line" | jq -r '.name')
-            if [ "$status" != "completed" ]; then
-              echo "Check '${name}' is still ${status}"
-              ALL_CHECKS_PASSED=false
-              break
-            fi
-            if [ "$conclusion" != "success" ] && [ "$conclusion" != "neutral" ] && [ "$conclusion" != "skipped" ]; then
-              echo "Check '${name}' concluded: ${conclusion}"
-              ALL_CHECKS_PASSED=false
-              break
-            fi
-          done < <(echo "$CHECKS" | jq -c '.[]')
-
-          if [ "$ALL_CHECKS_PASSED" != "true" ]; then
-            echo "::warning::Not all CI checks passed. Deferring auto-merge."
-
-            # Other CI checks are still running. Enable GitHub's native
-            # auto-merge instead of only commenting, so GitHub merges once the
-            # required checks pass — including this workflow's own check, which
-            # completes when this run ends — without needing a re-run.
-            if gh pr merge "$PR_NUMBER" \
-              --squash \
-              --delete-branch \
-              --auto \
-              --repo "$REPO"; then
-              echo "Auto-merge enabled for PR #${PR_NUMBER}; GitHub will merge once CI passes."
-              cat > /tmp/am_decision.md <<'EOF'
-          <!-- dependency-upgrade-decision -->
-          **Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. CI checks still running — auto-merge enabled, merging once they pass.
-          EOF
-              post_or_update_decision /tmp/am_decision.md || true
-              exit 0
-            fi
-
-            echo "::warning::Native auto-merge unavailable (may be disabled in repository settings)."
-
-            if gh pr merge "$PR_NUMBER" \
-              --squash \
-              --delete-branch \
-              --repo "$REPO"; then
-              echo "PR #${PR_NUMBER} merged and branch deleted."
-              cat > /tmp/am_decision.md <<'EOF'
-          <!-- dependency-upgrade-decision -->
-          **Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. Merged.
-          EOF
-            else
-              echo "::warning::Merge deferred until CI checks pass."
-              cat > /tmp/am_decision.md <<'EOF'
-          <!-- dependency-upgrade-decision -->
-          **Auto-analysis passed** (all Low risk / Proceed) but CI checks are not all passing. Merge deferred until checks pass.
-          EOF
-            fi
-            post_or_update_decision /tmp/am_decision.md || true
-            exit 0
-          fi
-
-          echo "All CI checks passed. Attempting merge."
-
-          # Prefer native auto-merge so GitHub waits for this workflow's own
-          # check (still in_progress here) before merging; fall back to a
-          # direct merge if auto-merge is disabled in repository settings.
-          if gh pr merge "$PR_NUMBER" \
-            --squash \
-            --delete-branch \
-            --auto \
-            --repo "$REPO" 2>/dev/null; then
-            echo "PR #${PR_NUMBER} auto-merge requested."
-            cat > /tmp/am_decision.md <<'EOF'
-          <!-- dependency-upgrade-decision -->
-          **Auto-analysis**: all dependency upgrades assessed as Low risk / Proceed. All CI checks passed. Merging.
-          EOF
-            post_or_update_decision /tmp/am_decision.md || true
-          elif gh pr merge "$PR_NUMBER" \
-            --squash \
-            --delete-branch \
-            --repo "$REPO"; then
-            echo "PR #${PR_NUMBER} merged and branch deleted."
-          else
-            echo "::warning::Auto-merge failed — branch protection may require manual approval."
-            cat > /tmp/am_decision.md <<'EOF'
-          <!-- dependency-upgrade-decision -->
-          **Auto-analysis passed** but merge failed. Branch protection likely requires manual approval.
-          EOF
-            post_or_update_decision /tmp/am_decision.md || true
-          fi
+          ./scripts/auto-merge.sh \
+            "${{ github.repository }}" \
+            "${{ github.event.pull_request.number }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            "${{ github.run_id }}"

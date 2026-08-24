@@ -7,7 +7,7 @@ description: >-
   bump, audit a version upgrade, or assess risks before updating a package.
 ---
 
-# Analyze Dependency Upgrade (finance-manager)
+# Analyze Dependency Upgrade
 
 Use this skill when the user wants to evaluate upgrading a dependency and needs
 a structured impact report. The skill runs as a GitHub Actions workflow triggered
@@ -81,158 +81,6 @@ Required secrets / variables (set in repository Settings → Secrets):
 `GITHUB_TOKEN` is provided automatically by Actions and is sufficient for
 posting PR comments.
 
-### Workflow template
-
-```yaml
-name: Dependency Upgrade Analysis
-
-on:
-  pull_request:
-    paths:
-      - 'package.json'
-    types: [opened, synchronize, reopened]
-
-concurrency:
-  group: dep-upgrade-analysis-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pull-requests: write
-
-jobs:
-  analyze:
-    name: Analyze dependency upgrade
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: Extract changed packages from PR diff
-        id: diff
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          HEAD=${{ github.event.pull_request.head.sha }}
-
-          # Fetch the base package.json for comparison
-          git show $BASE:package.json > /tmp/package.base.json || echo '{}' > /tmp/package.base.json
-
-          # Detect bumped packages: name, from version, to version (one per line)
-          node - <<'EOF'
-          const base = require('/tmp/package.base.json');
-          const head = require('./package.json');
-
-          const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
-          const changes = [];
-
-          for (const section of sections) {
-            const b = base[section] || {};
-            const h = head[section] || {};
-            for (const pkg of Object.keys(h)) {
-              if (h[pkg] !== b[pkg] && b[pkg]) {
-                changes.push({ pkg, from: b[pkg].replace(/^\^|~/, ''), to: h[pkg].replace(/^\^|~/, ''), section });
-              }
-              if (!b[pkg] && h[pkg]) {
-                changes.push({ pkg, from: null, to: h[pkg].replace(/^\^|~/, ''), section });
-              }
-            }
-          }
-
-          if (changes.length === 0) {
-            console.log('NO_CHANGES');
-            process.exit(0);
-          }
-
-          // Write as JSON for the next step
-          const fs = require('fs');
-          fs.writeFileSync('/tmp/dep_changes.json', JSON.stringify(changes, null, 2));
-          console.log('CHANGES_FOUND');
-          changes.forEach(c => console.log(`  ${c.pkg}: ${c.from} → ${c.to} (${c.section})`));
-          EOF
-
-          if [ ! -f /tmp/dep_changes.json ]; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "changes_json=$(cat /tmp/dep_changes.json | jq -c .)" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Skip if no dependency changes
-        if: steps.diff.outputs.has_changes != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --body "**Dependency Upgrade Analysis**: no \`package.json\` dependency changes detected in this PR." \
-            --repo ${{ github.repository }} || true
-
-      - name: Run opencode dependency analysis
-        if: steps.diff.outputs.has_changes == 'true'
-        id: analysis
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          REPO: ${{ github.repository }}
-          DEP_CHANGES: ${{ steps.diff.outputs.changes_json }}
-        run: |
-          opencode run \
-            --skill analyze-dependency-upgrade \
-            --output /tmp/dep_report.md \
-            "Analyze the dependency changes listed in the DEP_CHANGES env variable for this PR. \
-             PR #${PR_NUMBER}: ${PR_TITLE} (${PR_URL}). \
-             For each changed package, produce the full report following the skill structure. \
-             Output only the final Markdown report to /tmp/dep_report.md."
-
-      - name: Post or update PR comment
-        if: steps.diff.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          MARKER="<!-- dependency-upgrade-analysis -->"
-          REPORT=$(cat /tmp/dep_report.md)
-          BODY="${MARKER}
-          ${REPORT}"
-
-          # Find existing comment from this workflow
-          EXISTING=$(gh api \
-            repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-            --jq '.[] | select(.body | startswith("<!-- dependency-upgrade-analysis -->")) | .id' \
-            | head -1)
-
-          if [ -n "$EXISTING" ]; then
-            # Update existing comment
-            gh api \
-              repos/${{ github.repository }}/issues/comments/${EXISTING} \
-              -X PATCH \
-              -f body="$BODY"
-            echo "Updated existing comment #${EXISTING}"
-          else
-            # Create new comment
-            gh pr comment ${{ github.event.pull_request.number }} \
-              --body "$BODY" \
-              --repo ${{ github.repository }}
-            echo "Created new comment"
-          fi
-```
-
 ## Inputs (when running manually / in CI)
 
 When triggered via pull request, the skill **reads all inputs from the PR
@@ -282,8 +130,8 @@ the target state. Read:
 - `package.json` — to confirm declared versions.
 - `pnpm-lock.yaml` — to read the resolved (exact) versions, not just ranges.
 - `.nvmrc` — Node.js version constraint.
-- Config files relevant to the package (e.g. `.prettierrc`, `prisma/schema.prisma`,
-  `eslint.config.mjs`, `tsconfig.json`, `nest-cli.json`).
+- Config files relevant to the package (e.g. `.prettierrc`,
+  `eslint.config.mjs`, `tsconfig.json`, `nest-cli.json`, etc).
 
 ### 3. Fetch the changelog / release notes
 
@@ -325,9 +173,20 @@ PR context header so readers know which PR triggered the analysis.
 
 ### 7. Output the report
 
-**In CI (GitHub Actions):** write the report to `/tmp/dep_report.md`. The
-workflow step will post it as a PR comment. Do not write it to the
-repository tree. Do not commit any file.
+**In CI (GitHub Actions):**
+1. Write the Markdown report to `/tmp/dep_report.md`.
+2. Write the JSON summary to `/tmp/dep_report.json` with the structure:
+   ```json
+   {
+     "canAutoMerge": boolean,
+     "packages": [
+       { "pkg": "package-name", "risk": "Low", "action": "Proceed" }
+     ]
+   }
+   ```
+   Set `canAutoMerge` to `true` if and only if all packages have `risk: "Low"` and `action: "Proceed"`.
+
+The workflow step will post `/tmp/dep_report.md` as a PR comment and use `/tmp/dep_report.json` to evaluate auto-merge. Do not write to the repository tree. Do not commit any file.
 
 **Interactive / local:** print the report in the chat.
 
@@ -344,8 +203,6 @@ The Markdown report must contain the following sections in order. Use the
 exact headings — they are part of the contract.
 
 ````markdown
-<!-- dependency-upgrade-analysis -->
-
 # Dependency Upgrade Analysis
 
 > **PR**: [#<number> <title>](<url>)
@@ -435,11 +292,9 @@ Ordered checklist. If trivial, say so explicitly.
 - **Do not fabricate findings.** If a code search returns no matches, say so.
 - **Cite everything.** Every breaking change and deprecation must link to its source.
 - **No files committed.** The report lives only as a PR comment.
-- **Marker comment.** Always start the output with `<!-- dependency-upgrade-analysis -->` so the workflow update logic works.
+- **Marker comment.** Do NOT add the HTML marker comment yourself in CI; the workflow prepends it automatically before posting.
 - **One comment per PR.** The workflow updates the existing comment on re-runs; never post duplicates.
 - **No emojis** unless the user asks.
-- **Project context is `finance-manager`** — NestJS + Prisma + PostgreSQL + TypeScript.
-  Use this to focus changelog entries on relevant areas.
 
 ## Quick command reference
 
