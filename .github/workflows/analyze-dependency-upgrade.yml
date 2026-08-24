@@ -104,6 +104,7 @@ jobs:
       - name: Run OpenCode dependency analysis
         if: steps.diff.outputs.has_changes == 'true'
         id: analysis
+        timeout-minutes: 10
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
