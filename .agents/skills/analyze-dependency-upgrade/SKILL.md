@@ -23,6 +23,8 @@ Trigger this skill when the user says things like:
 - "Audite a atualização da dependência `X` da versão `A` para `B`"
 - "Posso atualizar o `typescript-eslint`? Gere um relatório de impacto"
 - "Evaluate the upgrade of `<package>` from `<old>` to `<new>`"
+- "Analise as atualizações de actions nos workflows"
+- "Check if the GitHub Actions in our workflows are up to date"
 - "Crie/atualize a análise de dependência para rodar no GitHub Actions"
 
 ## Architecture overview
@@ -37,7 +39,8 @@ PR opened / synchronized
 opencode (this skill)
         │
         ├─ reads PR diff via GitHub API → extracts package + versions
-        ├─ reads package.json / lockfile from the PR branch
+        ├─ reads PR diff → extracts GitHub Actions + versions from workflows
+        ├─ reads package.json / lockfile / workflow files from the PR branch
         ├─ fetches changelog (webfetch)
         ├─ greps codebase for impact
         ├─ builds report (Markdown)
@@ -57,8 +60,9 @@ It must:
 
 1. Trigger on `pull_request` events (`opened`, `synchronize`, `reopened`).
 2. Check out the PR branch with full history.
-3. Detect whether `package.json` was modified in the PR diff; skip the job and
-   add a neutral comment if no dependency change is found.
+3. Detect whether `package.json` or workflow files (`.github/workflows/*.yml`)
+   were modified in the PR diff; skip the job and add a neutral comment if no
+   dependency or action change is found.
 4. Call the opencode agent (this skill) with the PR context injected as
    environment variables.
 5. Post (or update) the report as a PR comment using `gh pr comment` or the
@@ -90,6 +94,7 @@ not ask the user interactively for these values.
 | Variable | Source | Description |
 |---|---|---|
 | `DEP_CHANGES` | workflow step | JSON array of `{pkg, from, to, section}` objects |
+| `ACTION_CHANGES` | workflow step | JSON array of `{pkg, from, to, section}` objects for GitHub Actions |
 | `PR_NUMBER` | `github.event.pull_request.number` | PR number |
 | `PR_TITLE` | `github.event.pull_request.title` | PR title |
 | `PR_URL` | `github.event.pull_request.html_url` | PR URL |
@@ -108,19 +113,23 @@ variables — never prompt interactively.
 
 ### 1. Parse dep changes from context
 
-Read `DEP_CHANGES` (JSON array). For each entry:
+Read `DEP_CHANGES` and `ACTION_CHANGES` (JSON arrays). For each entry:
 
-- `pkg` — package name.
-- `from` — old version (may be `null` for newly added packages; in that
+- `pkg` — package name or action reference (e.g. `actions/checkout`).
+- `from` — old version (may be `null` for newly added packages/actions; in that
   case, skip the breaking-change/deprecation analysis and only document
   the new addition).
 - `to` — new version.
 - `section` — which `package.json` section (`dependencies`,
-  `devDependencies`, etc.).
+  `devDependencies`, etc.) or `workflow` for GitHub Actions.
 
-If there is more than one changed package, produce a separate report section
-per package under a `## <package>` heading, then a combined **Summary** and
-**Risk assessment** at the top.
+Entries with `section: "workflow"` are GitHub Actions version changes detected
+in `.github/workflows/*.yml` files. These require a different changelog
+strategy (see step 3).
+
+If there is more than one changed package/action, produce a separate report
+section per item under a `## <package>` heading, then a combined **Summary**
+and **Risk assessment** at the top.
 
 ### 2. Read codebase state from the PR branch
 
@@ -132,15 +141,28 @@ the target state. Read:
 - `.nvmrc` — Node.js version constraint.
 - Config files relevant to the package (e.g. `.prettierrc`,
   `eslint.config.mjs`, `tsconfig.json`, `nest-cli.json`, etc).
+- `.github/workflows/*.yml` — workflow files, to verify action versions and
+  understand how changed actions are used in context.
 
 ### 3. Fetch the changelog / release notes
 
-Same strategy as the interactive version — try in this order:
+**For npm packages** — try in this order:
 
 1. GitHub releases page for the target tag.
 2. `CHANGELOG.md` on GitHub.
 3. npm registry page.
 4. Official vendor docs / blog.
+
+**For GitHub Actions** (entries with `section: "workflow"`) — the `pkg` field
+is the action reference (e.g. `actions/checkout`). Fetch release notes from:
+
+1. GitHub releases page: `https://github.com/{owner}/{repo}/releases/tag/{version}`
+   (use the `to` version as the tag).
+2. GitHub releases list: `https://github.com/{owner}/{repo}/releases`
+3. The action's README or documentation on GitHub.
+
+If the version is a major tag (e.g. `v7`), also check if there is a rolling
+`v7` tag pointing to the latest `v7.x.x` release.
 
 Use `webfetch` for each attempt. Do not invent URLs.
 
@@ -163,6 +185,9 @@ Cross-reference every breaking change and deprecation against the codebase:
 
 - Grep `src/`, `prisma/`, `test/`, `scripts/` for imports and symbol usage.
 - Check config files for package-specific options.
+- For workflow action changes, grep `.github/workflows/` for all usages of
+  the changed action to understand how it is configured (inputs, `with:`,
+  environment variables).
 - Record all matches with `file:line` references.
 - Categorize: **Will break** / **Will deprecate** / **No impact**.
 
@@ -211,17 +236,17 @@ exact headings — they are part of the contract.
 
 ## Overall risk assessment
 
-| Package | From | To | Risk | Action |
+| Package / Action | From | To | Risk | Action |
 |---|---|---|---|---|
-| `<pkg>` | `<from>` | `<to>` | Low / Medium / High | Proceed / Caution / Hold |
+| `<pkg or action>` | `<from>` | `<to>` | Low / Medium / High | Proceed / Caution / Hold |
 
-_(one row per changed package)_
+_(one row per changed package or action)_
 
 ---
 
-## `<package-name>` — <from> → <to>
+## `<package or action>` — <from> → <to>
 
-> **Section**: `<dependencies | devDependencies | …>`
+> **Section**: `<dependencies | devDependencies | workflow | …>`
 > **Changelog**: <url>
 
 ### Summary
@@ -264,10 +289,14 @@ relevance to this project, and docs link.
 - TypeScript constraints.
 - Default config changes.
 - Lockfile regeneration notes.
+- For workflow action changes: check if the new version requires different
+  permissions, runner versions, or input parameters.
 
 ### Project usage audit
 
 - **Files importing the package** — count + representative `file:line` paths.
+- **Workflows using the action** (if `section: "workflow"`) — list all
+  `.github/workflows/*.yml` files that reference the action, with `file:line`.
 - **APIs used** — main symbols / options referenced.
 - **APIs NOT used** — capabilities the upgrade would unlock.
 
@@ -307,6 +336,12 @@ rg "from '<package>'" src/
 
 # Search for a specific deprecated symbol
 rg '<symbol>' src/
+
+# Search for GitHub Action usages in workflow files
+rg "uses: <owner>/<repo>@" .github/workflows/
+
+# Fetch latest release of a GitHub Action
+gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name'
 
 # Post a PR comment manually (for local testing)
 gh pr comment <number> --body "$(cat /tmp/dep_report.md)"
