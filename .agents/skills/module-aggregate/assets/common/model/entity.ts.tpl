@@ -1,4 +1,4 @@
-import { Entity, EntityProps } from '__SHARED_PACKAGE__'
+import { Entity, EntityProps } from '@/shared/base/entity'
 
 export interface __AGGREGATE_CLASS_NAME__Props extends EntityProps {}
 

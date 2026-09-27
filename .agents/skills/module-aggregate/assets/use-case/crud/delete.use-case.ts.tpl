@@ -1,4 +1,5 @@
-import { Result, UseCase } from '__SHARED_PACKAGE__'
+import { Result } from '@/shared/base/result'
+import { UseCase } from '@/shared/base/UseCase'
 import { __AGGREGATE_REPOSITORY_NAME__ } from '../provider'
 
 export interface Delete__AGGREGATE_CLASS_NAME__Input {

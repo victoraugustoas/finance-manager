@@ -31,8 +31,3 @@ Aplicar o padrão de casos de uso do projeto com foco em orquestração de depen
 ## References
 
 Consultar `references/use-case-pattern.md` para paths, checklist, exemplos e armadilhas frequentes do projeto.
-Consultar `../skills-standards.md` para convenção global de nomenclatura.
-
-## Global Standards
-
-- Consultar `../skills-standards.md` para padroes globais de nomenclatura e convencoes gerais entre skills.

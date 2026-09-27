@@ -2,7 +2,7 @@
 
 ## Paths
 
-- Base entity: `packages/shared/src/base/entity.ts`
+- Base entity: `src/shared/base/entity.ts` (`import { Entity, EntityProps } from '@/shared/base/entity'`)
 - Entidades (exemplos):
   - `modules/auth/src/user/model/user.entity.ts`
   - `modules/auth/src/permission/model/permission.entity.ts`
@@ -10,7 +10,7 @@
   - `modules/stock/src/movement/model/movement.entity.ts`
   - `modules/product/src/product/model/product.entity.ts`
 - Testes de referência:
-  - `packages/shared/test/base/entity.test.ts`
+  - `test/shared/base/entity.test.ts`
   - `modules/branch/test/branch/branch.entity.test.ts`
   - `modules/stock/test/movement/movement.entity.test.ts`
   - `modules/stock/test/stock/stock.entity.test.ts`
@@ -52,7 +52,10 @@
 ## Exemplo mínimo
 
 ```ts
-import { Entity, EntityProps, Id, Name, Result } from '@mentoria-360/shared';
+import { Entity, EntityProps } from '@/shared/base/entity';
+import { Result } from '@/shared/base/result';
+import { Id } from '@/shared/ValueObjects/id.vo';
+import { Name } from './name.vo';
 
 export interface ExampleProps extends EntityProps {
   name: string;

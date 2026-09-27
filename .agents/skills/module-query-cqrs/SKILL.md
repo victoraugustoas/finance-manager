@@ -46,7 +46,3 @@ Leitura é tratada de forma diferente de comando. Por padrão, uma query é só 
 ## References
 
 Consultar `references/query-cqrs-pattern.md` para exemplos reais, critérios para use case de leitura, checklist e modelagem de DTO.
-
-## Global Standards
-
-- Consultar `../skills-standards.md` para padrões globais de nomenclatura e convenções gerais entre skills.

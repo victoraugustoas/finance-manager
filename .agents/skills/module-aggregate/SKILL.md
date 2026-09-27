@@ -52,8 +52,8 @@ node <SKILLS_DIR>/module-aggregate/scripts/create-aggregate.js --module auth --a
 
 - Aggregate scaffold under `modules/<module>/src/<aggregate>/`
 - Folders `model`, `provider`, and `use-case`
-- A base entity extending `Entity<Type, Props>` from the shared package resolved from `packages/shared/package.json`
-- An initial repository contract extending `CrudRepository<Entity>` inside `provider/`
+- A base entity extending `Entity<Type, Props>` imported from `@/shared/base/entity`
+- An initial repository contract inside `provider/`, with `create`, `update`, `findById` and `delete` returning `Result` from `@/shared/base/result`
 - A fully functional in-memory repository implementation inside `modules/<module>/test/<aggregate>/mock/`, intended as the reference implementation for use-case tests
 - Use-case tests under `modules/<module>/test/<aggregate>/`, already wired to consume the in-memory repository mock
 - No `test` folder is generated inside `src/<aggregate>`; production code stays under `src/**` and test-only artifacts stay under `test/**`
@@ -103,7 +103,8 @@ Creates only one minimal generic use case to demonstrate the structure:
 - Do not assume an opinionated DDD approach beyond the aggregate organization already used in the project.
 - Do not create controllers, adapters, Prisma implementations, migrations, or any extra infrastructure.
 - Preserve existing exports in `modules/<module>/src/index.ts`.
-- Always import from the shared package resolved from `packages/shared/package.json`; never use relative paths into `packages/shared`.
+- Always import the shared kernel through the `@/shared` alias (`@/*` maps to `src/*`). Never resolve a package name from `packages/shared/package.json` and never use relative paths into `src/shared`.
+- Shared symbols used by this scaffold: `Entity` and `EntityProps` from `@/shared/base/entity`, `Result` from `@/shared/base/result`, `UseCase` from `@/shared/base/UseCase`. There is no `CrudRepository` or `TransactionContext` in `src/shared`.
 - Keep the production source tree free of in-memory repository implementations; place them only under `modules/<module>/test/<aggregate>/mock/`.
 - Generate use-case tests that depend on the test mock implementation, not on files inside `src/<aggregate>/provider/`.
 - Use only the resources contained in `<SKILLS_DIR>/module-aggregate`.

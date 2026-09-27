@@ -3,13 +3,13 @@
 ## Paths
 
 - VOs globais (shared):
-  - `packages/shared/src/vo/*.vo.ts`
-  - `packages/shared/test/vo/*.vo.test.ts`
+  - `src/shared/ValueObjects/*.vo.ts` (exemplo: `src/shared/ValueObjects/id.vo.ts`)
+  - `test/shared/ValueObjects/*.vo.test.ts`
 - VOs de módulo (domínio):
   - `modules/<domain>/src/<feature>/model/<name>.vo.ts`
   - `modules/<domain>/test/<feature>/<name>.vo.test.ts`
-- Base VO: `packages/shared/src/base/vo.ts`
-- Result: `packages/shared/src/base/result.ts`
+- Base VO: `src/shared/base/vo.ts` (`import { ValueObject, ValueObjectConfig } from '@/shared/base/vo'`)
+- Result: `src/shared/base/result.ts` (`import { Result } from '@/shared/base/result'`)
 
 ## Core Principles
 
@@ -22,7 +22,8 @@
 ## Skeleton
 
 ```ts
-import { Result, ValueObject, ValueObjectConfig } from '../base';
+import { Result } from '@/shared/base/result';
+import { ValueObject, ValueObjectConfig } from '@/shared/base/vo';
 
 export class ExampleVo extends ValueObject<string, ValueObjectConfig> {
   private static readonly INVALID_EXAMPLE = 'INVALID_EXAMPLE';
@@ -52,11 +53,8 @@ export class ExampleVo extends ValueObject<string, ValueObjectConfig> {
 
 ## Reference VOs
 
-- `email.vo.ts` para normalizacao, regex e getters `local`/`domain`.
-- `id.vo.ts` para geracao default (uuid) e metodo `required`.
-- `permission-id.vo.ts` para heranca que apenas especializa a mensagem de erro.
-- `strong-password.vo.ts` para validacoes multiplas.
-- `url.vo.ts` e `number.vo.ts` para casos de tipos diferentes.
+- `src/shared/ValueObjects/id.vo.ts` para geracao default (uuid), validacao e `tryCreate`.
+- `test/shared/ValueObjects/id.vo.test.ts` e `test/shared/base/vo.test.ts` para o padrao de teste do kernel.
 
 ## Test Pattern
 

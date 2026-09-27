@@ -174,15 +174,12 @@ function main() {
     fail(`Aggregate tests for ${aggregateName} already exist at modules/${moduleName}/test/${aggregateName}.`)
   }
 
-  const sharedPackage = resolveSharedPackage(projectRoot)
-
   const replacements = {
     '__AGGREGATE_NAME__': aggregateName,
     '__AGGREGATE_CLASS_NAME__': toPascalCase(aggregateName),
     '__AGGREGATE_REPOSITORY_NAME__': `${toPascalCase(aggregateName)}Repository`,
     '__AGGREGATE_IN_MEMORY_REPOSITORY_NAME__': `InMemory${toPascalCase(aggregateName)}Repository`,
     '__AGGREGATE_VARIABLE_NAME__': toCamelCase(aggregateName),
-    '__SHARED_PACKAGE__': sharedPackage,
   }
 
   log(`Creating aggregate ${aggregateName} at modules/${moduleName}/src/${aggregateName}`)
@@ -324,24 +321,6 @@ function updateModuleIndex(indexPath, aggregateName) {
     normalized.length === 0 ? exportLine : `${normalized}\n\n${exportLine}`
 
   fs.writeFileSync(indexPath, `${nextContent}\n`)
-}
-
-function resolveSharedPackage(projectRoot) {
-  const packageJsonPath = path.join(projectRoot, 'packages', 'shared', 'package.json')
-  ensureFileExists(
-    packageJsonPath,
-    'Could not find packages/shared/package.json to resolve the shared package name.',
-  )
-  try {
-    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-    if (!pkg.name || typeof pkg.name !== 'string') {
-      fail('packages/shared/package.json does not contain a valid "name" field.')
-    }
-    return pkg.name
-  } catch (error) {
-    fail(`Failed to read packages/shared/package.json: ${error.message}`)
-    return ''
-  }
 }
 
 function toKebabCase(value) {

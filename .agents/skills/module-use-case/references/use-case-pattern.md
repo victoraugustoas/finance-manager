@@ -2,7 +2,8 @@
 
 ## Paths
 
-- Contrato base: `packages/shared/src/base/use-case.ts`
+- Contrato base: `src/shared/base/UseCase.ts` (`import { UseCase } from '@/shared/base/UseCase'`)
+- Result usado pelo contrato: `src/shared/base/result.ts` (`import { Result } from '@/shared/base/result'`)
 - Use cases (exemplos):
   - `modules/product/src/product/use-case/create-product.use-case.ts`
   - `modules/product/src/product/use-case/update-product.use-case.ts`
@@ -78,7 +79,8 @@
 ## Exemplo mínimo
 
 ```ts
-import { Result, UseCase } from '@mentoria-360/shared';
+import { Result } from '@/shared/base/result';
+import { UseCase } from '@/shared/base/UseCase';
 import { Thing } from '../model/thing.entity';
 import { ThingRepository } from '../provider/thing.repository';
 
@@ -90,7 +92,7 @@ export class CreateThingUseCase implements UseCase<CreateThingIn, void> {
   constructor(private readonly repo: ThingRepository) {}
 
   async execute(data: CreateThingIn): Promise<Result<void>> {
-    return Result.try(async () => {
+    return Result.tryAsync(async () => {
       const thingResult = Thing.tryCreate({ name: data.name }).validator.throwsIfFailed().result.instance;
 
       const tryCreateThing = await this.repo.create(thingResult);
@@ -104,7 +106,9 @@ export class CreateThingUseCase implements UseCase<CreateThingIn, void> {
 
 ```ts
 import { Password, PasswordCryptoProvider, PasswordRepository } from 'fake/path';
-import { Currency, DEFAULT_CURRENCY, Result, TransactionManager, UseCase } from '@mentoria-360/shared';
+import { Result } from '@/shared/base/result';
+import { UseCase } from '@/shared/base/UseCase';
+import { Currency, DEFAULT_CURRENCY, TransactionManager } from 'fake/path';
 import { User, UserErrors, UserRepository } from 'fake/path';
 import { UserExistsQuery } from 'fake/path';
 
@@ -126,7 +130,7 @@ export class CreateUserUseCase implements UseCase<CreateUserIn, void> {
   ) {}
 
   async execute(data: CreateUserIn): Promise<Result<void>> {
-    return Result.try(async () => {
+    return Result.tryAsync(async () => {
       const tryUserExists = await this.userExistsQuery.execute({
         email: data.email,
       });

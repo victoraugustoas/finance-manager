@@ -12,7 +12,7 @@ Aplicar o padrão de Entidades do projeto com foco em identidade (`id`), invaria
 ## Guidelines
 
 - Ler `references/entity-pattern.md` antes de criar/alterar entidades.
-- Estender `Entity<Type, Props>` de `@mentoria-360/shared` e manter construtor `private` ou `protected`.
+- Estender `Entity<Type, Props>` de `@/shared/base/entity` e manter construtor `private` ou `protected`. O alias `@/*` aponta para `src/*`.
 - Expor API consistente: `create` (throw) e `tryCreate` (`Result`).
 - Validar invariantes com VOs (`Id`, `Name`, `Text`, `Number`, `Sku`, etc.) e `Result.combine`.
 - Persistir no `props` apenas valores normalizados (`instance.value`, `instance.props` quando aplicável).
@@ -30,9 +30,4 @@ Aplicar o padrão de Entidades do projeto com foco em identidade (`id`), invaria
 
 ## References
 
-Consultar `references/entity-pattern.md` para paths, checklist, exemplos e armadilhas comuns observadas no código atual.
-Consultar `../skills-standards.md` para convenção global de nomenclatura.
-
-## Global Standards
-
-- Consultar `../skills-standards.md` para padroes globais de nomenclatura e convencoes gerais entre skills.
+Consultar `references/entity-pattern.md` para paths, checklist, exemplos e armadilhas comuns.

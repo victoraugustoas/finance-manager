@@ -40,7 +40,7 @@ export interface BrandPageDTO {
 `modules/<module>/src/<aggregate>/provider/find-brands.query.ts`:
 
 ```ts
-import { Result } from '@mentoria-360/shared'
+import { Result } from '@/shared/base/result'
 import { BrandFiltersDTO, BrandPageDTO } from '../dto'
 
 // One page of non-deleted brands. Without `search` they come ordered by name

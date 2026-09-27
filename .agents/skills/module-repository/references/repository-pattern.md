@@ -2,10 +2,10 @@
 
 ## Paths
 
-- Bases compartilhadas:
-  - `packages/shared/src/db/crud-repository.ts`
-  - `packages/shared/src/db/create-repository.ts`
-  - `packages/shared/src/db/find-by-id-repository.ts`
+- Kernel usado pelo contrato:
+  - `src/shared/base/result.ts` (`Result`)
+  - `src/shared/errors/shared-errors.ts` (`RepositoryErrors`)
+- Não há `CrudRepository`, `CreateRepository` nem `FindByIdRepository` em `src/shared`. O contrato do agregado declara os métodos de persistência e retorna `Result`.
 - Contratos de dominio em `modules/*`:
   - `modules/auth/src/user/provider/user.repository.ts`
   - `modules/product/src/product/provider/product.repository.ts`
@@ -35,7 +35,7 @@
 ## Estrutura esperada
 
 1. Definir interface de repositório no `dominio`.
-2. Estender `CrudRepository<T>` quando fizer sentido.
+2. Declarar os métodos de persistência no contrato do agregado, retornando `Promise<Result<...>>`.
 3. Adicionar métodos específicos de domínio apenas quando necessários.
 4. Implementar adapter (Prisma/in-memory) retornando `Result`.
 5. Incluir mapeadores:
