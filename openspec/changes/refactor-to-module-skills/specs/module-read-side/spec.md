@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define o lado de leitura CQRS: contratos Query, DTOs de projeção, implementação no adapter e chamada direta pelo controller, conforme as skills `module-query-cqrs` e `module-dto`, preservando a API HTTP pública.
+Define o lado de leitura CQRS: contratos Query, DTOs de projeção, implementação no adapter e chamada direta pelo controller, conforme as skills `module-query-cqrs` e `module-dto`, após o delete das implementações legadas e o rebuild dos módulos. Meta: preservar a API HTTP pública ao final.
 
 ## ADDED Requirements
 
@@ -29,7 +29,7 @@ DTOs MUST:
 
 #### Scenario: Query de listagem tipada
 
-- **WHEN** uma listagem migrada é definida
+- **WHEN** uma listagem recriada é definida
 - **THEN** existe interface `*Query` em `provider/` com `execute` retornando `Result` de DTO
 - **AND** os DTOs estão em `dto/` sem importar o client Prisma
 
@@ -37,13 +37,13 @@ DTOs MUST:
 
 A implementação da query MUST residir no adapter de infraestrutura do agregado em `apps/backend` (ex.: atributo público tipado na classe Prisma do agregado). O controller MUST converter parâmetros HTTP no DTO de entrada, chamar a query diretamente e mapear `isFailure` / `null` para resposta HTTP equivalente à API atual.
 
-Handlers legados `QueryHandler` usados só para projetar leitura MUST ser removidos ou reduzidos às exceções abaixo.
+Handlers legados `QueryHandler` MUST NÃO ser reintroduzidos no rebuild, salvo redução às exceções abaixo.
 
 Complexidade de leitura (filtros, ordenação, agregações, campos derivados) MUST ser resolvida no SQL/consulta sempre que fizer sentido; NÃO MUST criar domain service só para campo de projeção.
 
 #### Scenario: Controller de leitura chama query
 
-- **WHEN** um GET de listagem migrado é invocado
+- **WHEN** um GET de listagem recriado é invocado
 - **THEN** o controller chama `*.execute(...)` da query do adapter
 - **AND** não instancia use case de leitura, salvo exceção justificada
 
@@ -54,7 +54,7 @@ Use case `find-*.use-case.ts` de leitura MUST ser criado somente quando:
 - há muitas regras que não cabem em SQL sem duplicar domínio existente; ou
 - é preciso agregar várias queries distintas em um único resultado.
 
-Nesses casos, o use case MUST receber queries por parâmetro, NÃO MUST usar entidade nem repository de escrita, e MUST registrar em comentário a justificativa. Reporting composto (ex.: breakdown/statement que hoje combina readers/composers) MAY usar use case de leitura se a agregação de múltiplas queries for a justificativa.
+Nesses casos, o use case MUST receber queries por parâmetro, NÃO MUST usar entidade nem repository de escrita, e MUST registrar em comentário a justificativa. Reporting composto (ex.: breakdown/statement) MAY usar use case de leitura se a agregação de múltiplas queries for a justificativa.
 
 #### Scenario: Painel que agrega várias queries
 
@@ -64,14 +64,14 @@ Nesses casos, o use case MUST receber queries por parâmetro, NÃO MUST usar ent
 
 ### Requirement: Equivalência dos endpoints de leitura existentes
 
-Os endpoints HTTP de leitura já expostos MUST permanecer equivalentes após a migração:
+Os endpoints HTTP de leitura já expostos MUST permanecer equivalentes **após o rebuild** (não durante a janela pós-delete):
 
 - `GET /accounts` (se aplicável via reporting/accounts)
 - `GET /categories/income`, `GET /categories/expense`
 - `GET /transactions/expenses`, `GET /transactions/incomes`, `GET /transactions/transfers`
 - `GET /reporting/accounts`, `GET /reporting/categories/breakdown`, `GET /reporting/statement`
 
-(e demais GETs públicos existentes no momento da migração).
+(e demais GETs públicos existentes no momento do rebuild).
 
 #### Scenario: Breakdown de categorias
 

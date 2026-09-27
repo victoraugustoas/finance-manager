@@ -1,51 +1,52 @@
 # Tasks
 
-## 1. Workspace e packages/shared
+## 0. Keep `1a04a95b` / delete implementações legadas (apply futuro)
 
-- [ ] 1.1 Configurar pnpm workspaces (`packages/*`, `modules/*`, `apps/*`) e criar `packages/shared/package.json` com nome local (ex.: `@finance-manager/shared`); verificar com `pnpm install` sem erro
-- [ ] 1.2 Migrar/evoluir bases de `src/shared` para `packages/shared` alinhadas às skills (`Entity` com `create`/`tryCreate`/`cloneWith` ou equivalente, `ValueObject`, `Result` com `combine`/`ok`/`fail`, `UseCase`, bases de repositório CRUD quando aplicável); verificar testes unitários do shared passando
-- [ ] 1.3 Expor exports públicos do shared e garantir que imports usam o pacote (não path relativo para dentro de `packages/shared`); verificar TypeScript resolve o pacote a partir de um consumer de teste
+- [ ] 0.1 Garantir no worktree a presença de tudo que o commit `1a04a95b` adicionou (kernel Genérico em `src/shared/**` kebab-case, `test/shared/**`, skills `module-*`, `mise.toml`, `uuid`); restaurar do commit se estiver ausente; verificar diff contra `1a04a95b` nos paths KEEP
+- [ ] 0.2 Remover o kernel/shared legado fora desse commit (PascalCase `Entity`/`Result`/`AggregateRoot`/`CommandHandler`/`QueryHandler`/`Check`/`ValueObject`, VOs `Money`/`Effectivated`/`ReportingPeriod`, `MapResultErrorToHttpException` e correlatos não usados pelo kernel Genérico); preservar `UseCase.ts` enquanto as skills importarem `@/shared/base/UseCase`; verificar que imports `@/shared` resolvem o kernel Genérico
+- [ ] 0.3 Remover implementações de domínio/app legadas em `src/accounts`, `src/category`, `src/transactions`, `src/reporting` (core, infra, testes associados) e wiring que só sirva a esses contextos; preservar bootstrap Nest, `PrismaService`, schema/migrations Prisma e scripts mínimos; verificar build do app sem esses contextos (falhas de rota esperadas até o rebuild)
+- [ ] 0.4 Confirmar que skills OpenSpec e `.agents/skills/module-*` permanecem intactas nesta etapa; verificar `pnpm test` dos testes em `test/shared/**` passando
 
-## 2. App Nest em apps/backend
+## 1. Layout modules + apps/backend
 
-- [ ] 2.1 Criar `apps/backend` movendo bootstrap Nest (`main.ts`, módulos de entrypoint, wiring Prisma/config) sem alterar rotas HTTP; verificar `pnpm start`/`build` do app
-- [ ] 2.2 Apontar paths/tsconfig/jest do monorepo para `apps/backend` + `packages/shared`; verificar `pnpm test` da suíte existente ainda executa (mesmo que parte do domínio ainda esteja em `src/` temporariamente)
-- [ ] 2.3 Manter `prisma/` utilizável (raiz preferencial na primeira onda) e `DATABASE_URL`; verificar `pnpm prisma:generate` funciona
+- [ ] 1.1 Criar estrutura `modules/` e `apps/backend` (bootstrap Nest movido/adaptado de `main`/entrypoint) sem alterar schema Prisma; verificar app sobe
+- [ ] 1.2 Apontar tsconfig/jest/paths para `@/shared` → `src/*` e consumers em `modules/*` + `apps/backend`; verificar resolução TypeScript
+- [ ] 1.3 Manter `prisma/` utilizável (raiz preferencial na 1ª onda) e `DATABASE_URL`; verificar `pnpm prisma:generate`
 
-## 3. Módulo account
+## 2. Módulo account (rebuild via skills)
 
-- [ ] 3.1 Criar `modules/account` com `src/index.ts` e agregado `account` (`model`, `provider`, `use-case`, `dto`); verificar estrutura conforme `module-structure`
-- [ ] 3.2 Migrar entidade/VOs de conta para `*.entity.ts`/`*.vo.ts` com `create`/`tryCreate`; verificar testes de entidade/VO
-- [ ] 3.3 Migrar contrato de repositório para `provider/*.repository.ts` e adapter Prisma para `apps/backend`; verificar testes do repositório/mock in-memory em `modules/account/test/**/mock`
-- [ ] 3.4 Substituir `CreateAccount` CommandHandler por `create-account.use-case.ts` (e demais escritas do contexto); verificar testes de use case
-- [ ] 3.5 Migrar leituras do contexto account (se houver) para `*.query.ts` + DTOs; controller chama query/use case conforme lado; verificar `POST /accounts` (e GETs do contexto) equivalentes
-- [ ] 3.6 Remover código legado de `src/accounts` após wiring; verificar build/test sem imports quebrados
+- [ ] 2.1 Criar `modules/account` com `src/index.ts` e agregado `account` (`model`, `provider`, `use-case`, `dto`) via skill `module-aggregate`; verificar estrutura
+- [ ] 2.2 Implementar entidade/VOs de conta (`*.entity.ts`/`*.vo.ts`) sobre o kernel Genérico; verificar testes
+- [ ] 2.3 Contrato `provider/*.repository.ts` + adapter Prisma em `apps/backend` + mock in-memory; verificar testes
+- [ ] 2.4 Use cases de escrita (ex.: create-account); verificar testes de use case
+- [ ] 2.5 Leituras do contexto (se houver) via `*.query.ts` + DTOs; verificar equivalência HTTP do contexto account
+- [ ] 2.6 Garantir ausência de restos `src/accounts`; verificar build/test sem imports quebrados
 
-## 4. Módulo category
+## 3. Módulo category
 
-- [ ] 4.1 Criar `modules/category` e migrar modelo Category/SubCategory para `model/` com nomenclatura das skills; verificar testes de domínio
-- [ ] 4.2 Migrar repositório + adapter Prisma; verificar mocks in-memory e testes de persistência
-- [ ] 4.3 Migrar `CreateCategory`/`CreateSubCategory` para use cases; verificar testes de use case
-- [ ] 4.4 Migrar `ListIncomeCategories`/`ListExpenseCategories` para Query + DTO + chamada direta no controller; verificar `GET /categories/income`, `GET /categories/expense`, `POST /categories`, `POST /categories/:categoryId/subcategories`
-- [ ] 4.5 Remover `src/category` legado; verificar suite verde no contexto
+- [ ] 3.1 Criar `modules/category` e modelo Category/SubCategory; verificar testes de domínio
+- [ ] 3.2 Repositório + adapter Prisma + mocks; verificar testes
+- [ ] 3.3 Use cases de criação (category/sub-category); verificar testes
+- [ ] 3.4 Queries de listagem income/expense + DTOs; verificar `GET/POST` de categories equivalentes
+- [ ] 3.5 Garantir ausência de `src/category`; verificar suite do contexto
 
-## 5. Módulo transaction
+## 4. Módulo transaction
 
-- [ ] 5.1 Criar `modules/transaction` e migrar entidades Expense/Income/Transfer (e eventos de domínio se existirem) para o layout de agregado; verificar testes de domínio
-- [ ] 5.2 Migrar repositórios/ACL/readers de escrita para `provider` + adapters em `apps/backend`; verificar mocks e testes
-- [ ] 5.3 Migrar `RegisterExpense`/`RegisterIncome`/`RegisterTransfer`/`EditTransaction` para use cases; verificar testes de use case
-- [ ] 5.4 Migrar listagens para Query + DTO; controller sem QueryHandler legado; verificar `GET/POST/PUT` de `/transactions/*` equivalentes
-- [ ] 5.5 Remover `src/transactions` legado; verificar suite verde no contexto
+- [ ] 4.1 Criar `modules/transaction` e entidades Expense/Income/Transfer; verificar testes de domínio
+- [ ] 4.2 Providers/repositórios + adapters; verificar mocks e testes
+- [ ] 4.3 Use cases Register/Edit; verificar testes
+- [ ] 4.4 Queries de listagem + DTOs; verificar `GET/POST/PUT` de `/transactions/*` equivalentes
+- [ ] 4.5 Garantir ausência de `src/transactions`; verificar suite do contexto
 
-## 6. Módulo reporting
+## 5. Módulo reporting
 
-- [ ] 6.1 Criar `modules/reporting` e classificar `AccountBalanceCalculator`/`BreakdownCategoriesComposer`: domain service puro vs use case de leitura justificado; verificar testes unitários correspondentes
-- [ ] 6.2 Migrar queries `ListAccounts`/`BreakdownCategories`/`Statement` para contratos `*.query.ts` + DTOs (e use case de leitura só se a exceção da skill se aplicar, com comentário); verificar testes
-- [ ] 6.3 Implementar adapters Prisma/readers em `apps/backend` e wiring dos controllers; verificar `GET /reporting/accounts`, `GET /reporting/categories/breakdown`, `GET /reporting/statement`
-- [ ] 6.4 Remover `src/reporting` legado; verificar suite verde no contexto
+- [ ] 5.1 Criar `modules/reporting`; classificar calculators/composers como domain service vs use case de leitura justificado; verificar testes
+- [ ] 5.2 Queries ListAccounts/Breakdown/Statement + DTOs (use case de leitura só com justificativa); verificar testes
+- [ ] 5.3 Adapters em `apps/backend` + controllers; verificar endpoints `/reporting/*` equivalentes
+- [ ] 5.4 Garantir ausência de `src/reporting`; verificar suite do contexto
 
-## 7. Limpeza, docs e integração
+## 6. Docs e integração
 
-- [ ] 7.1 Remover `CommandHandler`/`QueryHandler` e restos de `src/shared`/`src/` legado não usados; verificar que nenhum import aponta para paths antigos
-- [ ] 7.2 Atualizar `AGENTS.md` e README: layout `modules/`/`packages/shared`/`apps/backend`, nomenclatura kebab-case das skills, referências às skills `module-*` no lugar das `create-*` removidas; verificar docs batem com `package.json` e árvore real (skill `update-readme`)
-- [ ] 7.3 Rodar integração ampla: `pnpm lint`, `pnpm test`, smoke e2e dos endpoints públicos listados nas specs; verificar tudo verde sem mudança intencional de contrato HTTP/schema
+- [ ] 6.1 Remover quaisquer restos de `CommandHandler`/`QueryHandler` e shared legado não preservado; verificar nenhum import para paths apagados
+- [ ] 6.2 Atualizar `AGENTS.md` e README: kernel `@/shared`, `modules/`/`apps/backend`, nomenclatura kebab-case, skills `module-*`, decisão keep/delete; verificar docs (skill `update-readme`)
+- [ ] 6.3 Rodar `pnpm lint`, `pnpm test`, smoke e2e dos endpoints públicos; verificar verde sem mudança intencional de contrato HTTP/schema

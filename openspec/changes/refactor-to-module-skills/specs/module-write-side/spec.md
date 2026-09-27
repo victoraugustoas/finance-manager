@@ -2,20 +2,20 @@
 
 ## Purpose
 
-Define os padrões de escrita (comando) do domínio e da aplicação: Entity, Value Object, Repository, Use Case, Domain Service e Result, conforme as skills `module-entity`, `module-value-object`, `module-repository`, `module-use-case` e `module-domain-service`.
+Define os padrões de escrita (comando) do domínio e da aplicação: Entity, Value Object, Repository, Use Case, Domain Service e Result, conforme as skills `module-*`, sobre o kernel Genérico mantido do commit `1a04a95b`.
 
 ## ADDED Requirements
 
-### Requirement: Kernel compartilhado em packages/shared
+### Requirement: Kernel compartilhado via `@/shared`
 
-O projeto MUST fornecer bases de domínio/aplicação em `packages/shared`, importáveis pelos módulos sem caminhos relativos para dentro do pacote shared. O kernel MUST incluir, no mínimo, contratos/classes alinhados às skills: `Entity`, `ValueObject`, `Result`, `UseCase`, e bases de repositório CRUD quando aplicáveis (`CrudRepository` ou equivalentes documentados nas skills).
+O projeto MUST fornecer bases de domínio/aplicação sob `src/shared`, importáveis pelos módulos exclusivamente via alias `@/shared` (sem caminhos relativos para dentro de `src/shared` e sem pacote `packages/shared`). O kernel MUST ser o adicionado pelo commit `1a04a95b` e incluir, no mínimo, contratos/classes alinhados às skills: `Entity`, value object base (`vo`), `Result` (e validator/erros associados), e `UseCase`. Repositórios de agregado MUST declarar interface explícita (`create` / `update` / `findById` / `delete` retornando `Result`); o projeto MUST NOT exigir `CrudRepository` nem `TransactionContext` no shared.
 
-Entidades de módulo MUST estender `Entity` do shared. Value Objects MUST estender `ValueObject` do shared. Use cases MUST implementar `UseCase<IN, OUT>` com `execute` retornando `Promise<Result<OUT>>`.
+Entidades de módulo MUST estender `Entity` do shared. Value Objects MUST estender a base de VO do shared. Use cases MUST implementar `UseCase<IN, OUT>` com `execute` retornando `Promise<Result<OUT>>`.
 
-#### Scenario: Módulo importa shared por pacote
+#### Scenario: Módulo importa shared pelo alias
 
 - **WHEN** uma entidade ou use case de `modules/<module>` referencia tipos base
-- **THEN** a importação usa o pacote shared do workspace (não `../../packages/shared/...` relativo)
+- **THEN** a importação usa `@/shared/...`
 - **AND** o contrato de use case expõe `execute` assíncrono retornando `Result`
 
 ### Requirement: Entidades com create/tryCreate e Result
@@ -39,7 +39,7 @@ Testes de entidade MUST cobrir criação válida, inválida, igualdade por `id` 
 
 ### Requirement: Value Objects com create/tryCreate
 
-Value Objects MUST ser imutáveis, validar no `tryCreate`, normalizar entrada quando fizer sentido, e expor `create`/`tryCreate` com códigos de erro estáticos legíveis. VOs globais MUST viver em `packages/shared`; VOs específicos de domínio MUST viver em `modules/<module>/src/<feature>/model/<name>.vo.ts` com testes sob `modules/<module>/test/`.
+Value Objects MUST ser imutáveis, validar no `tryCreate`, normalizar entrada quando fizer sentido, e expor `create`/`tryCreate` com códigos de erro estáticos legíveis. VOs globais MUST viver sob `src/shared` (ex.: `id.vo.ts` do kernel mantido); VOs específicos de domínio MUST viver em `modules/<module>/src/<feature>/model/<name>.vo.ts` com testes sob `modules/<module>/test/`.
 
 #### Scenario: VO rejeita valor inválido
 
@@ -61,9 +61,9 @@ Mocks in-memory MUST implementar o mesmo contrato e viver sob `modules/<module>/
 
 ### Requirement: Use cases orquestram escrita
 
-Operações de escrita (create/update/delete e comandos equivalentes legados) MUST ser implementadas como use cases em `modules/<module>/src/<aggregate>/use-case/*.use-case.ts`, implementando `UseCase<IN, OUT>`. O use case MUST orquestrar providers/repositórios/queries, delegar invariantes a entidades/VOs, e tratar falhas com early return via `Result.fail` / `withFail` (ou equivalente do shared). O use case NÃO MUST conter I/O direto de Prisma/HTTP.
+Operações de escrita (create/update/delete e comandos equivalentes) MUST ser implementadas como use cases em `modules/<module>/src/<aggregate>/use-case/*.use-case.ts`, implementando `UseCase<IN, OUT>`. O use case MUST orquestrar providers/repositórios/queries, delegar invariantes a entidades/VOs, e tratar falhas com early return via `Result.fail` / `withFail` (ou equivalente do shared). O use case NÃO MUST conter I/O direto de Prisma/HTTP.
 
-Handlers legados `CommandHandler` MUST ser substituídos por use cases equivalentes semanticamente.
+Handlers legados `CommandHandler` MUST NÃO ser reintroduzidos; o rebuild usa apenas use cases.
 
 #### Scenario: Use case de criação com falha de domínio
 
@@ -73,7 +73,7 @@ Handlers legados `CommandHandler` MUST ser substituídos por use cases equivalen
 
 ### Requirement: Domain services puros
 
-Serviços de domínio MUST existir apenas sob `modules/*/src/**` (arquivos `*.service.ts`), encapsular regras que não cabem em uma única entidade/VO, e NÃO depender de Nest, HTTP, Prisma, filesystem ou estado global. Serviços atuais de reporting que são pura composição/cálculo MUST ser classificados como domain services se permanecerem no módulo; lógica de projeção que cabe em SQL MUST migrar para o lado de leitura (ver capability `module-read-side`).
+Serviços de domínio MUST existir apenas sob `modules/*/src/**` (arquivos `*.service.ts`), encapsular regras que não cabem em uma única entidade/VO, e NÃO depender de Nest, HTTP, Prisma, filesystem ou estado global. Lógica de reporting que for pura composição/cálculo MUST ser classificada como domain service se permanecer no módulo; lógica de projeção que cabe em SQL MUST migrar para o lado de leitura (ver capability `module-read-side`).
 
 #### Scenario: Domain service sem I/O
 

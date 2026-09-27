@@ -2,25 +2,35 @@
 
 ## Purpose
 
-Define o layout estrutural do finance-manager alinhado às skills `module-*`: monorepo com `modules/`, `packages/shared/` e `apps/backend/`, organização por agregado e nomenclatura obrigatória.
+Define o layout estrutural do finance-manager alinhado às skills `module-*`: domínio em `modules/`, kernel Genérico em `src/shared` via `@/shared`, app Nest/adapters em `apps/backend/`, organização por agregado e nomenclatura obrigatória.
 
 ## ADDED Requirements
 
-### Requirement: Layout monorepo alinhado às module skills
+### Requirement: Layout alinhado às module skills
 
-O repositório MUST organizar o código de domínio, kernel compartilhado e infraestrutura de aplicação nos caminhos exigidos pelas skills `module-*`:
+O repositório MUST organizar o código assim:
 
 - Domínio de negócio: `modules/<module>/`
-- Kernel compartilhado: `packages/shared/`
+- Kernel compartilhado: `src/shared/**`, importado exclusivamente via alias `@/shared` (`@/*` mapeia para `src/*`)
 - App NestJS (controllers, adapters Prisma, wiring): `apps/backend/`
 
-Cada módulo de domínio MUST expor `modules/<module>/src/index.ts`. Código de produção do módulo MUST viver sob `modules/<module>/src/**`. Artefatos exclusivos de teste MUST viver sob `modules/<module>/test/**` e NÃO sob `modules/<module>/src/**`.
+O projeto MUST NOT tratar `packages/shared` como localização canônica do kernel nesta change. Cada módulo de domínio MUST expor `modules/<module>/src/index.ts`. Código de produção do módulo MUST viver sob `modules/<module>/src/**`. Artefatos exclusivos de teste MUST viver sob `modules/<module>/test/**` e NÃO sob `modules/<module>/src/**`.
 
-#### Scenario: Estrutura raiz após migração
+#### Scenario: Estrutura após migração
 
 - **WHEN** a migração estrutural for concluída
-- **THEN** existem os diretórios `modules/`, `packages/shared/` e `apps/backend/`
+- **THEN** existem `modules/`, kernel utilizável sob `src/shared` via `@/shared`, e `apps/backend/`
 - **AND** não permanece domínio de negócio sob o layout legado `src/{accounts,category,transactions,reporting}/core`
+
+### Requirement: Fonte de verdade do kernel shared
+
+O kernel compartilhado MUST ser o conjunto adicionado pelo commit `1a04a95b` (arquivos Genérico kebab-case sob `src/shared/base`, `src/shared/ValueObjects/id.vo.ts`, `src/shared/errors/*`, com testes em `test/shared/**`). Implementações shared PascalCase legadas e demais VOs/handlers legados em `src/shared` que não fazem parte desse commit MUST ser removidas no apply. Skills `module-*` e artefatos OpenSpec MUST ser preservados.
+
+#### Scenario: Kernel único após limpeza
+
+- **WHEN** a etapa keep/delete do apply for concluída
+- **THEN** o código importa bases de domínio de `@/shared/...` correspondente aos arquivos Genérico de `1a04a95b`
+- **AND** não coexistem `Entity.ts`/`Result.ts` PascalCase legados como API canônica ao lado do kernel Genérico
 
 ### Requirement: Organização por agregado
 
@@ -28,13 +38,13 @@ Dentro de `modules/<module>/src/<aggregate>/`, o agregado MUST usar pastas em in
 
 #### Scenario: Scaffold de agregado
 
-- **WHEN** um agregado é criado ou migrado para um módulo
+- **WHEN** um agregado é criado sob um módulo
 - **THEN** existem pelo menos `model/`, `provider/` e `use-case/` sob `modules/<module>/src/<aggregate>/`
 - **AND** o módulo exporta o agregado por `src/index.ts`
 
 ### Requirement: Nomenclatura kebab-case com sufixos das skills
 
-Arquivos de componentes de código sob `modules/` e `packages/shared/` MUST usar `kebab-case` com sufixos em inglês definidos pelas skills:
+Arquivos de componentes de código sob `modules/` e o kernel sob `src/shared/` MUST usar `kebab-case` com sufixos em inglês definidos pelas skills (exceto símbolos já referenciados pelas skills em path PascalCase pontual, ex. `UseCase`, até alinhamento explícito):
 
 - Entidade: `<nome>.entity.ts`
 - Value Object: `<nome>.vo.ts`
@@ -44,42 +54,40 @@ Arquivos de componentes de código sob `modules/` e `packages/shared/` MUST usar
 - Domain service: `<nome>.service.ts`
 - DTO: sob `dto/`, nomes em kebab-case
 
-Classes e interfaces MUST permanecer em PascalCase. Testes de use case MUST seguir `modules/<module>/test/<aggregate>/<verb>-<aggregate>.use-case.test.ts` (ou equivalente documentado pela skill). Mocks in-memory de repositório MUST ficar em `modules/<module>/test/**/mock/` (ex.: `in-memory-<aggregate>.repository.ts`), nunca em `src/**`.
+Classes e interfaces MUST permanecer em PascalCase. Testes de use case MUST seguir `modules/<module>/test/<aggregate>/<verb>-<aggregate>.use-case.test.ts` (ou equivalente documentado pela skill). Mocks in-memory de repositório MUST ficar em `modules/<module>/test/**/mock/`, nunca em `src/**` de módulo.
 
 Em conflito com a convenção PascalCase de arquivos do `AGENTS.md` legado, esta requirement MUST prevalecer.
 
-#### Scenario: Arquivo de entidade migrado
+#### Scenario: Arquivo de entidade recriado
 
-- **WHEN** a entidade de conta é migrada para o módulo correspondente
+- **WHEN** a entidade de conta é criada no módulo correspondente
 - **THEN** o arquivo se chama `account.entity.ts` (ou nome kebab-case do agregado) sob `model/`
 - **AND** não permanece como `Account.ts` no layout legado
 
-### Requirement: Mapeamento dos bounded contexts existentes
+### Requirement: Mapeamento dos bounded contexts
 
-Os bounded contexts documentados MUST ser representados como módulos sob `modules/`:
+Os bounded contexts documentados MUST ser representados como módulos sob `modules/` **após** a remoção das implementações legadas e o rebuild via skills:
 
-| Contexto legado | Módulo alvo (kebab-case) |
+| Contexto legado (a remover) | Módulo alvo (kebab-case) |
 | --- | --- |
 | Account (`src/accounts`) | `modules/account` |
 | Category (`src/category`) | `modules/category` |
 | Transaction (`src/transactions`) | `modules/transaction` |
 | Reporting (`src/reporting`) | `modules/reporting` |
-| Notifications (documentado; sem código em `src/` hoje) | `modules/notifications` somente quando houver implementação |
+| Notifications (sem código em `src/` hoje) | `modules/notifications` somente quando houver implementação |
 
-Nomes de pastas de módulo e agregado MUST ser em inglês kebab-case.
+#### Scenario: Contextos de negócio recriados
 
-#### Scenario: Contextos de negócio migrados
-
-- **WHEN** a migração dos contextos com código existente for concluída
+- **WHEN** o rebuild dos contextos for concluído
 - **THEN** existem `modules/account`, `modules/category`, `modules/transaction` e `modules/reporting`
 - **AND** cada um contém `src/index.ts`
 
 ### Requirement: Estabilidade da API HTTP e da persistência
 
-A refatoração estrutural MUST preservar o comportamento HTTP observável (rotas, métodos, formatos de request/response e códigos de status já expostos) e o schema de persistência Prisma (modelos e migrations existentes), salvo correção de bug incidental documentada. Regras de negócio MUST permanecer semanticamente equivalentes.
+Após o rebuild, a refatoração MUST preservar o comportamento HTTP observável (rotas, métodos, formatos de request/response e códigos de status já expostos) e o schema de persistência Prisma, salvo correção de bug incidental documentada. Regras de negócio MUST permanecer semanticamente equivalentes. Durante a janela entre o delete das implementações legadas e a recriação dos módulos, a API MAY ficar indisponível para esses contextos — essa janela MUST ser temporária e encerrada antes de concluir a change.
 
-#### Scenario: Smoke da API após migração de um contexto
+#### Scenario: Smoke da API após rebuild de um contexto
 
-- **WHEN** um contexto migrado é exercitado pelos mesmos endpoints HTTP de antes
+- **WHEN** um contexto recriado é exercitado pelos mesmos endpoints HTTP de antes
 - **THEN** as respostas observáveis (status e shape público) permanecem equivalentes
 - **AND** nenhuma migration Prisma nova é exigida apenas por mudança de pastas/arquivos

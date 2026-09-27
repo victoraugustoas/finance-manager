@@ -2,144 +2,133 @@
 
 ## Context
 
-Ver `proposal.md` (Why). Estado atual observado:
+Ver `proposal.md` (Why). Estado observado após o commit `1a04a95b`:
 
-- App NestJS single-package: `src/{accounts,category,transactions,reporting,shared,entrypoint}` + `src/main.ts`.
-- CQRS legado: `CommandHandler`/`QueryHandler` sob `core/commands` e `core/queries`; ports em `core/ports`; Prisma em `infra/database`; DTOs HTTP em `infra/dtos`.
-- Shared em `src/shared/base` com `Entity`, `Result`, `ValueObject`, `UseCase`, `CommandHandler`, `QueryHandler`, `AggregateRoot` — APIs diferentes das skills Genérico (`Entity<Type, Props>`, `tryCreate`, `cloneWith`, `CrudRepository`, pacote `@mentoria-360/shared` nos exemplos).
-- Skills novas assumem monorepo Genérico: `modules/<module>`, `packages/shared`, `apps/backend`, arquivos `kebab-case` + sufixos.
-- `AGENTS.md` ainda cita skills `create-*` removidas e PascalCase para arquivos de componente.
-- Arquivo referenciado `../skills-standards.md` **não existe** no commit; nomenclatura autoritativa = skill `module-aggregate` + pattern docs irmãos.
-- Não há `modules/`, `packages/` nem `apps/` hoje. Contexto Notifications está só documentado (sem pasta em `src/`).
+- **Kernel Genérico (adicionar/manter — fonte de verdade):** `src/shared/base/{aggregate-root,entity,message,metadata,result,result-error,result-validator,vo}.ts`, `src/shared/ValueObjects/id.vo.ts`, `src/shared/errors/{shared-errors,validation-error,validation-errors}.ts`, testes em `test/shared/**`. Skills `module-*` importam via `@/shared` (`@/*` → `src/*`) e rejeitam `packages/shared/package.json` / `CrudRepository` / `TransactionContext`.
+- **Kernel e domínio legados (apagar):** shared PascalCase (`Entity.ts`, `Result.ts`, `AggregateRoot.ts`, `CommandHandler.ts`, `QueryHandler.ts`, `ValueObject.ts`, `Check.ts`, VOs `Money`/`Effectivated`/`ReportingPeriod`, etc.) e contextos `src/{accounts,category,transactions,reporting}` com CQRS legado.
+- App Nest single-package ainda em `src/` + `src/main.ts`; não há `modules/` nem `apps/` hoje.
+- `AGENTS.md` ainda cita convenções PascalCase / skills `create-*` removidas.
+- Arquivo `../skills-standards.md` **não existe**; naming autoritativo = skills `module-*`.
+- **Nota de worktree:** o working tree pode estar com o kernel de `1a04a95b` ausente e o PascalCase presente (ou o inverso). O apply deve **restaurar/preservar** o tree do commit e só então executar o delete — esta sessão de planejamento **não** altera código.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Definir o caminho de migração estrutural até o layout das skills, contexto a contexto.
-- Adaptar o kernel shared às APIs que as skills exigem, preservando comportamento de negócio.
-- Substituir handlers de comando por use cases e handlers de query por contratos Query + adapters.
-- Registrar conflitos de convenção e a fonte da verdade escolhida.
+- Fixar a fonte de verdade do shared: kernel Genérico de `1a04a95b`.
+- Remover implementações legadas que competem com esse kernel e com as skills.
+- Recriar domínio em `modules/<module>` e adapters Nest sob `apps/backend` (ou equivalente Nest) sobre o kernel mantido.
+- Registrar conflitos de convenção e a ordem keep → delete → rebuild.
 
 **Non-Goals:**
 
-- Novas features de produto, novos endpoints ou mudanças de schema Prisma “de propósito”.
-- Reescrever as skills `module-*` ou portar o exemplo Mentoria-360 literal (auth/stock/product).
-- Introduzir frontend ou apps além do backend Nest.
-- Criar `modules/notifications` vazio só por documentação.
+- Aplicar keep/delete ou rebuild nesta sessão de planejamento.
+- Novas features de produto ou mudanças de schema Prisma “de propósito”.
+- Reescrever as skills `module-*` (já atualizadas em `1a04a95b`).
+- Introduzir frontend; criar `modules/notifications` vazio.
 
 ## Decisions
 
-### D1 — Adotar monorepo pnpm com três camadas
+### D1 — Kernel em `src/shared` via `@/shared` (não `packages/shared`)
 
-**Escolha:** Workspace com `packages/shared`, `modules/*` (pacotes de domínio) e `apps/backend` (Nest + Prisma adapters + controllers).
+**Escolha:** O kernel canônico permanece sob `src/shared/**`, importado exclusivamente pelo alias `@/shared`, como definido pelo commit `1a04a95b` e pelas skills.
 
-**Por quê:** É o layout explícito das skills (`module-aggregate`, `module-repository`, `module-query-cqrs`). Manter tudo em `src/` forçaria desviar das skills e quebraria o script `create-aggregate.js`.
+**Por quê:** As skills atualizadas proíbem resolver pacote a partir de `packages/shared/package.json` e geram imports `@/shared/base/...`.
 
-**Alternativa:** Manter single-package e só renomear pastas internas — rejeitada porque paths das skills (`modules/`, `packages/shared`, `apps/backend`) deixariam de ser verdadeiros.
+**Alternativa rejeitada:** Migrar shared para `packages/shared` e usar nome de pacote workspace — contradiz o commit e as skills atuais.
+
+**Domínio / app:** Continua válido o alvo `modules/<module>/` (skills) e `apps/backend/` para Nest + adapters Prisma/HTTP. O shared **não** se move para `packages/` nesta change.
 
 ### D2 — Nomes de módulos no singular inglês
 
 **Escolha:** `account`, `category`, `transaction`, `reporting` (e `notifications` só com código).
 
-**Por quê:** Skills exigem pastas kebab-case em inglês; singular alinha a exemplos Genérico (`modules/auth`, `modules/product`).
+**Por quê:** Skills exigem pastas kebab-case em inglês; singular alinha aos exemplos Genérico.
 
-**Alternativa:** Manter plurais legados (`accounts`, `transactions`) — rejeitada por divergir da skill de aggregate e do inglês canônico.
+**Alternativa rejeitada:** Plurais legados (`accounts`, `transactions`).
 
 ### D3 — Nomenclatura de arquivos: skills vencem AGENTS.md
 
-**Conflito:** `AGENTS.md` manda PascalCase (`Account.ts`); skills mandam `account.entity.ts`, `create-account.use-case.ts`, etc.
+**Conflito:** `AGENTS.md` manda PascalCase; skills mandam `account.entity.ts`, etc.
 
-**Escolha:** Seguir as skills `module-*`. Atualizar `AGENTS.md`/README na fase de docs (tarefa de apply).
+**Escolha:** Seguir as skills `module-*`. Atualizar docs na fase de apply.
 
-**Assunção registrada:** na ausência de `skills-standards.md`, `module-aggregate` é a fonte de verdade de naming entre skills.
+**Assunção:** na ausência de `skills-standards.md`, `module-aggregate` é a fonte de naming entre skills.
 
-### D4 — Evoluir shared em vez de copiar Mentoria-360 cegamente
+### D4 — Keep `1a04a95b` / delete o restante (substitui a deduplicação anterior)
 
-**Escolha:** Criar `packages/shared` migrando/evoluindo `src/shared` para a superfície exigida pelas skills (`Entity` com `tryCreate`/`cloneWith` ou equivalente, `Result` com `combine`/`validator`/`try` conforme necessário, `UseCase`, bases de repo). Remover ou deprecar `CommandHandler`/`QueryHandler` após migração dos contextos.
+**Decisão anterior (supersedida):** manter o kernel PascalCase do finance-manager e remover o kernel Genérico importado.
 
-**Por quê:** Skills importam shared por pacote e assumem essas APIs; o shared atual é mais simples e incompatível nos detalhes.
+**Decisão atual:**
 
-**Alternativa:** Wrapper fino mantendo API antiga — rejeitada: skills e templates geram código contra a API Genérico.
-
-**Compatibilidade:** Durante a migração incremental, permitir dual-support temporário (adapters de API) só se necessário para não migrar todos os contextos de uma vez; meta final é uma única API shared.
-
-### D5 — Mapeamento legado → alvo por contexto
-
-| Legado | Alvo |
+| Ação | Escopo |
 | --- | --- |
-| `src/shared/**` | `packages/shared/**` |
-| `src/accounts/core/model/*` | `modules/account/src/<aggregate>/model/*.entity.ts` (+ VOs) |
-| `src/accounts/core/ports/repositories/*` | `modules/account/src/<aggregate>/provider/*.repository.ts` |
-| `src/accounts/core/commands/*` | `modules/account/src/<aggregate>/use-case/*.use-case.ts` |
-| `src/accounts/core/queries/*` | `modules/account/src/<aggregate>/provider/*.query.ts` + `dto/` |
-| `src/accounts/infra/database/**` | `apps/backend/src/modules/account/*.prisma.ts` (ou equivalente Nest) |
-| `src/accounts/infra/controllers/**` | `apps/backend` controllers Nest |
-| `src/accounts/infra/dtos/**` | DTOs de transporte HTTP em `apps/backend` **ou** reexport de `modules/.../dto` sem vazar ORM; preferir DTOs de domínio/query no módulo |
-| `src/category/**` | `modules/category` + adapters em `apps/backend` (agregados `category`, `sub-category` se fizer sentido) |
-| `src/transactions/**` | `modules/transaction` (agregados expense/income/transfer ou um agregado `transaction` — preferir espelhar o modelo de domínio atual sem inventar features) |
-| `src/reporting/core/queries/*` + readers | Queries em `modules/reporting/.../provider` + adapters; composers/calculators puros → `*.service.ts` de domínio **ou** use case de leitura se agregarem várias queries |
-| `src/reporting/core/service/*` | Avaliar: puro → domain service; orquestração multi-query → use case de leitura justificado |
-| `src/entrypoint`, `src/main.ts` | `apps/backend` bootstrap Nest |
-| `prisma/` | Permanecer na raiz ou sob `apps/backend` com `DATABASE_URL` estável; **sem** mudança de schema |
+| **KEEP** | Tudo que o commit `1a04a95b` adicionou: kernel Genérico listado no Context; `test/shared/**`; mudanças em `.agents/skills/module-*`; artefatos OpenSpec desta change; `mise.toml`; `uuid` em `package.json` / lockfile. |
+| **DELETE** | Implementações pré-existentes **fora** desse commit: shared PascalCase e VOs/infra de domínio legado em `src/shared` que não foram adicionados por `1a04a95b`; código de negócio/app em `src/accounts`, `src/category`, `src/transactions`, `src/reporting` (core + infra + testes associados). |
+| **Preservar além do commit (assunção explícita)** | Skills e OpenSpec; `src/shared/base/UseCase.ts` enquanto as skills ainda importarem `@/shared/base/UseCase` (arquivo pré-existente não recriado no commit); bootstrap Nest (`main`/entrypoint), `PrismaService`, schema/migrations Prisma e scripts mínimos de infra necessários para o rebuild — **não** os adapters/handlers dos contextos apagados. Outbox/events e enums de domínio legados entram no DELETE com os contextos, salvo dependência descoberta do kernel mantido (hoje o kernel Genérico não depende deles). |
 
-Agregados iniciais sugeridos (ajustáveis na implementação sem mudar specs):
+**Por quê:** Uma única API shared alinhada às skills; evitar dual-kernel e migração “em cima” do CQRS legado.
 
-- `account`: `account`
-- `category`: `category` (subcategory como entidade aninhada ou agregado irmão, conforme modelo atual)
-- `transaction`: manter operações Register/Edit como use cases; modelar entidades Expense/Income/Transfer conforme domínio atual
-- `reporting`: agregados/features de leitura (`statement`, `breakdown`, `account-balance`) sem forçar CRUD
+**Alternativa rejeitada:** Evoluir/preservar o PascalCase e descartar o Genérico (dedup anterior).
+
+**Ordenação:** keep/restore do tree de `1a04a95b` → delete do restante → só então scaffold/rebuild dos módulos. Tudo isso é trabalho de **apply** futuro, não desta sessão.
+
+### D5 — Mapeamento legado → alvo (após delete)
+
+| Antes (a remover ou já removido) | Alvo (rebuild) |
+| --- | --- |
+| Kernel PascalCase em `src/shared` | *apagado*; kernel Genérico de `1a04a95b` permanece |
+| Kernel Genérico `src/shared` (kebab-case) | **mantido** in loco via `@/shared` |
+| `src/accounts/**` | Recriar `modules/account` + adapters em `apps/backend` |
+| `src/category/**` | Recriar `modules/category` + adapters |
+| `src/transactions/**` | Recriar `modules/transaction` + adapters |
+| `src/reporting/**` | Recriar `modules/reporting` + adapters |
+| `src/entrypoint`, `src/main.ts` | Mover/adaptar para `apps/backend` sem mudar contrato HTTP final |
+| `prisma/` | Permanecer na raiz (preferência 1ª onda); **sem** mudança de schema de propósito |
+
+Agregados iniciais (ajustáveis no apply): `account`; `category` (+ subcategory conforme modelo); `transaction` (expense/income/transfer); `reporting` (leituras statement/breakdown/balance).
 
 ### D6 — CQRS: use case na escrita; query na leitura
 
-**Escolha:** Seguir `module-query-cqrs`: controller chama Query direto; Reporting composto (breakdown/statement) pode usar use case de leitura **com comentário de justificativa** se continuar agregando múltiplas fontes.
-
-**Alternativa:** Manter QueryHandler em todos os GETs — rejeitada por contrariar a skill.
+**Escolha:** Seguir `module-query-cqrs`: controller chama Query direto; reporting composto MAY usar use case de leitura **com comentário de justificativa**.
 
 ### D7 — Package name do shared
 
-**Escolha:** Pacote workspace local (ex.: `@finance-manager/shared`), não `@mentoria-360/shared` dos exemplos das skills.
+**Escolha:** Não introduzir pacote `@finance-manager/shared` / `@mentoria-360/shared` nesta change. Consumers usam `@/shared/...`.
 
-**Por quê:** Skills dizem “resolved from `packages/shared/package.json`”; o nome Mentoria é do projeto de origem das skills.
+### D8 — Ordem de migração (apply)
 
-### D8 — Ordem de migração
-
-1. Workspace + `packages/shared` (bases exigidas pelas skills).
-2. Esqueleto `apps/backend` movendo bootstrap Nest/Prisma sem mudar rotas.
-3. `account` (menor superfície de escrita).
-4. `category`.
-5. `transaction`.
-6. `reporting` (mais exceções de leitura composta).
-7. Docs (`AGENTS.md`, README) + limpeza de `src/` legado.
-8. Não criar `notifications` vazio.
-
-Cada contexto: contratos no módulo → use cases/queries → adapter Prisma → controller → testes verdes → remover código legado do contexto.
+1. Garantir presença do tree adicionado por `1a04a95b` (restore se o worktree o removeu).
+2. Delete do restante das implementações (D4).
+3. Esqueleto `modules/*` + `apps/backend` (bootstrap Nest/Prisma) sem inventar features.
+4. Recriar `account` → `category` → `transaction` → `reporting` via skills.
+5. Docs (`AGENTS.md`, README) + limpeza final.
+6. Não criar `notifications` vazio.
 
 ### D9 — Testes
 
-- Unitários de entidade/VO/use case/domain service em `modules/*/test/**` (Jest atual pode ser reconfigurado para o workspace).
-- Mocks in-memory sob `test/**/mock/`.
-- Controllers/adapters: manter cobertura equivalente aos `*.spec.ts` atuais; integração HTTP existente (`test:e2e` / specs de controller) deve continuar passando com a mesma API.
-- Skills pedem `.http` de integração no Genérico; neste repo, **equivalente** = e2e/supertest já existente, sem obrigar nova stack `.http` nesta mudança (assunção).
+- Testes do kernel mantido: `test/shared/**` (já no commit).
+- Unitários de módulo em `modules/*/test/**`.
+- Equivalência HTTP via e2e/supertest existente após rebuild; skills pedem `.http` no Genérico — **equivalente** = e2e atual (assunção).
 
 ## Risks / Trade-offs
 
-- **[Risco] Quebra ampla ao mudar API do shared** → Mitigação: migrar shared com camada de compatibilidade temporária; um contexto por vez; suite de testes a cada etapa.
-- **[Risco] Skill Genérico vs Nest single-app** → Mitigação: `apps/backend` continua Nest; módulos são libs TypeScript puras.
-- **[Risco] Relocar `prisma/` quebra scripts/CI** → Mitigação: preferir manter `prisma/` na raiz na primeira onda; só mover se paths/scripts forem atualizados na mesma tarefa.
-- **[Risco] Reporting “quase CQRS puro” vira use cases demais** → Mitigação: checklist da skill de query; justificar cada use case de leitura.
-- **[Risco] `skills-standards.md` ausente** → Mitigação: documentar assunção (D3); não inventar o arquivo nesta mudança salvo necessidade de unificar naming.
-- **[Trade-off] Monorepo aumenta complexidade de build/tsconfig** → Aceito para conformidade com as skills e o script de aggregate.
+- **[Risco] Delete remove a API HTTP temporariamente** → Mitigação: rebuild por contexto; meta de equivalência só no fim; não declarar a change concluída com endpoints quebrados.
+- **[Risco] Worktree já divergiu de `1a04a95b`** → Mitigação: primeira tarefa de apply = restaurar arquivos KEEP do commit.
+- **[Risco] Skills ainda importam `UseCase` PascalCase** → Mitigação: preservar `UseCase.ts` (D4) ou alinhar path no apply sem reescrever skills além do necessário.
+- **[Risco] Perda de regras de negócio ao apagar contextos** → Mitigação: usar git history / specs de comportamento HTTP existentes como referência ao recriar; sem mudança intencional de regras.
+- **[Risco] Relocar `prisma/` quebra CI** → Mitigação: manter na raiz na 1ª onda.
+- **[Trade-off] Rebuild vs migrate-in-place** → Aceito: delete + skills é mais simples que dual-kernel.
 
 ## Migration Plan
 
-1. Introduzir pnpm workspaces e pacotes vazios/mínimos.
-2. Migrar shared e fazer o app depender do pacote.
-3. Mover Nest para `apps/backend` apontando para módulos (inicialmente ainda podem reexportar código legado).
-4. Migrar contextos na ordem D8; após cada um, `pnpm test` + smoke HTTP.
-5. Remover `src/` legado e referências `create-*` na documentação.
-6. Rollback: git revert por PR/contexto; schema DB inalterado facilita rollback de código.
+1. Restore/keep arquivos de `1a04a95b` (kernel + testes shared).
+2. Delete implementações legadas (D4) — **somente no apply**.
+3. Introduzir `modules/` + `apps/backend` mínimos.
+4. Recriar contextos na ordem D8; `pnpm test` + smoke HTTP por etapa quando houver endpoints de novo.
+5. Atualizar docs; limpar restos.
+6. Rollback: git revert / checkout dos paths apagados; schema DB inalterado facilita rollback.
 
 ## Open Questions
 
-Nenhum que altere specs ou a abordagem acima. Detalhes de quantos agregados dentro de `transaction`/`category` ficam para o apply, desde que respeitem `module-structure` e preservem regras atuais.
+Nenhum que altere a decisão keep/delete. Detalhes de quantos agregados dentro de `transaction`/`category` e o momento exato de mover Nest para `apps/backend` ficam para o apply, desde que respeitem as specs e o kernel mantido.
