@@ -49,7 +49,7 @@ Value Objects MUST ser imutáveis, validar no `tryCreate`, normalizar entrada qu
 
 ### Requirement: Repositórios no provider e adapters na infra
 
-Contratos de repositório MUST residir em `src/modules/<module>/<aggregate>/provider/*.repository.ts`, tipando operações com `Promise<Result<...>>`. Implementações Prisma (ou outro adapter) MUST residir em `src/modules/<module>/<aggregate>.prisma.ts`, mapear com `toDomain`/`fromDomain`, e NÃO vazar tipos de ORM para o domínio. Repositório é caminho de escrita/leitura orientada a entidade; NÃO MUST retornar DTO de projeção de API no lugar de entidade quando o contrato for de comando.
+Contratos de repositório MUST residir em `src/modules/<module>/<aggregate>/provider/*.repository.ts`, tipando operações com `Promise<Result<...>>`. Implementações Prisma (ou outro adapter) MUST residir em `src/modules/<module>/infra/<aggregate>/provider/prisma-<nome>.repository.ts`, espelhando o contrato, mapear com `toDomain`/`fromDomain`, e NÃO vazar tipos de ORM para o domínio. Repositório é caminho de escrita/leitura orientada a entidade; NÃO MUST retornar DTO de projeção de API no lugar de entidade quando o contrato for de comando.
 
 Mocks in-memory MUST implementar o mesmo contrato e viver sob `src/modules/<module>/test/**/mock/`.
 
@@ -57,7 +57,7 @@ Mocks in-memory MUST implementar o mesmo contrato e viver sob `src/modules/<modu
 
 - **WHEN** um use case de escrita persiste um agregado
 - **THEN** depende apenas da interface em `provider/*.repository.ts`
-- **AND** a implementação Prisma em `src/modules/<module>/<aggregate>.prisma.ts` retorna `Result` e mapeia entidade sem expor o client Prisma ao contrato de domínio
+- **AND** a implementação Prisma em `src/modules/<module>/infra/<aggregate>/provider/prisma-<nome>.repository.ts` retorna `Result` e mapeia entidade sem expor o client Prisma ao contrato de domínio
 
 ### Requirement: Use cases orquestram escrita
 
@@ -73,7 +73,7 @@ Handlers legados `CommandHandler` MUST NÃO ser reintroduzidos; o rebuild usa ap
 
 ### Requirement: Domain services puros
 
-Serviços de domínio MUST existir apenas como arquivos `*.service.ts` de domínio sob `src/modules/<module>/**` (pasta do agregado ou `service/` na raiz do módulo), encapsular regras que não cabem em uma única entidade/VO, e NÃO depender de Nest, HTTP, Prisma, filesystem ou estado global. Adapters `*.prisma.ts`, controllers e testes no mesmo `src/modules/` NÃO são domain service. Lógica de reporting que for pura composição/cálculo MUST ser classificada como domain service se permanecer no módulo; lógica de projeção que cabe em SQL MUST migrar para o lado de leitura (ver capability `module-read-side`).
+Serviços de domínio MUST existir apenas como arquivos `*.service.ts` sob `src/modules/<module>/<aggregate>/**` (em geral `model/` ou `service/`), encapsular regras que não cabem em uma única entidade/VO, e NÃO depender de Nest, HTTP, Prisma, filesystem ou estado global. A camada `src/modules/<module>/infra/**` e os testes em `src/modules/<module>/test/**` NÃO são domain service. Lógica de reporting que for pura composição/cálculo MUST ser classificada como domain service se permanecer no agregado; lógica de projeção que cabe em SQL MUST migrar para o lado de leitura (ver capability `module-read-side`).
 
 #### Scenario: Domain service sem I/O
 

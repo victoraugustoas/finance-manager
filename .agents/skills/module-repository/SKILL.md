@@ -9,11 +9,23 @@ description: 'Criar, revisar ou orientar contratos e implementações de reposit
 
 Aplicar o padrão de repositório para escrita e leitura de entidades de domínio com contratos no `dominio` e implementação desacoplada em infraestrutura.
 
+## Estrutura espelhada
+
+A infraestrutura repete o agregado e a pasta `provider/` do domínio:
+
+```text
+src/modules/<module>/<aggregate>/provider/<aggregate>.repository.ts
+src/modules/<module>/infra/<aggregate>/provider/prisma-<aggregate>.repository.ts
+```
+
+`model/`, `use-case/` e `service/` ficam só no agregado. O módulo Nest do contexto fica em `src/modules/<module>/infra/<module>.module.ts` e liga a interface do repositório à classe Prisma.
+
 ## Guidelines
 
 - Definir contrato em `src/modules/<module>/<aggregate>/provider/*.repository.ts`.
 - Reutilizar `Result` de `@/shared/base/result` e `RepositoryErrors` de `@/shared/errors/shared-errors`. O kernel em `src/shared` não expõe base CRUD.
-- Implementar em adapter de infraestrutura (ex.: `src/modules/<module>/<aggregate>.prisma.ts`) retornando `Result`.
+- Implementar o adapter em `src/modules/<module>/infra/<aggregate>/provider/`, espelhando a pasta `provider/` do agregado. Um contrato vira um arquivo: `prisma-<aggregate>.repository.ts` implementa `<aggregate>.repository.ts` e retorna `Result`.
+- Não concentrar o repositório num `<aggregate>.prisma.ts` na raiz do módulo.
 - Mapear domínio explicitamente:
   - `toDomain`: payload do banco -> entidade.
   - `fromDomain`: entidade -> payload de persistência.

@@ -35,7 +35,7 @@ DTOs MUST:
 
 ### Requirement: Implementação no adapter e controller
 
-A implementação da query MUST residir no adapter de infraestrutura do agregado em `src/modules/<module>/<aggregate>.prisma.ts` (atributo público tipado na classe Prisma do agregado). O controller MUST converter parâmetros HTTP no DTO de entrada, chamar a query diretamente e mapear `isFailure` / `null` para resposta HTTP equivalente à API atual.
+A implementação da query MUST residir em `src/modules/<module>/infra/<aggregate>/provider/prisma-<nome>.query.ts`, uma classe por interface, espelhando `src/modules/<module>/<aggregate>/provider/<nome>.query.ts`. O controller MUST residir em `src/modules/<module>/infra/<aggregate>/<aggregate>.controller.ts`, converter parâmetros HTTP no DTO de entrada, chamar `execute` da query diretamente e mapear `isFailure` / `null` para resposta HTTP equivalente à API atual. DTOs HTTP, quando o contrato da API difere do DTO do agregado, MUST viver em `src/modules/<module>/infra/<aggregate>/dto/*.http.dto.ts`.
 
 Handlers legados `QueryHandler` MUST NÃO ser reintroduzidos no rebuild, salvo redução às exceções abaixo.
 
@@ -44,7 +44,7 @@ Complexidade de leitura (filtros, ordenação, agregações, campos derivados) M
 #### Scenario: Controller de leitura chama query
 
 - **WHEN** um GET de listagem recriado é invocado
-- **THEN** o controller chama `*.execute(...)` da query do adapter
+- **THEN** o controller em `infra/<aggregate>/` chama `execute` da classe em `infra/<aggregate>/provider/prisma-<nome>.query.ts`
 - **AND** não instancia use case de leitura, salvo exceção justificada
 
 ### Requirement: Use case de leitura somente por exceção

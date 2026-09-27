@@ -6,7 +6,7 @@ Ver `proposal.md` (Why). Estado observado após o commit `1a04a95b`:
 
 - **Kernel Genérico (adicionar/manter — fonte de verdade):** `src/shared/base/{aggregate-root,entity,message,metadata,result,result-error,result-validator,vo}.ts`, `src/shared/ValueObjects/id.vo.ts`, `src/shared/errors/{shared-errors,validation-error,validation-errors}.ts`, testes em `test/shared/**`. Skills `module-*` importam via `@/shared` (`@/*` → `src/*`) e rejeitam `packages/shared/package.json` / `CrudRepository` / `TransactionContext`.
 - **Kernel e domínio legados (apagar):** shared PascalCase (`Entity.ts`, `Result.ts`, `AggregateRoot.ts`, `CommandHandler.ts`, `QueryHandler.ts`, `ValueObject.ts`, `Check.ts`, VOs `Money`/`Effectivated`/`ReportingPeriod`, etc.) e contextos `src/{accounts,category,transactions,reporting}` com CQRS legado.
-- App Nest single-package ainda em `src/` + `src/main.ts`. O alvo deixou de ser `modules/` na raiz mais `apps/backend/`: domínio, adapters e testes ficam em `src/modules/<module>/`, e o bootstrap Nest permanece em `src/`.
+- App Nest single-package ainda em `src/` + `src/main.ts`. O alvo deixou de ser `modules/` na raiz mais `apps/backend/`: domínio do agregado em `src/modules/<module>/<aggregate>/`, adapters em `src/modules/<module>/infra/<aggregate>/` espelhando `dto/` e `provider/`, testes em `src/modules/<module>/test/`, e o bootstrap Nest permanece em `src/`.
 - `AGENTS.md` ainda cita convenções PascalCase / skills `create-*` removidas.
 - Arquivo `../skills-standards.md` **não existe**; naming autoritativo = skills `module-*`.
 - **Nota de worktree:** o working tree pode estar com o kernel de `1a04a95b` ausente e o PascalCase presente (ou o inverso). O apply deve **restaurar/preservar** o tree do commit e só então executar o delete — esta sessão de planejamento **não** altera código.
@@ -17,7 +17,7 @@ Ver `proposal.md` (Why). Estado observado após o commit `1a04a95b`:
 
 - Fixar a fonte de verdade do shared: kernel Genérico de `1a04a95b`.
 - Remover implementações legadas que competem com esse kernel e com as skills.
-- Recriar domínio e adapters Nest/Prisma/HTTP em `src/modules/<module>` sobre o kernel mantido.
+- Recriar domínio e adapters Nest/Prisma/HTTP em `src/modules/<module>`, com a infra espelhando as pastas do agregado, sobre o kernel mantido.
 - Registrar conflitos de convenção e a ordem keep → delete → rebuild.
 
 **Non-Goals:**
@@ -37,7 +37,7 @@ Ver `proposal.md` (Why). Estado observado após o commit `1a04a95b`:
 
 **Alternativa rejeitada:** Migrar shared para `packages/shared` e usar nome de pacote workspace — contradiz o commit e as skills atuais.
 
-**Domínio / app:** O alvo é `src/modules/<module>/` para domínio, testes e adapters Prisma/HTTP. O bootstrap Nest permanece em `src/` (`main.ts` / entrypoint). O shared **não** se move para `packages/` nesta change.
+**Domínio / app:** O alvo é `src/modules/<module>/<aggregate>/` para o domínio, `src/modules/<module>/infra/<aggregate>/` para adapters Prisma/HTTP e `src/modules/<module>/test/` para testes. O bootstrap Nest permanece em `src/` (`main.ts` / entrypoint). O shared **não** se move para `packages/` nesta change.
 
 ### D2 — Nomes de módulos no singular inglês
 
@@ -90,7 +90,7 @@ Agregados iniciais (ajustáveis no apply): `account`; `category` (+ subcategory 
 
 ### D6 — CQRS: use case na escrita; query na leitura
 
-**Escolha:** Seguir `module-query-cqrs`: controller chama Query direto; reporting composto MAY usar use case de leitura **com comentário de justificativa**.
+**Escolha:** Seguir `module-query-cqrs`: cada query é uma classe em `infra/<aggregate>/provider/prisma-<nome>.query.ts`; o controller em `infra/<aggregate>/<aggregate>.controller.ts` chama `execute` direto; reporting composto MAY usar use case de leitura **com comentário de justificativa**.
 
 ### D7 — Package name do shared
 
@@ -100,7 +100,7 @@ Agregados iniciais (ajustáveis no apply): `account`; `category` (+ subcategory 
 
 1. Garantir presença do tree adicionado por `1a04a95b` (restore se o worktree o removeu).
 2. Delete do restante das implementações (D4).
-3. Esqueleto `src/modules/*` (domínio, testes e adapters) com bootstrap Nest em `src/`, sem inventar features.
+3. Esqueleto `src/modules/*` (domínio em `<aggregate>/`, adapters em `infra/<aggregate>/`, testes em `test/`) com bootstrap Nest em `src/`, sem inventar features.
 4. Recriar `account` → `category` → `transaction` → `reporting` via skills.
 5. Docs (`AGENTS.md`, README) + limpeza final.
 6. Não criar `notifications` vazio.
@@ -110,6 +110,24 @@ Agregados iniciais (ajustáveis no apply): `account`; `category` (+ subcategory 
 - Testes do kernel mantido: `test/shared/**` (já no commit).
 - Unitários de módulo em `src/modules/*/test/**`.
 - Equivalência HTTP via e2e/supertest existente após rebuild; skills pedem `.http` no Genérico — **equivalente** = e2e atual (assunção).
+
+### D10 — Infraestrutura espelha as pastas do agregado
+
+**Escolha:** Adapters não ficam num `<aggregate>.prisma.ts` na raiz do módulo. A infra repete o agregado:
+
+```text
+src/modules/<module>/infra/<aggregate>/dto/*.http.dto.ts
+src/modules/<module>/infra/<aggregate>/provider/prisma-<nome>.repository.ts
+src/modules/<module>/infra/<aggregate>/provider/prisma-<nome>.query.ts
+src/modules/<module>/infra/<aggregate>/<aggregate>.controller.ts
+src/modules/<module>/infra/<module>.module.ts
+```
+
+`model/`, `use-case/` e `service/` ficam só no agregado. Um contrato de `provider/` vira um arquivo Prisma na pasta espelhada.
+
+**Por quê:** As skills `module-aggregate`, `module-repository`, `module-query-cqrs` e `module-dto` passaram a espelhar `dto/` e `provider/` do domínio na camada `infra/`.
+
+**Alternativa rejeitada:** Classe única `<aggregate>.prisma.ts` com repositório e queries como atributos públicos.
 
 ## Risks / Trade-offs
 
@@ -124,11 +142,11 @@ Agregados iniciais (ajustáveis no apply): `account`; `category` (+ subcategory 
 
 1. Restore/keep arquivos de `1a04a95b` (kernel + testes shared).
 2. Delete implementações legadas (D4) — **somente no apply**.
-3. Introduzir `src/modules/` mínimo, com bootstrap Nest ainda em `src/`.
+3. Introduzir `src/modules/` mínimo (domínio em `<aggregate>/`, adapters em `infra/<aggregate>/`), com bootstrap Nest ainda em `src/`.
 4. Recriar contextos na ordem D8; `pnpm test` + smoke HTTP por etapa quando houver endpoints de novo.
 5. Atualizar docs; limpar restos.
 6. Rollback: git revert / checkout dos paths apagados; schema DB inalterado facilita rollback.
 
 ## Open Questions
 
-Nenhum que altere a decisão keep/delete. Detalhes de quantos agregados dentro de `transaction`/`category` ficam para o apply, desde que respeitem as specs e o kernel mantido. O bootstrap Nest permanece em `src/`; adapters e controllers do módulo vivem em `src/modules/<module>/`.
+Nenhum que altere a decisão keep/delete. Detalhes de quantos agregados dentro de `transaction`/`category` ficam para o apply, desde que respeitem as specs e o kernel mantido. O bootstrap Nest permanece em `src/`; adapters e controllers vivem em `src/modules/<module>/infra/<aggregate>/`.

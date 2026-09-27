@@ -10,10 +10,10 @@
   - `src/modules/auth/user/provider/user.repository.ts`
   - `src/modules/product/product/provider/product.repository.ts`
   - `src/modules/branch/branch/provider/branch.repository.ts`
-- Implementações de infraestrutura:
-  - `src/modules/auth/user.prisma.ts`
-  - `src/modules/product/product.prisma.ts`
-  - `src/modules/branch/branch.prisma.ts`
+- Implementações de infraestrutura, espelhando `provider/` do agregado:
+  - `src/modules/auth/infra/user/provider/prisma-user.repository.ts`
+  - `src/modules/product/infra/product/provider/prisma-product.repository.ts`
+  - `src/modules/branch/infra/branch/provider/prisma-branch.repository.ts`
 - Mocks/in-memory para testes:
   - `src/modules/<domain>/test/mock/in-memory-<entity>.repository.ts`
 
@@ -30,14 +30,15 @@
   - pode buscar entidade para preservar invariantes antes de update/delete.
 - Query:
   - usada para leitura/projeção DTO.
-  - pode coexistir na mesma classe adapter, mas como contrato separado.
+  - contrato separado em `<aggregate>/provider/*.query.ts`.
+  - implementação separada em `infra/<aggregate>/provider/prisma-*.query.ts`, ao lado do repositório Prisma.
 
 ## Estrutura esperada
 
 1. Definir interface de repositório no `dominio`.
 2. Declarar os métodos de persistência no contrato do agregado, retornando `Promise<Result<...>>`.
 3. Adicionar métodos específicos de domínio apenas quando necessários.
-4. Implementar adapter (Prisma/in-memory) retornando `Result`.
+4. Implementar o adapter Prisma em `src/modules/<module>/infra/<aggregate>/provider/prisma-<aggregate>.repository.ts`, no mesmo lugar relativo do contrato (`<aggregate>/provider/`). O mock in-memory fica só em `test/`.
 5. Incluir mapeadores:
 
 - `toDomain(payload)` para criar entidade.

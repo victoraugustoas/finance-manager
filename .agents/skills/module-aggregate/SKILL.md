@@ -102,6 +102,7 @@ Creates only one minimal generic use case to demonstrate the structure:
 - Do not invent aggregate-specific attributes.
 - Do not assume an opinionated DDD approach beyond the aggregate organization already used in the project.
 - Do not create controllers, adapters, Prisma implementations, migrations, or any extra infrastructure.
+- When another skill adds infrastructure, it mirrors this aggregate under `src/modules/<module>/infra/<aggregate>/`: `dto/` for `*.http.dto.ts` and `provider/` for one Prisma file per domain contract (`prisma-<aggregate>.repository.ts`, `prisma-<name>.query.ts`). `model/`, `use-case/`, and `service/` stay only in the aggregate. The Nest module of the bounded context is `src/modules/<module>/infra/<module>.module.ts`, and the controller is `src/modules/<module>/infra/<aggregate>/<aggregate>.controller.ts`.
 - Preserve existing exports in `src/modules/<module>/index.ts`.
 - Always import the shared kernel through the `@/shared` alias (`@/*` maps to `src/*`). Never resolve a package name from `packages/shared/package.json` and never use relative paths into `src/shared`.
 - Shared symbols used by this scaffold: `Entity` and `EntityProps` from `@/shared/base/entity`, `Result` from `@/shared/base/result`, `UseCase` from `@/shared/base/UseCase`. There is no `CrudRepository` or `TransactionContext` in `src/shared`.

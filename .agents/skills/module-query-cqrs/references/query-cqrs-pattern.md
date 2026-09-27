@@ -54,57 +54,48 @@ export interface FindBrandsQuery {
 
 O comentário da interface descreve o comportamento que o SQL precisa cumprir (filtros, ordenação, quando retorna `null`).
 
-### 2. Implementação no adapter Prisma
+### 2. Implementação Prisma espelhando `provider/`
 
-A query é um atributo público tipado da mesma classe que implementa o repository do agregado (`src/modules/<module>/<aggregate>.prisma.ts`):
+Cada interface de query vira uma classe no mesmo lugar relativo do contrato:
+
+`src/modules/<module>/infra/<aggregate>/provider/prisma-find-brands.query.ts`
 
 ```ts
 @Injectable()
-export class BrandPrisma implements BrandRepository {
+export class PrismaFindBrandsQuery implements FindBrandsQuery {
   constructor(private readonly prisma: PrismaService) {}
 
   // Read side (CQRS): rows are mapped straight to `BrandDTO`, without the entity.
-  readonly findBrands: FindBrandsQuery = {
-    execute: (filter) =>
-      Result.tryAsync(async () => {
-        const page = Math.max(1, Math.trunc(filter.page) || 1);
-        const pageSize = Math.max(1, Math.trunc(filter.pageSize) || 1);
+  execute(filter: BrandFiltersDTO): Promise<Result<BrandPageDTO>> {
+    return Result.tryAsync(async () => {
+      const page = Math.max(1, Math.trunc(filter.page) || 1);
+      const pageSize = Math.max(1, Math.trunc(filter.pageSize) || 1);
 
-        const conditions = [Prisma.sql`deleted_at IS NULL`];
-        if (typeof filter.isActive === 'boolean') {
-          conditions.push(Prisma.sql`is_active = ${filter.isActive}`);
-        }
-        const where = Prisma.join(conditions, ' AND ');
+      const conditions = [Prisma.sql`deleted_at IS NULL`];
+      if (typeof filter.isActive === 'boolean') {
+        conditions.push(Prisma.sql`is_active = ${filter.isActive}`);
+      }
+      const where = Prisma.join(conditions, ' AND ');
 
-        const client = this.prisma.client;
-        const [counts, rows] = await Promise.all([
-          client.$queryRaw<{ total: number }[]>`SELECT count(*)::int AS total FROM brands WHERE ${where}`,
-          client.$queryRaw<BrandSearchRow[]>`
-            SELECT id, name, slug, description, logo_url, is_active, created_at, updated_at
-            FROM brands
-            WHERE ${where}
-            ORDER BY name COLLATE "pt-BR-x-icu", id
-            LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
-        ]);
+      const client = this.prisma.client;
+      const [counts, rows] = await Promise.all([
+        client.$queryRaw<{ total: number }[]>`SELECT count(*)::int AS total FROM brands WHERE ${where}`,
+        client.$queryRaw<BrandSearchRow[]>`
+          SELECT id, name, slug, description, logo_url, is_active, created_at, updated_at
+          FROM brands
+          WHERE ${where}
+          ORDER BY name COLLATE "pt-BR-x-icu", id
+          LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+      ]);
 
-        const total = counts[0]?.total ?? 0;
-        return { items: rows.map(searchRowToDTO), total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
-      }),
-  };
-
-  readonly findBrandById: FindBrandByIdQuery = {
-    execute: (id) =>
-      Result.tryAsync(async () => {
-        // A malformed id never matches the uuid column; skip the database error.
-        if (!this.isUuid(id)) return null;
-        const row = await this.prisma.client.brand.findFirst({ where: { id, deletedAt: null } });
-        return row ? this.toDTO(row) : null;
-      }),
-  };
-
-  // ... métodos do repository (create/update/findById/delete)
+      const total = counts[0]?.total ?? 0;
+      return { items: rows.map(searchRowToDTO), total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+    });
+  }
 }
 ```
+
+`findBrandById` segue o mesmo espelho em `infra/<aggregate>/provider/prisma-find-brand-by-id.query.ts`. O repositório de escrita fica em `prisma-<aggregate>.repository.ts` na mesma pasta `provider/`, não na classe da query.
 
 Responsabilidades do adapter na leitura:
 
@@ -113,6 +104,8 @@ Responsabilidades do adapter na leitura:
 - mapear linhas para DTO (`snake_case` → `camelCase`, `null` explícito).
 
 ### 3. Chamada direta no controller
+
+O controller fica em `src/modules/<module>/infra/<aggregate>/<aggregate>.controller.ts` e recebe a classe da query no construtor.
 
 ```ts
 @Get()
@@ -127,7 +120,7 @@ async findAll(
   };
   if (isActive === 'true' || isActive === 'false') filter.isActive = isActive === 'true';
 
-  const result = await this.brandPrisma.findBrands.execute(filter);
+  const result = await this.findBrands.execute(filter);
 
   if (result.isFailure) this.throwFailure(result.errors);
   return result.instance;
@@ -135,7 +128,7 @@ async findAll(
 
 @Get(':id')
 async findById(@Param('id') id: string): Promise<BrandDTO> {
-  const result = await this.brandPrisma.findBrandById.execute(id);
+  const result = await this.findBrandById.execute(id);
 
   if (result.isFailure) this.throwFailure(result.errors);
   if (!result.instance) throw new NotFoundException([BrandErrors.BRAND_NOT_FOUND]);
@@ -221,28 +214,28 @@ export interface FindXxxQuery {
   - `src/modules/catalog/category/provider/find-category-tree.query.ts`
   - `src/modules/catalog/category/provider/find-category-children.query.ts`
   - `src/modules/catalog/category/dto/category.dto.ts`
-- Implementações no adapter (Prisma):
-  - `src/modules/catalog/brand.prisma.ts` (`findBrands`: busca textual, ordenação com collation e contagem em SQL)
-  - `src/modules/catalog/category.prisma.ts` (`BASE_SELECT`: `level`, `path` e `childrenCount` calculados em SQL)
+- Implementações Prisma, espelhando `provider/` do agregado:
+  - `src/modules/catalog/infra/brand/provider/prisma-find-brands.query.ts` (busca textual, ordenação com collation e contagem em SQL)
+  - `src/modules/catalog/infra/category/provider/prisma-find-category-tree.query.ts` (`BASE_SELECT`: `level`, `path` e `childrenCount` calculados em SQL)
 - Controllers que chamam queries direto:
-  - `src/modules/catalog/brand.controller.ts`
-  - `src/modules/catalog/category.controller.ts`
+  - `src/modules/catalog/infra/brand/brand.controller.ts`
+  - `src/modules/catalog/infra/category/category.controller.ts`
 - Testes de integração das queries:
   - `src/modules/catalog/test/brand.integration.http`
   - `src/modules/catalog/test/category.integration.http`
 - Contraexemplo (não seguir em queries novas):
-  - `src/modules/catalog/product.prisma.ts` (`findProducts` carrega todas as categorias para calcular `categoryPath` e descendentes em memória; resolver no SQL)
+  - `src/modules/catalog/infra/product/provider/prisma-find-products.query.ts` (`findProducts` carrega todas as categorias para calcular `categoryPath` e descendentes em memória; resolver no SQL)
 
 ## Checklist de implementação
 
 - [ ] Caso é leitura (não comando).
-- [ ] DTOs em `dto/` e interface `*Query` em `provider/` do agregado.
+- [ ] DTOs de projeção em `<aggregate>/dto/` e interface `*Query` em `<aggregate>/provider/`. DTOs HTTP, se existirem, em `infra/<aggregate>/dto/`.
 - [ ] Comentário da interface descreve filtros, ordenação e quando retorna `null`.
 - [ ] `execute` retorna `Promise<Result<DTO>>`.
-- [ ] Implementação no `*.prisma.ts` do agregado como atributo público tipado (`readonly findXxx: FindXxxQuery`).
+- [ ] Implementação em `src/modules/<module>/infra/<aggregate>/provider/prisma-<nome>.query.ts`, uma classe por interface.
 - [ ] Filtros, hierarquia, contagens e campos derivados resolvidos no SQL; nada calculado em memória que o banco resolva.
 - [ ] Adapter só normaliza a entrada e mapeia linhas para DTO, sem passar pela entidade.
-- [ ] Controller chama a query direto e mapeia `isFailure`/`null` para exceção HTTP.
+- [ ] Controller em `infra/<aggregate>/<aggregate>.controller.ts` chama a query direto e mapeia `isFailure`/`null` para exceção HTTP.
 - [ ] Nenhum `find-*.use-case.ts` criado, salvo exceção justificada em comentário.
 - [ ] Nenhum serviço de domínio criado para campo de projeção.
 - [ ] DTO alinhado com a necessidade do consumidor e sem detalhes do banco.
@@ -261,6 +254,7 @@ export interface FindXxxQuery {
 
 ## Armadilhas comuns
 
+- Juntar várias queries e o repositório num único `<aggregate>.prisma.ts` na raiz do módulo.
 - Criar `find-*.use-case.ts` para cada query "por padrão".
 - Criar serviço de domínio ou use case só para calcular campo de projeção.
 - Carregar uma tabela inteira e filtrar, ordenar ou montar árvore em memória.

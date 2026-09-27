@@ -39,6 +39,13 @@ Exemplos reais:
 - Filtros dedicados:
   - `ProductFiltersDTO`, `BrandFiltersDTO`.
 
+## Onde o arquivo fica
+
+- DTO de use case, saída e projeção de query: `src/modules/<module>/<aggregate>/dto/*.dto.ts`.
+- DTO HTTP (request/response quando o contrato da API difere do DTO do agregado): `src/modules/<module>/infra/<aggregate>/dto/*.http.dto.ts`.
+
+A pasta `dto/` da infra espelha a pasta `dto/` do agregado.
+
 ## Fronteiras
 
 - DTO não carrega regra de domínio.

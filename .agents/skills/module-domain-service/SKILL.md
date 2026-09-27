@@ -11,7 +11,7 @@ Aplicar o padrão de serviço de domínio para encapsular regras que não perten
 
 ## Guidelines
 
-- Considerar domínio apenas dentro de `src/modules/*`, nas pastas de agregado (`model`, `provider`, `use-case`, `dto`). Adapters `*.prisma.ts`, controllers e providers HTTP no mesmo `src/modules/` não são domínio.
+- Considerar domínio apenas dentro de `src/modules/<module>/<aggregate>/` (`model`, `provider`, `use-case`, `dto`, `service`). A camada `src/modules/<module>/infra/**` (controllers, DTOs HTTP e adapters Prisma) não é domínio.
 - Não tratar `*.service.ts` de `web`, `frontend`, `api` ou infraestrutura como domínio.
 - Manter o serviço sem dependência de framework, HTTP, banco, Prisma, Nest, React ou estado global.
 - Preferir funções/métodos puros e determinísticos.
@@ -20,7 +20,7 @@ Aplicar o padrão de serviço de domínio para encapsular regras que não perten
 
 ## Workflow
 
-1. Confirmar que o arquivo alvo está em `src/modules/*/`, fora de adapters Prisma, controllers e testes.
+1. Confirmar que o arquivo alvo está em `src/modules/<module>/<aggregate>/`, fora de `infra/` e de `test/`.
 2. Identificar a regra transversal que não cabe em uma única entidade.
 3. Definir API mínima do serviço (classe com método estático ou instância simples).
 4. Implementar regra sem side effects e sem I/O.

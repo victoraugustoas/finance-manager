@@ -1,6 +1,6 @@
 ---
 name: module-dto
-description: 'Criar, revisar ou orientar Data Transfer Objects de módulo no padrão Genérico. Usar quando o pedido envolver arquivos `dto/*.ts`, contratos de entrada (`InDTO`), saída (`OutDTO`), DTOs de query CQRS para leitura, paginação/filtros/metadados, adaptação de tipagem para consumo da API/front sem vazar detalhes de entidade/ORM ou a skill `module-dto`.'
+description: 'Criar, revisar ou orientar Data Transfer Objects de módulo no padrão Genérico. Usar quando o pedido envolver arquivos `dto/*.ts` ou `*.http.dto.ts`, contratos de entrada (`InDTO`), saída (`OutDTO`), DTOs de query CQRS para leitura, DTOs HTTP em `infra/<aggregate>/dto/` espelhando o `dto/` do agregado, paginação/filtros/metadados, adaptação de tipagem para consumo da API/front sem vazar detalhes de entidade/ORM ou a skill `module-dto`.'
 ---
 
 # Module DTO
@@ -21,6 +21,9 @@ Aplicar o padrão de DTOs para fronteiras de aplicação/leitura, separando clar
   - ou ser totalmente independente quando a projeção exigir.
 - Manter DTO sem regra de domínio e sem acoplamento ao ORM.
 - Preferir nomes explícitos (`FindAllUsersOutDTO`, `ProductFiltersDTO`, `RoleDTO`).
+- Separar DTO do agregado e DTO HTTP, nas mesmas pastas relativas:
+  - agregado: `src/modules/<module>/<aggregate>/dto/*.dto.ts` (entrada de use case, saída e projeção de query);
+  - infra: `src/modules/<module>/infra/<aggregate>/dto/*.http.dto.ts` (request/response HTTP quando o contrato da API difere do DTO do agregado).
 
 ## Workflow
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define o layout estrutural do finance-manager alinhado às skills `module-*`: domínio, testes e adapters em `src/modules/`, kernel Genérico em `src/shared` via `@/shared`, bootstrap Nest em `src/`, organização por agregado e nomenclatura obrigatória.
+Define o layout estrutural do finance-manager alinhado às skills `module-*`: domínio do agregado, infraestrutura espelhando `dto/` e `provider/`, testes em `src/modules/`, kernel Genérico em `src/shared` via `@/shared`, bootstrap Nest em `src/`, organização por agregado e nomenclatura obrigatória.
 
 ## ADDED Requirements
 
@@ -10,11 +10,13 @@ Define o layout estrutural do finance-manager alinhado às skills `module-*`: do
 
 O repositório MUST organizar o código assim:
 
-- Domínio, adapters Prisma/HTTP e testes do módulo: `src/modules/<module>/`
+- Domínio do agregado: `src/modules/<module>/<aggregate>/`
+- Adapters Prisma/HTTP: `src/modules/<module>/infra/<aggregate>/`, espelhando as pastas do agregado que têm adapter
+- Testes do módulo: `src/modules/<module>/test/`
 - Kernel compartilhado: `src/shared/**`, importado exclusivamente via alias `@/shared` (`@/*` mapeia para `src/*`)
 - Bootstrap NestJS (`main.ts`, entrypoint): `src/`
 
-O projeto MUST NOT tratar `packages/shared` como localização canônica do kernel nesta change e MUST NOT introduzir `modules/` na raiz nem `apps/backend/`. Cada módulo MUST expor `src/modules/<module>/index.ts`. Código de produção do agregado MUST viver sob `src/modules/<module>/<aggregate>/**`. Artefatos exclusivos de teste MUST viver sob `src/modules/<module>/test/**` e NÃO sob `src/modules/<module>/<aggregate>/**`.
+O projeto MUST NOT tratar `packages/shared` como localização canônica do kernel nesta change e MUST NOT introduzir `modules/` na raiz nem `apps/backend/`. Cada módulo MUST expor `src/modules/<module>/index.ts`. Código de domínio do agregado MUST viver sob `src/modules/<module>/<aggregate>/**`. Artefatos exclusivos de teste MUST viver sob `src/modules/<module>/test/**` e NÃO sob o agregado nem sob `infra/`.
 
 #### Scenario: Estrutura após migração
 
@@ -42,6 +44,23 @@ Dentro de `src/modules/<module>/<aggregate>/`, o agregado MUST usar pastas em in
 - **THEN** existem pelo menos `model/`, `provider/` e `use-case/` sob `src/modules/<module>/<aggregate>/`
 - **AND** o módulo exporta o agregado por `src/modules/<module>/index.ts`
 
+### Requirement: Infraestrutura espelha o agregado
+
+A camada de infraestrutura MUST repetir o agregado sob `src/modules/<module>/infra/<aggregate>/`, com as mesmas pastas relativas que têm adapter:
+
+- `dto/*.http.dto.ts` espelha `<aggregate>/dto/` quando o contrato HTTP difere do DTO do agregado
+- `provider/prisma-<nome>.repository.ts`, `provider/prisma-<nome>.query.ts` e readers equivalentes espelham um arquivo de `<aggregate>/provider/` cada
+- controller em `src/modules/<module>/infra/<aggregate>/<aggregate>.controller.ts`
+- módulo Nest do contexto em `src/modules/<module>/infra/<module>.module.ts`
+
+`model/`, `use-case/` e `service/` MUST permanecer apenas no agregado. A implementação MUST NOT concentrar repositório e queries num único `src/modules/<module>/<aggregate>.prisma.ts`.
+
+#### Scenario: Adapter de conta
+
+- **WHEN** o repositório de account é implementado
+- **THEN** o contrato está em `src/modules/account/account/provider/account.repository.ts`
+- **AND** a implementação Prisma está em `src/modules/account/infra/account/provider/prisma-account.repository.ts`
+
 ### Requirement: Nomenclatura kebab-case com sufixos das skills
 
 Arquivos de componentes de código sob `src/modules/` e o kernel sob `src/shared/` MUST usar `kebab-case` com sufixos em inglês definidos pelas skills (exceto símbolos já referenciados pelas skills em path PascalCase pontual, ex. `UseCase`, até alinhamento explícito):
@@ -52,7 +71,11 @@ Arquivos de componentes de código sob `src/modules/` e o kernel sob `src/shared
 - Query CQRS: `<nome>.query.ts`
 - Use case: `<verb>-<nome>.use-case.ts`
 - Domain service: `<nome>.service.ts`
-- DTO: sob `dto/`, nomes em kebab-case
+- DTO do agregado: sob `<aggregate>/dto/`, nomes em kebab-case
+- DTO HTTP: `*.http.dto.ts` sob `infra/<aggregate>/dto/`
+- Repositório Prisma: `prisma-<nome>.repository.ts` sob `infra/<aggregate>/provider/`
+- Query Prisma: `prisma-<nome>.query.ts` sob `infra/<aggregate>/provider/`
+- Controller: `<aggregate>.controller.ts` sob `infra/<aggregate>/`
 
 Classes e interfaces MUST permanecer em PascalCase. Testes de use case MUST seguir `src/modules/<module>/test/<aggregate>/<verb>-<aggregate>.use-case.test.ts` (ou equivalente documentado pela skill). Mocks in-memory de repositório MUST ficar em `src/modules/<module>/test/**/mock/`, nunca dentro de `src/modules/<module>/<aggregate>/**`.
 

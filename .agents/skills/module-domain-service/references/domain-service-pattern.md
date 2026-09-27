@@ -9,7 +9,7 @@
 - Exemplo inválido para esta skill:
   - qualquer pasta de UI/browser dentro de um pacote de domínio
   - `apps/frontend/**`
-  - adapters Prisma, controllers e providers HTTP em `src/modules/**` (`*.prisma.ts`, `*.controller.ts`)
+  - `src/modules/<module>/infra/**` (controllers, `dto/*.http.dto.ts` e `provider/prisma-*.ts`)
 
 ## Quando criar um Domain Service
 
@@ -53,7 +53,7 @@
 
 ## Checklist de implementação
 
-- [ ] Arquivo de domínio em `src/modules/<domain>/**`, fora de `*.prisma.ts`, controllers e `test/`.
+- [ ] Arquivo de domínio em `src/modules/<module>/<aggregate>/**`, fora de `infra/` e de `test/`.
 - [ ] Sem dependência de framework (Nest/React/etc.).
 - [ ] Sem I/O (db/http/fs).
 - [ ] Assinatura clara e coesa.
