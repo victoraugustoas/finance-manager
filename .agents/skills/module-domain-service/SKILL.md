@@ -1,6 +1,6 @@
 ---
 name: module-domain-service
-description: Criar, revisar ou orientar a implementação de serviços de domínio de módulo no padrão Genérico, restritos ao núcleo de domínio (`modules/*`). Usar quando o pedido envolver "domain service", "serviço de domínio", arquivos `*.service.ts` em `modules/*/src/**`, políticas de domínio, cálculos/regras puras entre entidades e VOs, criação/ajuste de testes desses serviços ou a skill `module-domain-service`.
+description: Criar, revisar ou orientar a implementação de serviços de domínio de módulo no padrão Genérico, restritos ao núcleo de domínio (`src/modules/*`). Usar quando o pedido envolver "domain service", "serviço de domínio", arquivos `*.service.ts` em `src/modules/**`, políticas de domínio, cálculos/regras puras entre entidades e VOs, criação/ajuste de testes desses serviços ou a skill `module-domain-service`.
 ---
 
 # Module Domain Service
@@ -11,7 +11,7 @@ Aplicar o padrão de serviço de domínio para encapsular regras que não perten
 
 ## Guidelines
 
-- Considerar domínio apenas dentro de `modules/*`.
+- Considerar domínio apenas dentro de `src/modules/*`, nas pastas de agregado (`model`, `provider`, `use-case`, `dto`). Adapters `*.prisma.ts`, controllers e providers HTTP no mesmo `src/modules/` não são domínio.
 - Não tratar `*.service.ts` de `web`, `frontend`, `api` ou infraestrutura como domínio.
 - Manter o serviço sem dependência de framework, HTTP, banco, Prisma, Nest, React ou estado global.
 - Preferir funções/métodos puros e determinísticos.
@@ -20,7 +20,7 @@ Aplicar o padrão de serviço de domínio para encapsular regras que não perten
 
 ## Workflow
 
-1. Confirmar que o arquivo alvo está em `modules/*/`.
+1. Confirmar que o arquivo alvo está em `src/modules/*/`, fora de adapters Prisma, controllers e testes.
 2. Identificar a regra transversal que não cabe em uma única entidade.
 3. Definir API mínima do serviço (classe com método estático ou instância simples).
 4. Implementar regra sem side effects e sem I/O.

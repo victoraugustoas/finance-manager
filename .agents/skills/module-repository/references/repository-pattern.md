@@ -6,16 +6,16 @@
   - `src/shared/base/result.ts` (`Result`)
   - `src/shared/errors/shared-errors.ts` (`RepositoryErrors`)
 - Não há `CrudRepository`, `CreateRepository` nem `FindByIdRepository` em `src/shared`. O contrato do agregado declara os métodos de persistência e retorna `Result`.
-- Contratos de dominio em `modules/*`:
-  - `modules/auth/src/user/provider/user.repository.ts`
-  - `modules/product/src/product/provider/product.repository.ts`
-  - `modules/branch/src/branch/provider/branch.repository.ts`
+- Contratos de dominio em `src/modules/*`:
+  - `src/modules/auth/user/provider/user.repository.ts`
+  - `src/modules/product/product/provider/product.repository.ts`
+  - `src/modules/branch/branch/provider/branch.repository.ts`
 - Implementações de infraestrutura:
-  - `apps/backend/src/modules/auth/user.prisma.ts`
-  - `apps/backend/src/modules/product/product.prisma.ts`
-  - `apps/backend/src/modules/branch/branch.prisma.ts`
+  - `src/modules/auth/user.prisma.ts`
+  - `src/modules/product/product.prisma.ts`
+  - `src/modules/branch/branch.prisma.ts`
 - Mocks/in-memory para testes:
-  - `modules/<domain>/test/mock/in-memory-<entity>.repository.ts`
+  - `src/modules/<domain>/test/mock/in-memory-<entity>.repository.ts`
 
 ## Papel do Repository
 

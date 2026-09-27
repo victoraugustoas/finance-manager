@@ -18,7 +18,7 @@ Leitura voltada a API/projeção MUST usar contratos Query e NÃO MUST passar pe
 
 ### Requirement: Contratos Query e DTOs no módulo
 
-Interfaces de query MUST viver em `modules/<module>/src/<aggregate>/provider/<nome>.query.ts` com assinatura `execute(input) => Promise<Result<DTO>>`. DTOs de entrada/saída/projeção MUST viver em `modules/<module>/src/<aggregate>/dto/`. O comentário da interface Query MUST documentar filtros, ordenação, paginação e quando retorna `null`.
+Interfaces de query MUST viver em `src/modules/<module>/<aggregate>/provider/<nome>.query.ts` com assinatura `execute(input) => Promise<Result<DTO>>`. DTOs de entrada/saída/projeção MUST viver em `src/modules/<module>/<aggregate>/dto/`. O comentário da interface Query MUST documentar filtros, ordenação, paginação e quando retorna `null`.
 
 DTOs MUST:
 
@@ -35,7 +35,7 @@ DTOs MUST:
 
 ### Requirement: Implementação no adapter e controller
 
-A implementação da query MUST residir no adapter de infraestrutura do agregado em `apps/backend` (ex.: atributo público tipado na classe Prisma do agregado). O controller MUST converter parâmetros HTTP no DTO de entrada, chamar a query diretamente e mapear `isFailure` / `null` para resposta HTTP equivalente à API atual.
+A implementação da query MUST residir no adapter de infraestrutura do agregado em `src/modules/<module>/<aggregate>.prisma.ts` (atributo público tipado na classe Prisma do agregado). O controller MUST converter parâmetros HTTP no DTO de entrada, chamar a query diretamente e mapear `isFailure` / `null` para resposta HTTP equivalente à API atual.
 
 Handlers legados `QueryHandler` MUST NÃO ser reintroduzidos no rebuild, salvo redução às exceções abaixo.
 

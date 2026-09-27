@@ -15,8 +15,8 @@ Leitura é tratada de forma diferente de comando. Por padrão, uma query é só 
   - comando (create/update/delete, invariantes de escrita) passa por entidade + repository + use case;
   - leitura/projeção usa Query e **não** passa pela entidade nem pelo use case.
 - Caminho padrão da leitura: **interface + implementação Prisma + controller**.
-  - Interface `*Query` em `modules/<module>/src/<aggregate>/provider/<nome>.query.ts` (`execute(input) => Promise<Result<DTO>>`), com os DTOs em `dto/`.
-  - Implementação no adapter do agregado (`apps/backend/src/modules/<module>/<aggregate>.prisma.ts`) como atributo público tipado com a interface (ex.: `readonly findBrands: FindBrandsQuery = { execute: ... }`), mapeando linhas direto para DTO.
+  - Interface `*Query` em `src/modules/<module>/<aggregate>/provider/<nome>.query.ts` (`execute(input) => Promise<Result<DTO>>`), com os DTOs em `dto/`.
+  - Implementação no adapter do agregado (`src/modules/<module>/<aggregate>.prisma.ts`) como atributo público tipado com a interface (ex.: `readonly findBrands: FindBrandsQuery = { execute: ... }`), mapeando linhas direto para DTO.
   - O controller converte os parâmetros HTTP no DTO de entrada, chama `this.<aggregate>Prisma.<query>.execute(...)` e mapeia `isFailure`/`null` para exceção HTTP.
 - Colocar a complexidade da leitura no SQL sempre que fizer sentido: filtros, regras de visibilidade, hierarquias (self-joins ou `WITH RECURSIVE`), busca textual, ordenação, agregações, contagens, campos derivados e agregação em JSON. O adapter só normaliza a entrada e mapeia linhas para DTO.
 - Não criar serviço de domínio nem carregar tabelas inteiras para calcular campos de projeção em memória.

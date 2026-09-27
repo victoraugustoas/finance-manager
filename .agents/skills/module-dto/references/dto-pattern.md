@@ -21,11 +21,11 @@
 
 Exemplos reais:
 
-- `modules/auth/src/user/dto/user.dto.ts`
+- `src/modules/auth/user/dto/user.dto.ts`
   - `UserDTO extends Omit<UserProps, "roleIds">` + `roles` e `permissions`.
-- `modules/auth/src/role/dto/role.dto.ts`
+- `src/modules/auth/role/dto/role.dto.ts`
   - `RoleDTO extends Omit<RoleProps, "permissionIds">` + `permissions`.
-- `modules/product/src/product/dto/product-details.dto.ts`
+- `src/modules/product/product/dto/product-details.dto.ts`
   - `ProductDetailsDTO extends Omit<ProductProps, "subcategoryId" | "brandId">` + `category/subcategory/brand`.
 
 ## Convenções úteis observadas

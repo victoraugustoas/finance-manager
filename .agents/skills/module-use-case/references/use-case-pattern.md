@@ -5,17 +5,17 @@
 - Contrato base: `src/shared/base/UseCase.ts` (`import { UseCase } from '@/shared/base/UseCase'`)
 - Result usado pelo contrato: `src/shared/base/result.ts` (`import { Result } from '@/shared/base/result'`)
 - Use cases (exemplos):
-  - `modules/product/src/product/use-case/create-product.use-case.ts`
-  - `modules/product/src/product/use-case/update-product.use-case.ts`
-  - `modules/auth/src/user/use-case/update-user.use-case.ts`
-  - `modules/auth/src/user/use-case/login.use-case.ts`
-  - `modules/stock/src/movement/use-case/create-movement-out.use-case.ts`
-  - `modules/auth/src/user/use-case/get-auth-dashboard-overview.use-case.ts`
+  - `src/modules/product/product/use-case/create-product.use-case.ts`
+  - `src/modules/product/product/use-case/update-product.use-case.ts`
+  - `src/modules/auth/user/use-case/update-user.use-case.ts`
+  - `src/modules/auth/user/use-case/login.use-case.ts`
+  - `src/modules/stock/movement/use-case/create-movement-out.use-case.ts`
+  - `src/modules/auth/user/use-case/get-auth-dashboard-overview.use-case.ts`
 - Testes (exemplos):
-  - `modules/branch/test/branch/create-branch.test.ts`
-  - `modules/stock/test/movement/create-movement-in.test.ts`
-  - `modules/stock/test/snapshot/get-stock-quantity.use-case.test.ts`
-  - `modules/product/test/category/category.use-case.test.ts`
+  - `src/modules/branch/test/branch/create-branch.test.ts`
+  - `src/modules/stock/test/movement/create-movement-in.test.ts`
+  - `src/modules/stock/test/snapshot/get-stock-quantity.use-case.test.ts`
+  - `src/modules/product/test/category/category.use-case.test.ts`
 
 ## Estrutura esperada
 

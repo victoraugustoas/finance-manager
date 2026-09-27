@@ -4,16 +4,16 @@
 
 - Base entity: `src/shared/base/entity.ts` (`import { Entity, EntityProps } from '@/shared/base/entity'`)
 - Entidades (exemplos):
-  - `modules/auth/src/user/model/user.entity.ts`
-  - `modules/auth/src/permission/model/permission.entity.ts`
-  - `modules/branch/src/branch/model/branch.entity.ts`
-  - `modules/stock/src/movement/model/movement.entity.ts`
-  - `modules/product/src/product/model/product.entity.ts`
+  - `src/modules/auth/user/model/user.entity.ts`
+  - `src/modules/auth/permission/model/permission.entity.ts`
+  - `src/modules/branch/branch/model/branch.entity.ts`
+  - `src/modules/stock/movement/model/movement.entity.ts`
+  - `src/modules/product/product/model/product.entity.ts`
 - Testes de referência:
   - `test/shared/base/entity.test.ts`
-  - `modules/branch/test/branch/branch.entity.test.ts`
-  - `modules/stock/test/movement/movement.entity.test.ts`
-  - `modules/stock/test/stock/stock.entity.test.ts`
+  - `src/modules/branch/test/branch/branch.entity.test.ts`
+  - `src/modules/stock/test/movement/movement.entity.test.ts`
+  - `src/modules/stock/test/stock/stock.entity.test.ts`
 
 ## Estrutura esperada
 

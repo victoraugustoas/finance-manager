@@ -6,8 +6,8 @@
   - `src/shared/ValueObjects/*.vo.ts` (exemplo: `src/shared/ValueObjects/id.vo.ts`)
   - `test/shared/ValueObjects/*.vo.test.ts`
 - VOs de módulo (domínio):
-  - `modules/<domain>/src/<feature>/model/<name>.vo.ts`
-  - `modules/<domain>/test/<feature>/<name>.vo.test.ts`
+  - `src/modules/<domain>/<feature>/model/<name>.vo.ts`
+  - `src/modules/<domain>/test/<feature>/<name>.vo.test.ts`
 - Base VO: `src/shared/base/vo.ts` (`import { ValueObject, ValueObjectConfig } from '@/shared/base/vo'`)
 - Result: `src/shared/base/result.ts` (`import { Result } from '@/shared/base/result'`)
 

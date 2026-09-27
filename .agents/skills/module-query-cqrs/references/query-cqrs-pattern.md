@@ -18,7 +18,7 @@ Leitura e comando seguem caminhos diferentes:
 
 ### 1. Interface e DTOs no módulo
 
-`modules/<module>/src/<aggregate>/dto/<aggregate>-filters.dto.ts` e `<aggregate>.dto.ts`:
+`src/modules/<module>/<aggregate>/dto/<aggregate>-filters.dto.ts` e `<aggregate>.dto.ts`:
 
 ```ts
 export interface BrandFiltersDTO {
@@ -37,7 +37,7 @@ export interface BrandPageDTO {
 }
 ```
 
-`modules/<module>/src/<aggregate>/provider/find-brands.query.ts`:
+`src/modules/<module>/<aggregate>/provider/find-brands.query.ts`:
 
 ```ts
 import { Result } from '@/shared/base/result'
@@ -56,7 +56,7 @@ O comentário da interface descreve o comportamento que o SQL precisa cumprir (f
 
 ### 2. Implementação no adapter Prisma
 
-A query é um atributo público tipado da mesma classe que implementa o repository do agregado (`apps/backend/src/modules/<module>/<aggregate>.prisma.ts`):
+A query é um atributo público tipado da mesma classe que implementa o repository do agregado (`src/modules/<module>/<aggregate>.prisma.ts`):
 
 ```ts
 @Injectable()
@@ -179,7 +179,7 @@ Não justificam use case de leitura:
 
 Quando for aceitável:
 
-- fica em `modules/<module>/src/<aggregate>/use-case/find-<nome>.use-case.ts` e implementa `UseCase<Input, Output>`;
+- fica em `src/modules/<module>/<aggregate>/use-case/find-<nome>.use-case.ts` e implementa `UseCase<Input, Output>`;
 - recebe as queries por parâmetro; não usa entidade nem repository de escrita;
 - registra em comentário por que a leitura não coube no SQL;
 - tem teste unitário com implementações em memória das queries (skill: module-use-case).
@@ -216,22 +216,22 @@ export interface FindXxxQuery {
 ## Paths de referência
 
 - Interfaces de query e DTOs no módulo:
-  - `modules/catalog/src/brand/provider/find-brands.query.ts`
-  - `modules/catalog/src/brand/provider/find-brand-by-id.query.ts`
-  - `modules/catalog/src/category/provider/find-category-tree.query.ts`
-  - `modules/catalog/src/category/provider/find-category-children.query.ts`
-  - `modules/catalog/src/category/dto/category.dto.ts`
+  - `src/modules/catalog/brand/provider/find-brands.query.ts`
+  - `src/modules/catalog/brand/provider/find-brand-by-id.query.ts`
+  - `src/modules/catalog/category/provider/find-category-tree.query.ts`
+  - `src/modules/catalog/category/provider/find-category-children.query.ts`
+  - `src/modules/catalog/category/dto/category.dto.ts`
 - Implementações no adapter (Prisma):
-  - `apps/backend/src/modules/catalog/brand.prisma.ts` (`findBrands`: busca textual, ordenação com collation e contagem em SQL)
-  - `apps/backend/src/modules/catalog/category.prisma.ts` (`BASE_SELECT`: `level`, `path` e `childrenCount` calculados em SQL)
+  - `src/modules/catalog/brand.prisma.ts` (`findBrands`: busca textual, ordenação com collation e contagem em SQL)
+  - `src/modules/catalog/category.prisma.ts` (`BASE_SELECT`: `level`, `path` e `childrenCount` calculados em SQL)
 - Controllers que chamam queries direto:
-  - `apps/backend/src/modules/catalog/brand.controller.ts`
-  - `apps/backend/src/modules/catalog/category.controller.ts`
+  - `src/modules/catalog/brand.controller.ts`
+  - `src/modules/catalog/category.controller.ts`
 - Testes de integração das queries:
-  - `apps/backend/src/modules/catalog/test/brand.integration.http`
-  - `apps/backend/src/modules/catalog/test/category.integration.http`
+  - `src/modules/catalog/test/brand.integration.http`
+  - `src/modules/catalog/test/category.integration.http`
 - Contraexemplo (não seguir em queries novas):
-  - `apps/backend/src/modules/catalog/product.prisma.ts` (`findProducts` carrega todas as categorias para calcular `categoryPath` e descendentes em memória; resolver no SQL)
+  - `src/modules/catalog/product.prisma.ts` (`findProducts` carrega todas as categorias para calcular `categoryPath` e descendentes em memória; resolver no SQL)
 
 ## Checklist de implementação
 
@@ -251,7 +251,7 @@ export interface FindXxxQuery {
 ## Estratégia de testes
 
 - Query não tem teste unitário da interface: o comportamento real está no SQL e só é verificado contra o banco.
-- Cobrir no `apps/backend/src/modules/<module>/test/<aggregate>.integration.http`:
+- Cobrir no `src/modules/<module>/test/<aggregate>.integration.http`:
   - cenário feliz (formato do DTO, campos derivados);
   - vazio e not found (`null` → `404`);
   - filtros e busca (conferindo `total` e `totalPages`);

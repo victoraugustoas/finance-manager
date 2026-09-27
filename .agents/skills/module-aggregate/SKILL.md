@@ -1,17 +1,17 @@
 ---
 name: module-aggregate
-description: Creates the standard scaffold for an aggregate inside an existing business module in `modules/<module>`, always generating English folder and file names such as `model`, `provider`, `use-case`, `*.entity.ts`, `*.repository.ts`, and `*.use-case.ts`.
+description: Creates the standard scaffold for an aggregate inside an existing business module in `src/modules/<module>`, always generating English folder and file names such as `model`, `provider`, `use-case`, `*.entity.ts`, `*.repository.ts`, and `*.use-case.ts`.
 ---
 
 # Module Aggregate
 
-Use `scripts/create-aggregate.js` to create the deterministic base scaffold for an aggregate inside an existing module in `modules/<module>`. The generated structure must always use English naming for folders, files, classes, interfaces, and use cases.
+Use `scripts/create-aggregate.js` to create the deterministic base scaffold for an aggregate inside an existing module in `src/modules/<module>`. The generated structure must always use English naming for folders, files, classes, interfaces, and use cases.
 
-Important: the skill may keep internal test templates under `<SKILLS_DIR>/module-aggregate/assets/**`, but the generated test files must always be created at the module root under `modules/<module>/test/**`, never inside `modules/<module>/src/**`.
+Important: the skill may keep internal test templates under `<SKILLS_DIR>/module-aggregate/assets/**`, but the generated test files must always be created at the module root under `src/modules/<module>/test/**`, never inside `src/modules/<module>/<aggregate>/**`.
 
 ## Required inputs
 
-1. `module name`, matching an existing folder in `modules/<module>`.
+1. `module name`, matching an existing folder in `src/modules/<module>`.
 2. `aggregate name`.
 
 ## Optional but recommended input
@@ -29,7 +29,7 @@ Do not execute the skill without that answer.
 ## Workflow
 
 1. Validate that the request explicitly provides the module and aggregate.
-2. Validate that `modules/<module>` already exists and contains `src/index.ts`.
+2. Validate that `src/modules/<module>` already exists and contains `index.ts`.
 3. Normalize the aggregate name to `kebab-case` for folders and files.
 4. If `mode` is missing, ask the objective question above and wait.
 5. Execute from the project root:
@@ -39,24 +39,24 @@ node <SKILLS_DIR>/module-aggregate/scripts/create-aggregate.js --module auth --a
 ```
 
 6. Verify at the end:
-   - `modules/<module>/src/<aggregate>/dto/<aggregate>.dto.ts`
-   - `modules/<module>/src/<aggregate>/model/<aggregate>.entity.ts`
-   - `modules/<module>/src/<aggregate>/provider/<aggregate>.repository.ts`
-   - `modules/<module>/src/<aggregate>/use-case/index.ts`
-   - `modules/<module>/src/<aggregate>/index.ts`
-   - `modules/<module>/test/mock/in-memory-<aggregate>.repository.ts`
-   - `modules/<module>/test/<aggregate>/*.use-case.test.ts`
-   - `modules/<module>/src/index.ts` exports `./<aggregate>` without removing existing exports
+   - `src/modules/<module>/<aggregate>/dto/<aggregate>.dto.ts`
+   - `src/modules/<module>/<aggregate>/model/<aggregate>.entity.ts`
+   - `src/modules/<module>/<aggregate>/provider/<aggregate>.repository.ts`
+   - `src/modules/<module>/<aggregate>/use-case/index.ts`
+   - `src/modules/<module>/<aggregate>/index.ts`
+   - `src/modules/<module>/test/mock/in-memory-<aggregate>.repository.ts`
+   - `src/modules/<module>/test/<aggregate>/*.use-case.test.ts`
+   - `src/modules/<module>/index.ts` exports `./<aggregate>` without removing existing exports
 
 ## What the skill creates
 
-- Aggregate scaffold under `modules/<module>/src/<aggregate>/`
+- Aggregate scaffold under `src/modules/<module>/<aggregate>/`
 - Folders `model`, `provider`, and `use-case`
-- A base entity extending `Entity<Type, Props>` imported from `@/shared/base/entity`
+- **A base entity extending `Entity<Type, Props>` imported from `@/shared/base/entity`**
 - An initial repository contract inside `provider/`, with `create`, `update`, `findById` and `delete` returning `Result` from `@/shared/base/result`
-- A fully functional in-memory repository implementation inside `modules/<module>/test/<aggregate>/mock/`, intended as the reference implementation for use-case tests
-- Use-case tests under `modules/<module>/test/<aggregate>/`, already wired to consume the in-memory repository mock
-- No `test` folder is generated inside `src/<aggregate>`; production code stays under `src/**` and test-only artifacts stay under `test/**`
+- A fully functional in-memory repository implementation inside `src/modules/<module>/test/<aggregate>/mock/`, intended as the reference implementation for use-case tests
+- Use-case tests under `src/modules/<module>/test/<aggregate>/`, already wired to consume the in-memory repository mock
+- No `test` folder is generated inside `<aggregate>`; production code stays under `src/modules/<module>/<aggregate>/**` and test-only artifacts stay under `src/modules/<module>/test/**`
 - Required `index.ts` files to export the aggregate
 - Minimal use cases for the selected mode, implementing `UseCase<IN, OUT>` and returning `Result<OUT>`
 
@@ -102,10 +102,10 @@ Creates only one minimal generic use case to demonstrate the structure:
 - Do not invent aggregate-specific attributes.
 - Do not assume an opinionated DDD approach beyond the aggregate organization already used in the project.
 - Do not create controllers, adapters, Prisma implementations, migrations, or any extra infrastructure.
-- Preserve existing exports in `modules/<module>/src/index.ts`.
+- Preserve existing exports in `src/modules/<module>/index.ts`.
 - Always import the shared kernel through the `@/shared` alias (`@/*` maps to `src/*`). Never resolve a package name from `packages/shared/package.json` and never use relative paths into `src/shared`.
 - Shared symbols used by this scaffold: `Entity` and `EntityProps` from `@/shared/base/entity`, `Result` from `@/shared/base/result`, `UseCase` from `@/shared/base/UseCase`. There is no `CrudRepository` or `TransactionContext` in `src/shared`.
-- Keep the production source tree free of in-memory repository implementations; place them only under `modules/<module>/test/<aggregate>/mock/`.
+- Keep the production source tree free of in-memory repository implementations; place them only under `src/modules/<module>/test/<aggregate>/mock/`.
 - Generate use-case tests that depend on the test mock implementation, not on files inside `src/<aggregate>/provider/`.
 - Use only the resources contained in `<SKILLS_DIR>/module-aggregate`.
 
@@ -113,7 +113,7 @@ Creates only one minimal generic use case to demonstrate the structure:
 
 - `scripts/create-aggregate.js`: materializes the aggregate scaffold.
 - `assets/common/`: base templates for `model`, `provider`, `aggregate`, `use-case`, and shared test mocks.
-- The internal template folders `assets/common/test/**` and `assets/test/**` are only sources for generation; their output target is always `modules/<module>/test/**`.
+- The internal template folders `assets/common/test/**` and `assets/test/**` are only sources for generation; their output target is always `src/modules/<module>/test/**`.
 - `assets/use-case/crud/`: CRUD use-case templates in English.
 - `assets/use-case/example/`: minimal example use-case template.
 - `assets/test/crud/`: CRUD use-case test templates in English.
@@ -124,6 +124,6 @@ Creates only one minimal generic use case to demonstrate the structure:
 - Do not execute when the requested module does not exist.
 - Do not execute when the aggregate already exists.
 - Do not infer `crud` or `example` if the mode was not provided.
-- Do not generate in-memory repositories inside `modules/<module>/src/**`.
-- Do not edit files outside `modules/<module>/src/**` and `modules/<module>/test/**`, except the skill itself.
+- Do not generate in-memory repositories inside `src/modules/<module>/<aggregate>/**`.
+- Do not edit files outside `src/modules/<module>/**`, except the skill itself.
 - Do not add extra documentation outside the skill files.

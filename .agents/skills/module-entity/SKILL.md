@@ -25,7 +25,7 @@ Aplicar o padrão de Entidades do projeto com foco em identidade (`id`), invaria
 2. Mapear dependências de VOs e entidades aninhadas para validação.
 3. Implementar `Props`, classe, getters e `create/tryCreate` no padrão do projeto.
 4. Adicionar métodos de domínio quando houver transição de estado/comportamento.
-5. Criar ou atualizar testes em `modules/*/test/**` cobrindo criação válida, inválida, `cloneWith` e igualdade por `id`.
+5. Criar ou atualizar testes em `src/modules/*/test/**` cobrindo criação válida, inválida, `cloneWith` e igualdade por `id`.
 6. Revisar consistência de mapeamento com repositórios/DTOs para novos campos.
 
 ## References

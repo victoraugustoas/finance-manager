@@ -2,14 +2,14 @@
 
 ## Escopo (fronteira)
 
-- Considerar **serviço de domínio** apenas em caminhos `modules/*/src/**`.
+- Considerar **serviço de domínio** apenas em arquivos `*.service.ts` de domínio sob `src/modules/<module>/**` (pasta do agregado, em geral `model/`, ou `service/` na raiz do módulo).
 - Exemplo válido:
-  - `modules/auth/src/permission/model/permission-policy.service.ts`
-  - `modules/stock/src/service/stock-calculator.service.ts`
+  - `src/modules/auth/permission/model/permission-policy.service.ts`
+  - `src/modules/stock/service/stock-calculator.service.ts`
 - Exemplo inválido para esta skill:
   - qualquer pasta de UI/browser dentro de um pacote de domínio
   - `apps/frontend/**`
-  - `apps/backend/**` (infra/controllers/providers HTTP)
+  - adapters Prisma, controllers e providers HTTP em `src/modules/**` (`*.prisma.ts`, `*.controller.ts`)
 
 ## Quando criar um Domain Service
 
@@ -33,7 +33,7 @@
 
 ### PermissionPolicy
 
-- Arquivo: `modules/auth/src/permission/model/permission-policy.service.ts`
+- Arquivo: `src/modules/auth/permission/model/permission-policy.service.ts`
 - Papel:
   - receber permissões do usuário
   - validar se conjunto exigido está contido no conjunto do usuário
@@ -43,7 +43,7 @@
 
 ### StockCalculator
 
-- Arquivo: `modules/stock/src/service/stock-calculator.service.ts`
+- Arquivo: `src/modules/stock/service/stock-calculator.service.ts`
 - Papel:
   - calcular saldo atual baseado em `snapshot` + lista de `movements`
 - Características:
@@ -53,7 +53,7 @@
 
 ## Checklist de implementação
 
-- [ ] Arquivo em `modules/<domain>/src/**`.
+- [ ] Arquivo de domínio em `src/modules/<domain>/**`, fora de `*.prisma.ts`, controllers e `test/`.
 - [ ] Sem dependência de framework (Nest/React/etc.).
 - [ ] Sem I/O (db/http/fs).
 - [ ] Assinatura clara e coesa.

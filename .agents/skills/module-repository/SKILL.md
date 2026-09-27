@@ -11,9 +11,9 @@ Aplicar o padrão de repositório para escrita e leitura de entidades de domíni
 
 ## Guidelines
 
-- Definir contrato em `modules/*/src/**/provider/*.repository.ts`.
+- Definir contrato em `src/modules/<module>/<aggregate>/provider/*.repository.ts`.
 - Reutilizar `Result` de `@/shared/base/result` e `RepositoryErrors` de `@/shared/errors/shared-errors`. O kernel em `src/shared` não expõe base CRUD.
-- Implementar em adapter de infraestrutura (ex.: `apps/backend/src/**/*.prisma.ts`) retornando `Result`.
+- Implementar em adapter de infraestrutura (ex.: `src/modules/<module>/<aggregate>.prisma.ts`) retornando `Result`.
 - Mapear domínio explicitamente:
   - `toDomain`: payload do banco -> entidade.
   - `fromDomain`: entidade -> payload de persistência.

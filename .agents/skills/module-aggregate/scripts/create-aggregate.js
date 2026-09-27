@@ -36,7 +36,7 @@ const COMMON_AGGREGATE_FILES = [
   },
 ]
 
-// Test-only artifacts are generated at modules/<module>/test/**, never inside src/**.
+// Test-only artifacts are generated at src/modules/<module>/test/**, never inside the aggregate folder.
 const COMMON_MODULE_FILES = [
   {
     template: path.join('assets', 'common', 'test', 'mock', 'in-memory-repository.ts.tpl'),
@@ -139,7 +139,7 @@ function main() {
   }
 
   if (!/^[a-z0-9-]+$/.test(moduleName)) {
-    fail('Module name must match the existing folder in modules/<module>.')
+    fail('Module name must match the existing folder in src/modules/<module>.')
   }
 
   const aggregateName = toKebabCase(aggregateInput)
@@ -150,28 +150,26 @@ function main() {
 
   const projectRoot = process.cwd()
   const skillRoot = path.resolve(__dirname, '..')
-  const moduleDir = path.join(projectRoot, 'modules', moduleName)
-  const moduleSrcDir = path.join(moduleDir, 'src')
-  const moduleIndex = path.join(moduleSrcDir, 'index.ts')
-  const aggregateDir = path.join(moduleSrcDir, aggregateName)
+  const moduleDir = path.join(projectRoot, 'src', 'modules', moduleName)
+  const moduleIndex = path.join(moduleDir, 'index.ts')
+  const aggregateDir = path.join(moduleDir, aggregateName)
   const aggregateTestDir = path.join(moduleDir, 'test', aggregateName)
 
-  ensureDirectoryExists(moduleDir, `Module ${moduleName} does not exist at modules/${moduleName}.`)
   ensureDirectoryExists(
-    moduleSrcDir,
-    `Module ${moduleName} must contain modules/${moduleName}/src.`,
+    moduleDir,
+    `Module ${moduleName} does not exist at src/modules/${moduleName}.`,
   )
   ensureFileExists(
     moduleIndex,
-    `File modules/${moduleName}/src/index.ts was not found.`,
+    `File src/modules/${moduleName}/index.ts was not found.`,
   )
 
   if (fs.existsSync(aggregateDir)) {
-    fail(`Aggregate ${aggregateName} already exists at modules/${moduleName}/src/${aggregateName}.`)
+    fail(`Aggregate ${aggregateName} already exists at src/modules/${moduleName}/${aggregateName}.`)
   }
 
   if (fs.existsSync(aggregateTestDir)) {
-    fail(`Aggregate tests for ${aggregateName} already exist at modules/${moduleName}/test/${aggregateName}.`)
+    fail(`Aggregate tests for ${aggregateName} already exist at src/modules/${moduleName}/test/${aggregateName}.`)
   }
 
   const replacements = {
@@ -182,7 +180,7 @@ function main() {
     '__AGGREGATE_VARIABLE_NAME__': toCamelCase(aggregateName),
   }
 
-  log(`Creating aggregate ${aggregateName} at modules/${moduleName}/src/${aggregateName}`)
+  log(`Creating aggregate ${aggregateName} at src/modules/${moduleName}/${aggregateName}`)
   fs.mkdirSync(path.join(aggregateDir, 'dto'), { recursive: true })
   fs.mkdirSync(path.join(aggregateDir, 'model'), { recursive: true })
   fs.mkdirSync(path.join(aggregateDir, 'provider'), { recursive: true })

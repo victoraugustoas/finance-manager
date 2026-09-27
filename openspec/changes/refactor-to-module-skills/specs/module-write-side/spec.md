@@ -14,7 +14,7 @@ Entidades de módulo MUST estender `Entity` do shared. Value Objects MUST estend
 
 #### Scenario: Módulo importa shared pelo alias
 
-- **WHEN** uma entidade ou use case de `modules/<module>` referencia tipos base
+- **WHEN** uma entidade ou use case de `src/modules/<module>` referencia tipos base
 - **THEN** a importação usa `@/shared/...`
 - **AND** o contrato de use case expõe `execute` assíncrono retornando `Result`
 
@@ -39,7 +39,7 @@ Testes de entidade MUST cobrir criação válida, inválida, igualdade por `id` 
 
 ### Requirement: Value Objects com create/tryCreate
 
-Value Objects MUST ser imutáveis, validar no `tryCreate`, normalizar entrada quando fizer sentido, e expor `create`/`tryCreate` com códigos de erro estáticos legíveis. VOs globais MUST viver sob `src/shared` (ex.: `id.vo.ts` do kernel mantido); VOs específicos de domínio MUST viver em `modules/<module>/src/<feature>/model/<name>.vo.ts` com testes sob `modules/<module>/test/`.
+Value Objects MUST ser imutáveis, validar no `tryCreate`, normalizar entrada quando fizer sentido, e expor `create`/`tryCreate` com códigos de erro estáticos legíveis. VOs globais MUST viver sob `src/shared` (ex.: `id.vo.ts` do kernel mantido); VOs específicos de domínio MUST viver em `src/modules/<module>/<feature>/model/<name>.vo.ts` com testes sob `src/modules/<module>/test/`.
 
 #### Scenario: VO rejeita valor inválido
 
@@ -49,19 +49,19 @@ Value Objects MUST ser imutáveis, validar no `tryCreate`, normalizar entrada qu
 
 ### Requirement: Repositórios no provider e adapters na infra
 
-Contratos de repositório MUST residir em `modules/<module>/src/<aggregate>/provider/*.repository.ts`, tipando operações com `Promise<Result<...>>`. Implementações Prisma (ou outro adapter) MUST residir em `apps/backend`, mapear com `toDomain`/`fromDomain`, e NÃO vazar tipos de ORM para o domínio. Repositório é caminho de escrita/leitura orientada a entidade; NÃO MUST retornar DTO de projeção de API no lugar de entidade quando o contrato for de comando.
+Contratos de repositório MUST residir em `src/modules/<module>/<aggregate>/provider/*.repository.ts`, tipando operações com `Promise<Result<...>>`. Implementações Prisma (ou outro adapter) MUST residir em `src/modules/<module>/<aggregate>.prisma.ts`, mapear com `toDomain`/`fromDomain`, e NÃO vazar tipos de ORM para o domínio. Repositório é caminho de escrita/leitura orientada a entidade; NÃO MUST retornar DTO de projeção de API no lugar de entidade quando o contrato for de comando.
 
-Mocks in-memory MUST implementar o mesmo contrato e viver sob `modules/<module>/test/**/mock/`.
+Mocks in-memory MUST implementar o mesmo contrato e viver sob `src/modules/<module>/test/**/mock/`.
 
 #### Scenario: Contrato vs adapter
 
 - **WHEN** um use case de escrita persiste um agregado
 - **THEN** depende apenas da interface em `provider/*.repository.ts`
-- **AND** a implementação Prisma em `apps/backend` retorna `Result` e mapeia entidade sem expor o client Prisma ao módulo
+- **AND** a implementação Prisma em `src/modules/<module>/<aggregate>.prisma.ts` retorna `Result` e mapeia entidade sem expor o client Prisma ao contrato de domínio
 
 ### Requirement: Use cases orquestram escrita
 
-Operações de escrita (create/update/delete e comandos equivalentes) MUST ser implementadas como use cases em `modules/<module>/src/<aggregate>/use-case/*.use-case.ts`, implementando `UseCase<IN, OUT>`. O use case MUST orquestrar providers/repositórios/queries, delegar invariantes a entidades/VOs, e tratar falhas com early return via `Result.fail` / `withFail` (ou equivalente do shared). O use case NÃO MUST conter I/O direto de Prisma/HTTP.
+Operações de escrita (create/update/delete e comandos equivalentes) MUST ser implementadas como use cases em `src/modules/<module>/<aggregate>/use-case/*.use-case.ts`, implementando `UseCase<IN, OUT>`. O use case MUST orquestrar providers/repositórios/queries, delegar invariantes a entidades/VOs, e tratar falhas com early return via `Result.fail` / `withFail` (ou equivalente do shared). O use case NÃO MUST conter I/O direto de Prisma/HTTP.
 
 Handlers legados `CommandHandler` MUST NÃO ser reintroduzidos; o rebuild usa apenas use cases.
 
@@ -73,10 +73,10 @@ Handlers legados `CommandHandler` MUST NÃO ser reintroduzidos; o rebuild usa ap
 
 ### Requirement: Domain services puros
 
-Serviços de domínio MUST existir apenas sob `modules/*/src/**` (arquivos `*.service.ts`), encapsular regras que não cabem em uma única entidade/VO, e NÃO depender de Nest, HTTP, Prisma, filesystem ou estado global. Lógica de reporting que for pura composição/cálculo MUST ser classificada como domain service se permanecer no módulo; lógica de projeção que cabe em SQL MUST migrar para o lado de leitura (ver capability `module-read-side`).
+Serviços de domínio MUST existir apenas como arquivos `*.service.ts` de domínio sob `src/modules/<module>/**` (pasta do agregado ou `service/` na raiz do módulo), encapsular regras que não cabem em uma única entidade/VO, e NÃO depender de Nest, HTTP, Prisma, filesystem ou estado global. Adapters `*.prisma.ts`, controllers e testes no mesmo `src/modules/` NÃO são domain service. Lógica de reporting que for pura composição/cálculo MUST ser classificada como domain service se permanecer no módulo; lógica de projeção que cabe em SQL MUST migrar para o lado de leitura (ver capability `module-read-side`).
 
 #### Scenario: Domain service sem I/O
 
 - **WHEN** um domain service é executado em teste unitário
 - **THEN** produz saída determinística a partir das entradas de domínio
-- **AND** não importa adapters de `apps/backend` nem clients de banco
+- **AND** não importa adapters Prisma, controllers nem clients de banco
