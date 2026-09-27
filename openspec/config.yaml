@@ -1,4 +1,4 @@
-schema: spec-driven
+schema: spec-driven-bpmn
 
 # Project context (optional)
 # This is shown to AI when creating artifacts.
@@ -30,3 +30,13 @@ schema: spec-driven
 #     archive:
 #       guidance:
 #         - Summarize the archive outcome before finishing
+
+operations:
+  archive:
+    guidance:
+      - After spec sync has been verified and before moving the change directory, promote process diagrams. Walk each capability path in the change's specs/ tree.
+      - If a capability has both process.bpmn and process.retired, or a process.svg without process.bpmn, stop and do not archive.
+      - If it has process.bpmn, it must also have process.svg. Copy both onto openspec/specs/<capability>/, replacing any existing files.
+      - If it has only process.retired, delete openspec/specs/<capability>/process.bpmn and process.svg when those files exist.
+      - If it has neither process.bpmn nor process.retired, leave the living process.bpmn and process.svg unchanged.
+      - If the archive proceeds without spec sync, do not copy or delete living process.bpmn or process.svg files. They stay inside the archived change.

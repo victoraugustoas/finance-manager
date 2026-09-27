@@ -3,4 +3,5 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': true
   prisma: true
+  puppeteer: true
   unrs-resolver: true

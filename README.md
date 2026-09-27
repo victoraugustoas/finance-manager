@@ -71,7 +71,8 @@ After starting the app (`pnpm start:dev` or `pnpm start`), **Swagger UI** and th
 | `pnpm start:prod`      | Run `node dist/main` |
 | `pnpm lint`            | ESLint on `src` and `test` with `--fix` |
 | `pnpm format`          | Prettier on `.ts` files under `src` and `test` |
-| `pnpm test`            | Unit tests (Jest) |
+| `pnpm test`            | Unit tests (Jest) and the bpmn-js script tests |
+| `pnpm bpmn:svg`        | Validate a `.bpmn` with bpmn-js, write the sibling `.svg`, and print a Markdown image link (`--from <file.md>` makes the path relative to that file) |
 | `pnpm test:watch`      | Jest in watch mode |
 | `pnpm test:cov`        | Tests with coverage |
 | `pnpm test:e2e`        | E2E tests (config in `test/jest-e2e.json`) |
@@ -133,6 +134,7 @@ The `src/shared` tree holds domain primitives under `shared/base` (`Result`, `Us
 - Tests: same base name with `.spec.ts` suffix (e.g. `Money.spec.ts`).
 - Barrel files named `index.ts` stay lowercase.
 - TypeScript path alias: `@/*` → `src/*` (see `tsconfig.json` `compilerOptions.paths`).
+- OpenSpec changes use the `spec-driven-bpmn` schema. When a capability's delta changes its business process, the change carries `specs/<capability>/process.bpmn` (BPMN 2.0 XML) and `process.svg`. `pnpm bpmn:svg -- <file.bpmn>` validates the XML with bpmn-js and writes the SVG. Markdown in the same directory references it as `![Process name](process.svg)` inside the spec `## Purpose`. From another file, `pnpm bpmn:svg -- <file.bpmn> --from <file.md>` prints the relative image link. Retiring that process uses `process.retired` and removes that image line. After spec sync, the archive skill copies or deletes `openspec/specs/<capability>/process.bpmn` and `process.svg`. The `openspec archive` CLI merges only `spec.md` and does not promote the diagram.
 
 See `AGENTS.md` for more detail for contributors and tooling.
 
