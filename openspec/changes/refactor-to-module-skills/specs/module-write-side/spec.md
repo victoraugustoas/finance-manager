@@ -4,6 +4,8 @@
 
 Define os padrões de escrita (comando) do domínio e da aplicação: Entity, Value Object, Repository, Use Case, Domain Service e Result, conforme as skills `module-*`, sobre o kernel Genérico mantido do commit `1a04a95b`.
 
+![Comando de escrita (use case)](process.svg)
+
 ## ADDED Requirements
 
 ### Requirement: Kernel compartilhado via `@/shared`

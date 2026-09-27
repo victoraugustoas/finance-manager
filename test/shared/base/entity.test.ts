@@ -1,7 +1,6 @@
 import { TestEntity } from '../data/test.entity';
 
 describe('Entity', () => {
-  wwwwwwww;
   describe('creation', () => {
     test('should create entity with provided id', () => {
       const providedId = '550e8400-e29b-41d4-a716-446655440000';

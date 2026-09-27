@@ -4,6 +4,8 @@
 
 Define o lado de leitura CQRS: contratos Query, DTOs de projeção, implementação no adapter e chamada direta pelo controller, conforme as skills `module-query-cqrs` e `module-dto`, após o delete das implementações legadas e o rebuild dos módulos. Meta: preservar a API HTTP pública ao final.
 
+![Leitura CQRS (query)](process.svg)
+
 ## ADDED Requirements
 
 ### Requirement: Separação comando versus leitura

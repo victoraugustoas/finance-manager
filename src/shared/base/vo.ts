@@ -6,9 +6,7 @@ export interface ValueObjectConfig {
   optional?: boolean;
 }
 
-export type OptionalConfig<
-  Config extends ValueObjectConfig = ValueObjectConfig,
-> = Config & {
+export type OptionalConfig<Config extends ValueObjectConfig = ValueObjectConfig> = Config & {
   optional: true;
 };
 
@@ -28,7 +26,10 @@ export function isEmptyValue(value: unknown): boolean {
 }
 
 export abstract class ValueObject<T, Config extends ValueObjectConfig> {
-  constructor(readonly value: T, readonly config?: Config) {}
+  constructor(
+    readonly value: T,
+    readonly config?: Config,
+  ) {}
 
   equals(vo: ValueObject<T, Config>): boolean {
     return this.value === vo.value;

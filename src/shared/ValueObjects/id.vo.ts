@@ -7,7 +7,7 @@ import {
 } from '@/shared/base/vo';
 import { Metadata } from '@/shared/base/metadata';
 import { ValidationError } from '@/shared/errors/validation-error';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { SharedErrors } from '@/shared/errors/shared-errors';
 import { Result } from '@/shared/base/result';
 
@@ -24,7 +24,7 @@ export class Id extends ValueObject<string, ValueObjectConfig> {
   }
 
   public static createUUID(): string {
-    return uuidv4();
+    return randomUUID();
   }
 
   public static create(value?: string, metaOrConfig?: ValueObjectConfig): Id {
@@ -47,7 +47,7 @@ export class Id extends ValueObject<string, ValueObjectConfig> {
     }
     try {
       const hasValue = value !== undefined && value !== null && value !== '';
-      const idValue = hasValue ? value!.trim().toLowerCase() : uuidv4();
+      const idValue = hasValue ? value!.trim().toLowerCase() : randomUUID();
 
       if (!Id.isValid(idValue)) {
         throw new ValidationError({ code: Id.INVALID_ID });

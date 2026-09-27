@@ -2,6 +2,17 @@ export const SharedErrors = {
   ID_INVALID: 'INVALID_ID',
 } as const;
 
+/** Failures of the shared `Money` value object. */
+export const MoneyErrors = {
+  NOT_FINITE: 'MONEY_NOT_FINITE',
+  CENTS_NOT_INTEGER: 'MONEY_CENTS_NOT_INTEGER',
+} as const;
+
+/** Failures of the shared `ReportingPeriod` value object. */
+export const PeriodErrors = {
+  END_DATE_NOT_AFTER_START_DATE: 'END_DATE_NOT_AFTER_START_DATE',
+} as const;
+
 export type SharedErrorCode = (typeof SharedErrors)[keyof typeof SharedErrors];
 
 /**
@@ -27,4 +38,7 @@ export const ResultErrors = {
 export const RepositoryErrors = {
   ENTITY_ALREADY_EXISTS: 'ENTITY_ALREADY_EXISTS',
   ENTITY_NOT_FOUND: 'ENTITY_NOT_FOUND',
+  /** Codes kept as `PRISMA_*` so the public HTTP status mapping stays unchanged. */
+  WRITE_FAILED: 'PRISMA_INSERT_ERROR',
+  READ_FAILED: 'PRISMA_QUERY_ERROR',
 } as const;

@@ -1,21 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AccountsModule } from '@/accounts/infra/module/accounts.module';
-import { CategoriesModule } from '@/category/infra/module/categories.module';
-import { TransactionsModule } from '@/transactions/infra/module/transactions.module';
-import { ReportingModule } from '@/reporting/infra/module/reporting.module';
-import { PrismaService } from '@/shared/infra/PrismaService';
-import { ConfigModule } from '@nestjs/config';
-import { EventsModule } from '@/shared/events/EventsModule';
+import { PrismaService } from '@/shared/infra/prisma.service';
+import { EventsModule } from '@/shared/events/events.module';
+import { AccountModule } from '@/modules/account/infra/account.module';
+import { CategoryModule } from '@/modules/category/infra/category.module';
+import { ReportingModule } from '@/modules/reporting/infra/reporting.module';
+import { TransactionModule } from '@/modules/transaction/infra/transaction.module';
 
 @Module({
-  imports: [
-    EventsModule,
-    AccountsModule,
-    CategoriesModule,
-    TransactionsModule,
-    ReportingModule,
-    ConfigModule.forRoot(),
-  ],
+  imports: [EventsModule, AccountModule, CategoryModule, TransactionModule, ReportingModule],
   providers: [PrismaService],
 })
 export class EntryPointModule {}

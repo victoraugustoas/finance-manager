@@ -1,2 +1,3 @@
-export * from './Money';
-export * from './ReportingPeriod';
+export * from './id.vo';
+export * from './money.vo';
+export * from './reporting-period.vo';
